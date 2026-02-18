@@ -13,36 +13,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // Find the OTP record
     const record = await prisma.otp.findUnique({
       where: { email },
     });
 
     if (!record) {
-      return NextResponse.json(
-        { error: 'No verification pending for this email. Request new OTP.' },
-        { status: 404 }
-      );
-    }
-
-    if (record.verified) {
-      return NextResponse.json(
-        { msg: 'Email already verified' },
-        { status: 200 }
-      );
-    }
-
-    if (new Date() > record.expiresAt) {
-      return NextResponse.json(
-        { error: 'OTP expired. Please request a new one.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 });
     }
 
     if (record.otp !== otp) {
-      return NextResponse.json(
-        { error: 'Invalid OTP' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
+    }
+
+    if (new Date() > record.expiresAt) {
+      return NextResponse.json({ error: 'OTP has expired' }, { status: 400 });
     }
 
     // Mark as verified
@@ -51,12 +36,10 @@ export async function POST(req: Request) {
       data: { verified: true },
     });
 
-    return NextResponse.json({ message: 'Email verified successfully' });
+    return NextResponse.json({ message: 'OTP verified successfully' });
+
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

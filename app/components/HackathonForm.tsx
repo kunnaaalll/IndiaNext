@@ -9,117 +9,173 @@ import { ChevronUp, ChevronDown, Check, Loader2 } from 'lucide-react';
 const THEME = {
   bg: 'bg-black',
   text: 'text-white',
-  accent: 'text-blue-500', 
-  glow: 'shadow-[inset_0_0_100px_rgba(0,100,255,0.2)]',
+  accent: 'text-neon-orange', 
+  glow: 'shadow-[inset_0_0_100px_rgba(255,100,0,0.1)]',
 };
 
 const QUESTIONS = [
+  // 1. CHOOSE YOUR TRACK
+  {
+    id: 'track',
+    type: 'choice',
+    question: "Choose Your Mission",
+    subtext: "TRACK A (Solvers): Surprise Problem at 11 AM (₹40K Prize). TRACK B (Visionaries): Build your Startup Idea (₹20K Prize).",
+    options: ["A: The Solvers", "B: The Visionaries"],
+    required: true,
+  },
+  
+  // 2. TEAM CONFIGURATION (Leader)
   {
     id: 'teamName',
     type: 'text',
-    question: "What is your Team Name?",
-    placeholder: "e.g. Code Warriors",
+    question: "Team Name",
+    placeholder: "e.g. System Override",
     required: true,
   },
   {
     id: 'leaderName',
     type: 'text',
-    question: "Team Leader's Full Name",
-    placeholder: "John Doe",
+    question: "Team Leader Name",
+    subtext: "You will be the primary point of contact.",
+    placeholder: "Full Name",
     required: true,
   },
   {
-    id: 'email',
+    id: 'leaderEmail', // Changed from 'email' to 'leaderEmail' to match schema
     type: 'email',
-    question: "Leader's Email Address",
+    question: "Leader Email",
     placeholder: "leader@college.edu",
     required: true,
     isEmail: true,
   },
   {
-    id: 'phone',
+    id: 'leaderPhone',
     type: 'tel',
-    question: "Leader's Contact Number",
-    placeholder: "+91 99999 99999",
+    question: "Leader Phone",
+    placeholder: "+91 00000 00000",
     required: true,
   },
   {
-    id: 'college',
+    id: 'leaderCollege',
     type: 'text',
-    question: "College / Institution Name",
-    placeholder: "IIT Bombay, LPU, etc.",
+    question: "Leader College / Institution",
+    placeholder: "University Name",
     required: true,
   },
   {
-    id: 'track',
-    type: 'choice',
-    question: "Which track are you applying for?",
-    subtext: "Innovation: Build your own idea (30 teams). Problem Statement: Solve a given problem on the spot (70 teams).",
-    options: ["Innovation (Own Idea)", "Problem Statement (On Spot)"],
+    id: 'leaderGithub',
+    type: 'url',
+    question: "Leader GitHub URL",
+    placeholder: "https://github.com/...",
     required: true,
   },
-  // Innovation Track Questions
+  {
+    id: 'leaderLinkedin',
+    type: 'url',
+    question: "Leader LinkedIn URL",
+    placeholder: "https://linkedin.com/in/...",
+    required: false,
+  },
+
+  // 3. MEMBER DETAILS (2, 3, 4)
+  // Member 2
+  {
+    id: 'member2Name',
+    type: 'text',
+    question: "Member 2 Name",
+    placeholder: "Full Name",
+    required: true,
+  },
+  {
+    id: 'member2Github',
+    type: 'url',
+    question: "Member 2 GitHub",
+    placeholder: "https://github.com/...",
+    required: true,
+  },
+  // Member 3
+  {
+    id: 'member3Name',
+    type: 'text',
+    question: "Member 3 Name",
+    placeholder: "Full Name",
+    required: true,
+  },
+  {
+    id: 'member3Github',
+    type: 'url',
+    question: "Member 3 GitHub",
+    placeholder: "https://github.com/...",
+    required: true,
+  },
+  // Member 4
+  {
+    id: 'member4Name',
+    type: 'text',
+    question: "Member 4 Name",
+    placeholder: "Full Name",
+    required: true,
+  },
+  {
+    id: 'member4Github',
+    type: 'url',
+    question: "Member 4 GitHub",
+    placeholder: "https://github.com/...",
+    required: true,
+  },
+
+  // 4. TRACK SPECIFIC QUESTIONS
+  // Track A: Past Experience
+  {
+    id: 'pastHackathonExperience',
+    type: 'long-text',
+    question: "Past Hackathon Experience",
+    subtext: "Briefly list previous hackathons won or participated in.",
+    placeholder: "Winner at XYZ Hackathon, Built ABC project...",
+    required: false,
+    condition: (answers: any) => answers.track === "A: The Solvers",
+  },
+
+  // Track B: Project Details
   {
     id: 'projectTitle',
     type: 'text',
-    question: "What is your Project Title?",
-    placeholder: "e.g. Smart Traffic Manager",
+    question: "Startup Idea Title",
+    placeholder: "Project Name",
     required: true,
-    condition: (answers: any) => answers.track === "Innovation (Own Idea)",
+    condition: (answers: any) => answers.track === "B: The Visionaries",
   },
   {
     id: 'projectAbstract',
     type: 'long-text',
-    question: "Describe your solution/idea in detail.",
-    subtext: "This is crucial for your selection. Explain the problem and your proposed solution.",
-    placeholder: "Our solution aims to...",
+    question: "Project Abstract (200 Words)",
+    subtext: "Describe the problem you are solving and your unique solution.",
+    placeholder: "We are building a...",
     required: true,
-    condition: (answers: any) => answers.track === "Innovation (Own Idea)",
+    condition: (answers: any) => answers.track === "B: The Visionaries",
+  },
+  {
+    id: 'focusArea',
+    type: 'choice',
+    question: "Focus Area",
+    options: [
+      "TrustTech (Blockchain/CyberSec)",
+      "Sustainable Intelligence (Green Tech)",
+      "Bio-Digital Systems (HealthTech)",
+      "Next-Gen Skilling (EdTech)",
+      "Rural FinTech (Inclusion)"
+    ],
+    required: true,
+    condition: (answers: any) => answers.track === "B: The Visionaries",
   },
   {
     id: 'techStack',
     type: 'text',
-    question: "What Tech Stack will you use?",
-    placeholder: "React, Node, Python, etc.",
+    question: "Proposed Tech Stack",
+    placeholder: "Next.js, Solidity, Python...",
     required: true,
-    condition: (answers: any) => answers.track === "Innovation (Own Idea)",
+    condition: (answers: any) => answers.track === "B: The Visionaries",
   },
-  // Problem Statement Track Questions
-  {
-    id: 'screeningSolution',
-    type: 'long-text',
-    question: "Screening Challenge: Smart Campus System",
-    subtext: "PROBLEM: Design a scalable system to manage student attendance efficiently without biometric or manual entry. \n\nTASK: Describe your approach.",
-    placeholder: "We propose using...",
-    required: true,
-    condition: (answers: any) => answers.track === "Problem Statement (On Spot)",
-  },
-  {
-    id: 'skills',
-    type: 'text',
-    question: "What are your team's top technical skills?",
-    subtext: "List the technologies you are most proficient in.",
-    placeholder: "Web Dev, App Dev, AI/ML...",
-    required: true,
-    condition: (answers: any) => answers.track === "Problem Statement (On Spot)",
-  },
-  {
-    id: 'portfolio',
-    type: 'url',
-    question: "Portfolio / GitHub / Previous Projects Link",
-    subtext: "Show us what you've built before.",
-    placeholder: "https://github.com/...",
-    required: true,
-    condition: (answers: any) => answers.track === "Problem Statement (On Spot)",
-  },
-  // Common Final Question
-  {
-    id: 'comments',
-    type: 'long-text',
-    question: "Any other details?",
-    placeholder: "Anything else...",
-    required: false,
-  }
 ];
 
 export default function HackathonForm() {
@@ -137,6 +193,7 @@ export default function HackathonForm() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const totalSteps = QUESTIONS.length;
+  // Dynamic progress calculation logic could be better but linear is fine for now
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   const currentQuestion = QUESTIONS[currentStep];
@@ -158,8 +215,8 @@ export default function HackathonForm() {
 
   const handleNext = async () => {
     // Special handling for email step
-    if (currentQuestion.id === 'email' && !emailVerified) {
-        if (!answers.email || !answers.email.includes('@')) {
+    if (currentQuestion.id === 'leaderEmail' && !emailVerified) {
+        if (!answers.leaderEmail || !answers.leaderEmail.includes('@')) {
             setErrorMsg("Please enter a valid email.");
             return;
         }
@@ -180,11 +237,20 @@ export default function HackathonForm() {
 
   const submitForm = async () => {
       setLoading(true);
+      
+      // Map Friendly Track Name to API value
+      const trackCode = answers.track.startsWith("A") ? "A" : "B";
+      
+      const payload = {
+          ...answers,
+          track: trackCode,
+      };
+
       try {
           const res = await fetch('/api/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(answers),
+              body: JSON.stringify(payload),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Submission failed');
@@ -204,7 +270,7 @@ export default function HackathonForm() {
           const res = await fetch('/api/send-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: answers.email }),
+              body: JSON.stringify({ email: answers.leaderEmail }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
@@ -224,7 +290,7 @@ export default function HackathonForm() {
           const res = await fetch('/api/verify-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: answers.email, otp: otpValue }),
+              body: JSON.stringify({ email: answers.leaderEmail, otp: otpValue }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error);
@@ -321,7 +387,7 @@ export default function HackathonForm() {
                  className="w-full"
                >
                  <div className="mb-6 flex items-center gap-3 text-neon-orange">
-                   <span className="text-sm font-medium">Step {currentStep + 1}<span className="text-gray-600">/</span>{totalSteps}</span>
+                   <span className="text-sm font-medium">Step {currentStep + 1}</span>
                  </div>
 
                  <h2 className="text-2xl md:text-4xl font-light mb-4 leading-tight">
@@ -362,7 +428,7 @@ export default function HackathonForm() {
                  className="w-full"
                >
                   <h2 className="text-2xl md:text-4xl font-light mb-4 leading-tight">Enter Verification Code</h2>
-                  <p className="text-gray-400 text-lg mb-8 font-light">We sent a 6-digit code to {answers.email}</p>
+                  <p className="text-gray-400 text-lg mb-8 font-light">We sent a 6-digit code to {answers.leaderEmail}</p>
                   
                   <input
                     type="text"
@@ -424,7 +490,8 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
      <div className="max-w-2xl">
         <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6">IndiaNext <br /> 2026</h1>
         <p className="text-xl md:text-2xl text-gray-400 font-light mb-10">
-          Join the top Teams. <br/> 30 Innovation Track. 70 Problem Solvers.
+          Join the Future Proof India Mission. <br/> 
+          <span className="text-neon-orange">Choose Your Track.</span>
         </p>
         <button 
           onClick={onStart}
@@ -432,7 +499,7 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
         >
           Begin Registration
         </button>
-        <p className="mt-4 text-sm text-gray-500">🕒 Takes 3 minutes</p>
+        <p className="mt-4 text-sm text-gray-500">🕒 Takes ~5 minutes</p>
      </div>
   </div>
 );
@@ -444,9 +511,10 @@ const ThankYouScreen = () => (
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-2xl"
       >
-         <h1 className="text-4xl md:text-5xl font-medium mb-6">Thank you for applying.</h1>
-         <p className="text-xl text-gray-400 font-light">We'll be in touch shortly.</p>
-         <a href="/" className="mt-8 inline-block text-neon-blue hover:text-white underline transition-colors">Back to home</a>
+         <h1 className="text-4xl md:text-5xl font-medium mb-6 text-green-500">Registration Complete.</h1>
+         <p className="text-xl text-gray-400 font-light mb-4">Your application has been logged into the mainframe.</p>
+         <p className="text-md text-gray-500 font-mono">Shortlist Announcement: 8th March 2026</p>
+         <a href="/" className="mt-8 inline-block text-neon-blue hover:text-white underline transition-colors">Back to Mission Control</a>
       </motion.div>
    </div>
 );
@@ -463,7 +531,7 @@ const InputRenderer = ({ question, value, onChange }: any) => {
 
   if (question.type === 'choice') {
     return (
-      <div className="flex flex-col gap-3 max-w-xs">
+      <div className="flex flex-col gap-3 max-w-lg">
         {question.options.map((opt: string, idx: number) => (
           <OptionButton 
             key={opt} 
@@ -504,32 +572,27 @@ const InputRenderer = ({ question, value, onChange }: any) => {
 };
 
 const OptionButton = ({ opt, selected, onSelect }: any) => {
-   const keyKey = opt.charAt(0).toUpperCase();
+   // Use a random key or mapped key for better UX? A/B is fine.
+   // Simplified logic for this specific form:
+   let keyKey = "";
+   if (opt.startsWith("A")) keyKey = "A";
+   else if (opt.startsWith("B")) keyKey = "B";
+   else keyKey = opt.charAt(0);
    
-   useEffect(() => {
-     const handler = (e: KeyboardEvent) => {
-        if (e.key.toUpperCase() === keyKey) {
-            onSelect();
-        }
-     };
-     window.addEventListener('keydown', handler);
-     return () => window.removeEventListener('keydown', handler);
-   }, [keyKey, onSelect]);
-
    return (
       <button
         onClick={onSelect}
-        className={`text-left px-4 py-3 rounded border text-xl transition-all flex items-center gap-3 w-full
+        className={`text-left px-4 py-4 rounded border text-xl transition-all flex items-center gap-3 w-full
            ${selected ? 'bg-neon-orange/20 border-neon-orange text-white' : 'border-gray-700 hover:bg-gray-800 text-gray-300'}
         `}
       >
-        <div className={`w-8 h-8 border rounded flex items-center justify-center text-sm font-bold transition-colors
+        <div className={`w-8 h-8 border rounded flex items-center justify-center text-sm font-bold transition-colors shrink-0
            ${selected ? 'bg-neon-orange border-neon-orange text-white' : 'border-gray-600 text-gray-500'}
         `}>
           {keyKey}
         </div>
         <span>{opt}</span>
-        {selected && <Check size={20} className="ml-auto text-neon-orange" />}
+        {selected && <Check size={20} className="ml-auto text-neon-orange shrink-0" />}
       </button>
    );
 };

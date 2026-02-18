@@ -4,82 +4,120 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
     const { 
-      teamName, 
-      leaderName, 
-      email, 
-      phone, 
-      college, 
       track, 
-      projectTitle, 
-      projectAbstract, 
-      techStack, 
-      screeningSolution, 
-      skills, 
-      portfolio, 
-      comments 
-    } = await req.json();
+      leaderEmail,
+      teamName,
+      leaderName,
+      leaderPhone,
+      leaderCollege,
+      
+      // Track A fields
+      pastHackathonExperience,
+      
+      // Track B fields
+      projectTitle,
+      projectAbstract,
+      techStack,
+      focusArea,
+      
+      // Members (flat)
+      member2Name, member2Email, member2Github, member2Linkedin,
+      member3Name, member3Email, member3Github, member3Linkedin,
+      member4Name, member4Email, member4Github, member4Linkedin,
+      
+      // Leader Extras
+      leaderGithub,
+      leaderLinkedin
+    } = body;
 
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      );
+    if (!track || !leaderEmail) {
+      return NextResponse.json({ error: 'Track and Email are required' }, { status: 400 });
     }
 
-    // Verify email is verified in OTP table first
+    // Verify OTP status (Must be verified before calling this)
     const otpRecord = await prisma.otp.findUnique({
-      where: { email },
+      where: { email: leaderEmail },
     });
 
     if (!otpRecord || !otpRecord.verified) {
-      return NextResponse.json(
-        { error: 'Please verify your email address first.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email not verified. Please verify OTP first.' }, { status: 403 });
     }
 
-    // Check if already registered
-    const existingReg = await prisma.registration.findUnique({
-      where: { email },
-    });
+    // Check if ALREADY registered FOR THIS TRACK
+    if (track === 'A') {
+      const existing = await prisma.solverRegistration.findUnique({
+        where: { leaderEmail },
+      });
+      if (existing) {
+        return NextResponse.json({ error: 'You have already registered for Track A (The Solvers).' }, { status: 409 });
+      }
 
-    if (existingReg) {
-      return NextResponse.json(
-        { error: 'A team with this leader email is already registered.' },
-        { status: 409 }
-      );
+      await prisma.solverRegistration.create({
+        data: {
+          teamName,
+          leaderName,
+          leaderEmail,
+          leaderPhone,
+          leaderCollege,
+          leaderGithub,
+          leaderLinkedin,
+          member2Name,
+          member2Github,
+          member2Linkedin,
+          member3Name,
+          member3Github,
+          member3Linkedin,
+          member4Name,
+          member4Github,
+          member4Linkedin,
+          pastHackathonExperience,
+        },
+      });
+    } else if (track === 'B') {
+      const existing = await prisma.visionaryRegistration.findUnique({
+        where: { leaderEmail },
+      });
+      if (existing) {
+        return NextResponse.json({ error: 'You have already registered for Track B (The Visionaries).' }, { status: 409 });
+      }
+
+      await prisma.visionaryRegistration.create({
+        data: {
+          teamName,
+          leaderName,
+          leaderEmail,
+          leaderPhone,
+          leaderCollege,
+          leaderGithub,
+          leaderLinkedin,
+          member2Name,
+          member2Github,
+          member2Linkedin,
+          member3Name,
+          member3Github,
+          member3Linkedin,
+          member4Name,
+          member4Github,
+          member4Linkedin,
+          projectTitle,
+          projectAbstract,
+          techStack,
+          focusArea,
+        },
+      });
+    } else {
+      return NextResponse.json({ error: 'Invalid Track' }, { status: 400 });
     }
 
-    // Depending on track, some fields might be optional/null, Prisma handles optional fields if they are ? in schema
-    const registration = await prisma.registration.create({
-      data: {
-        teamName,
-        leaderName,
-        email,
-        phone,
-        college,
-        track,
-        projectTitle: projectTitle || null,
-        projectAbstract: projectAbstract || null,
-        techStack: techStack || null,
-        screeningSolution: screeningSolution || null,
-        skills: skills || null,
-        portfolio: portfolio || null,
-        comments: comments || null,
-      },
-    });
+    // Optional: Send confirmation email
+    // ...
 
-    return NextResponse.json({ 
-      message: 'Registration successful! See you at the hackathon.',
-      data: registration 
-    }, { status: 201 });
+    return NextResponse.json({ message: 'Registration Successful!' });
 
   } catch (error) {
-    console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Something went wrong during registration.' },
-      { status: 500 }
-    );
+    console.error('Registration Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

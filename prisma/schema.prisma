@@ -6,22 +6,75 @@ datasource db {
   provider = "postgresql"
 }
 
-model Registration {
-  id                String   @id @default(cuid())
-  teamName          String
-  leaderName        String
-  email             String   @unique
-  phone             String
-  college           String
-  track             String
-  projectTitle      String?
-  projectAbstract   String?
-  techStack         String?
-  screeningSolution String?
-  skills            String?
-  portfolio         String?
-  comments          String?
-  createdAt         DateTime @default(now())
+// TRACK A: THE SOLVERS
+model SolverRegistration {
+  id        String   @id @default(cuid())
+  teamName  String
+  
+  // Leader Details
+  leaderName     String
+  leaderEmail    String   @unique // One registration per email for Track A
+  leaderPhone    String
+  leaderCollege  String
+  leaderGithub   String
+  leaderLinkedin String?
+
+  // Member 2
+  member2Name     String
+  member2Github   String
+  member2Linkedin String?
+  
+  // Member 3
+  member3Name     String
+  member3Github   String
+  member3Linkedin String?
+
+  // Member 4
+  member4Name     String
+  member4Github   String
+  member4Linkedin String?
+
+  // Track A Specifics
+  pastHackathonExperience String? // Text describing past experience
+
+  createdAt DateTime @default(now())
+}
+
+// TRACK B: THE VISIONARIES
+model VisionaryRegistration {
+  id        String   @id @default(cuid())
+  teamName  String
+
+  // Leader Details
+  leaderName     String
+  leaderEmail    String   @unique // One registration per email for Track B
+  leaderPhone    String
+  leaderCollege  String
+  leaderGithub   String
+  leaderLinkedin String?
+
+  // Member 2
+  member2Name     String
+  member2Github   String
+  member2Linkedin String?
+  
+  // Member 3
+  member3Name     String
+  member3Github   String
+  member3Linkedin String?
+
+  // Member 4
+  member4Name     String
+  member4Github   String
+  member4Linkedin String?
+
+  // Track B Specifics
+  projectTitle    String
+  projectAbstract String
+  techStack       String
+  focusArea       String // TrustTech, Sustainable Intelligence, etc.
+
+  createdAt DateTime @default(now())
 }
 
 model Otp {

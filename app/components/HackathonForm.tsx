@@ -636,7 +636,65 @@ export default function HackathonForm() {
     return nextStep;
   };
 
-  const handleNext = async () => {
+  const sendOtp = React.useCallback(async () => {
+      setLoading(true);
+      setErrorMsg("");
+      if (answers.leaderEmail === "demo@indianext.in") {
+          setTimeout(() => { setShowOtpInput(true); setLoading(false); alert("CODE: 123456"); }, 1000);
+          return;
+      }
+      try {
+          const res = await fetch('/api/send-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: answers.leaderEmail }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          setShowOtpInput(true);
+      } catch (err: any) {
+          setErrorMsg(err.message);
+      } finally {
+          setLoading(false);
+      }
+  }, [answers.leaderEmail]);
+
+  const submitForm = React.useCallback(async () => {
+      setLoading(true);
+
+      // DEMO MODE BYPASS
+      if (answers.leaderEmail === "demo@indianext.in") {
+          setTimeout(() => { setIsCompleted(true); setLoading(false); }, 1500); 
+          return;
+      }
+      
+      try {
+          // Flatten College Logic
+          const finalAnswers = { ...answers };
+          if (finalAnswers.member2CollegeSame && finalAnswers.member2CollegeSame.includes("Same as Leader")) finalAnswers.member2College = finalAnswers.leaderCollege;
+          if (finalAnswers.member3CollegeSame && finalAnswers.member3CollegeSame.includes("Same as Leader")) finalAnswers.member3College = finalAnswers.leaderCollege;
+          if (finalAnswers.member4CollegeSame && finalAnswers.member4CollegeSame.includes("Same as Leader")) finalAnswers.member4College = finalAnswers.leaderCollege;
+
+          if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
+          if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
+
+          const res = await fetch('/api/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(finalAnswers),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Submission failed');
+          
+          setIsCompleted(true);
+      } catch (err: any) {
+          setErrorMsg(err.message);
+      } finally {
+          setLoading(false);
+      }
+  }, [answers, setIsCompleted]);
+
+  const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
     const q = currentQuestion;
     const ans = answers[q.id];
@@ -655,7 +713,7 @@ export default function HackathonForm() {
 
     // 2. Checkbox: Accept ALL
     if (q.type === 'checkbox' && q.required) {
-        if (q.options && ans.length !== q.options.length) {
+        if (q.options && Array.isArray(ans) && ans.length !== q.options.length) {
             setErrorMsg("Must accept all conditions.");
             return;
         }
@@ -692,67 +750,9 @@ export default function HackathonForm() {
     } else {
       await submitForm();
     }
-  };
+  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm]);
 
-  const submitForm = async () => {
-      setLoading(true);
-
-      // DEMO MODE BYPASS
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setIsCompleted(true); setLoading(false); }, 1500); 
-          return;
-      }
-      
-      try {
-          // Flatten College Logic
-          const finalAnswers = { ...answers };
-          if (finalAnswers.member2CollegeSame && finalAnswers.member2CollegeSame.includes("Same as Leader")) finalAnswers.member2College = finalAnswers.leaderCollege;
-          if (finalAnswers.member3CollegeSame && finalAnswers.member3CollegeSame.includes("Same as Leader")) finalAnswers.member3College = finalAnswers.leaderCollege;
-          if (finalAnswers.member4CollegeSame && finalAnswers.member4CollegeSame.includes("Same as Leader")) finalAnswers.member4College = finalAnswers.leaderCollege;
-
-          if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
-          if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
-
-          const res = await fetch('/api/register', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(finalAnswers),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Submission failed');
-          
-          setIsCompleted(true);
-      } catch (err: any) {
-          setErrorMsg(err.message);
-      } finally {
-          setLoading(false);
-      }
-  };
-
-  const sendOtp = async () => {
-      setLoading(true);
-      setErrorMsg("");
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setShowOtpInput(true); setLoading(false); alert("CODE: 123456"); }, 1000);
-          return;
-      }
-      try {
-          const res = await fetch('/api/send-otp', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: answers.leaderEmail }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error);
-          setShowOtpInput(true);
-      } catch (err: any) {
-          setErrorMsg(err.message);
-      } finally {
-          setLoading(false);
-      }
-  };
-
-  const verifyOtp = async () => {
+  const verifyOtp = React.useCallback(async () => {
       setLoading(true);
       setErrorMsg("");
       if (answers.leaderEmail === "demo@indianext.in") {
@@ -787,7 +787,7 @@ export default function HackathonForm() {
       } finally {
           setLoading(false);
       }
-  };
+  }, [answers.leaderEmail, otpValue, currentStep, answers]);
 
   const handlePrev = () => {
     if (showOtpInput) { setShowOtpInput(false); return; }
@@ -817,7 +817,7 @@ export default function HackathonForm() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [started, isCompleted, currentStep, answers, currentQuestion, showOtpInput, otpValue, loading]);
+  }, [started, isCompleted, currentStep, answers, currentQuestion, showOtpInput, otpValue, loading, handleNext, verifyOtp]);
 
 
   if (!started) return <WelcomeScreen onStart={handleStart} />;

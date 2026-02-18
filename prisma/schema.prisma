@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Registration {
+  id                String   @id @default(cuid())
+  teamName          String
+  leaderName        String
+  email             String   @unique
+  phone             String
+  college           String
+  track             String
+  projectTitle      String?
+  projectAbstract   String?
+  techStack         String?
+  screeningSolution String?
+  skills            String?
+  portfolio         String?
+  comments          String?
+  createdAt         DateTime @default(now())
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

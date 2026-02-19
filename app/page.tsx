@@ -268,7 +268,8 @@ const Navbar = () => (
         {[
             { label: './ABOUT', href: '#about' },
             { label: './TRACKS', href: '#tracks' },
-            { label: './BOUNTY', href: '#bounty' }
+            { label: './BOUNTY', href: '#bounty' },
+            { label: './RULES', href: '/rules' }
         ].map((link) => (
             <Link key={link.label} href={link.href} className="hover:text-white transition-colors relative group">
                 {link.label}
@@ -829,8 +830,8 @@ const Footer = () => (
                 <div>
                    <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">DIRECTORIES</h4>
                    <div className="flex flex-col gap-5 text-[10px] font-black tracking-widest uppercase">
-                        <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
-                        <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
+                        <Link href="/rules" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
+                        <Link href="/rules#conduct" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
                         <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>

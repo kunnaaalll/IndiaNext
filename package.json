@@ -24,6 +24,7 @@
     "test:email:template": "node scripts/test-email-template.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
     "@tanstack/react-query": "^5.62.11",

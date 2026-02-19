@@ -219,7 +219,8 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
       const messageId = result.data?.id;
       console.log(`[Email] ✅ Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`);
 
-      await logEmail({
+      // Non-blocking log — don't wait for DB write
+      logEmail({
         to,
         from,
         subject,
@@ -227,7 +228,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
         status: 'SENT',
         messageId,
         attempts: attempt + 1,
-      });
+      }).catch(err => console.error('[Email] Log write failed:', err));
 
       return { success: true, messageId };
 
@@ -263,7 +264,8 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
     error: finalError,
   });
 
-  await logEmail({
+  // Non-blocking log
+  logEmail({
     to,
     from,
     subject,
@@ -271,7 +273,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
     status: 'FAILED',
     error: finalError,
     attempts: attempt,
-  });
+  }).catch(err => console.error('[Email] Log write failed:', err));
 
   return { success: false, error: finalError };
 }

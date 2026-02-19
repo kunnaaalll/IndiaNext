@@ -44,8 +44,8 @@ interface EmailResult {
 
 const EMAIL_CONFIG = {
   from: process.env.EMAIL_FROM || "onboarding@resend.dev",
-  maxRetries: 3,
-  retryDelays: [1000, 3000, 9000], // Exponential backoff: 1s, 3s, 9s
+  maxRetries: 2,
+  retryDelays: [500, 1500], // Fast retries for serverless — 0.5s, 1.5s
   timeout: 10000, // 10 seconds
   otpExpiryMinutes: 10, // Shared constant — used in OTP HTML template AND send-otp route
 } as const;
@@ -680,25 +680,29 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   // Validate all emails first
   const validEmails: BatchEmailItem[] = [];
   const results: EmailResult[] = [];
+  const failedValidations: { to: string; from: string; subject: string; type: EmailType; error: string }[] = [];
 
   for (const email of emails) {
     const validation = validateEmail(email.to);
     if (!validation.valid) {
       console.error(`[Email] Batch validation failed for ${email.to}: ${validation.error}`);
-      await logEmail({
-        to: email.to,
-        from,
-        subject: email.subject,
-        type: email.type,
-        status: 'FAILED',
-        error: validation.error || 'Invalid email',
-        attempts: 0,
-      });
+      failedValidations.push({ to: email.to, from, subject: email.subject, type: email.type, error: validation.error || 'Invalid email' });
       results.push({ success: false, error: validation.error });
     } else {
       validEmails.push(email);
       results.push({ success: true }); // placeholder — updated below
     }
+  }
+
+  // Log validation failures in bulk (non-blocking)
+  if (failedValidations.length > 0) {
+    prisma.emailLog.createMany({
+      data: failedValidations.map(f => ({
+        to: f.to, from: f.from, subject: f.subject, type: f.type,
+        status: 'FAILED' as const, provider: 'resend', error: f.error,
+        attempts: 0, lastAttempt: new Date(),
+      })),
+    }).catch(err => console.error('[Email] Failed to log validation failures:', err));
   }
 
   if (validEmails.length === 0) return results;
@@ -727,28 +731,29 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
         });
       }
 
-      // Log each successful send
+      // Log all successful sends in a single DB call
       const batchData = batchResult.data?.data || [];
+      const logEntries: { to: string; from: string; subject: string; type: EmailType; status: 'SENT'; provider: string; messageId: string | undefined; attempts: number; lastAttempt: Date; sentAt: Date }[] = [];
       let validIdx = 0;
       for (let i = 0; i < results.length; i++) {
         if (results[i].success && validIdx < validEmails.length) {
           const messageId = batchData[validIdx]?.id;
           results[i] = { success: true, messageId };
-
-          await logEmail({
-            to: validEmails[validIdx].to,
-            from,
+          logEntries.push({
+            to: validEmails[validIdx].to, from,
             subject: validEmails[validIdx].subject,
             type: validEmails[validIdx].type,
-            status: 'SENT',
-            messageId,
-            attempts: attempt + 1,
+            status: 'SENT', provider: 'resend', messageId,
+            attempts: attempt + 1, lastAttempt: new Date(), sentAt: new Date(),
           });
-
           console.log(`[Email] ✅ ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`);
           validIdx++;
         }
       }
+
+      // Bulk insert logs — don't block the return
+      prisma.emailLog.createMany({ data: logEntries })
+        .catch(err => console.error('[Email] Failed to bulk-log sent emails:', err));
 
       console.log(`[Email] ✅ Batch complete — ${validEmails.length} emails sent in 1 API call`);
       return results;

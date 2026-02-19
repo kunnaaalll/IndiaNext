@@ -38,10 +38,10 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 
 // Create context for each request (App Router / Fetch adapter)
 export async function createContext(opts: FetchCreateContextFnOptions) {
-  // Read token from Authorization header or session cookie
-  const authHeader = opts.req.headers.get('authorization');
+  // Read session token ONLY from HttpOnly cookie — never from Authorization header.
+  // Accepting tokens via headers would bypass SameSite/HttpOnly cookie protections.
   const cookies = parseCookies(opts.req.headers.get('cookie'));
-  const token = authHeader?.replace('Bearer ', '') || cookies.session || null;
+  const token = cookies.session_token || null;
 
   let session = null;
   if (token) {

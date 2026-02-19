@@ -5,6 +5,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
+import { INDIAN_COLLEGES } from '@/lib/data/colleges';
+import { INDIAN_DEGREES } from '@/lib/data/degrees';
 
 // ── Types ───────────────────────────────────────
 type Answers = Record<string, string | string[] | undefined>;
@@ -17,6 +19,8 @@ interface Question {
   text?: string;
   placeholder?: string;
   options?: string[];
+  suggestions?: string[];
+  sameAsLeaderField?: string;
   required?: boolean;
   isEmail?: boolean;
   noPaste?: boolean;
@@ -89,16 +93,18 @@ const QUESTIONS: Question[] = [
   },
   {
     id: 'leaderCollege',
-    type: 'text',
+    type: 'combobox',
     question: "College / University Name",
-    placeholder: "University Name",
+    placeholder: "Search or type your college...",
+    suggestions: INDIAN_COLLEGES,
     required: true,
   },
   {
     id: 'leaderDegree',
-    type: 'text',
+    type: 'combobox',
     question: "Degree / Course",
-    placeholder: "e.g. B.Tech CSE",
+    placeholder: "Search or type your degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
   },
   
@@ -121,30 +127,21 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member2CollegeSame',
-    type: 'checkbox',
-    question: "Member 2 College",
-    options: ["Same as Leader"],
-    required: false,
+    id: 'member2College',
+    type: 'combobox',
+    question: "Member 2 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member2College',
-    type: 'text',
-    question: "Member 2 College Name",
-    placeholder: "College Name",
-    required: true,
-    condition: (answers: Answers) => {
-        const isMember = typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize);
-        const isSame = Array.isArray(answers.member2CollegeSame) && answers.member2CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
-  },
-  {
     id: 'member2Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 2 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
@@ -167,30 +164,21 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member3CollegeSame',
-    type: 'checkbox',
-    question: "Member 3 College",
-    options: ["Same as Leader"],
-    required: false,
+    id: 'member3College',
+    type: 'combobox',
+    question: "Member 3 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member3College',
-    type: 'text',
-    question: "Member 3 College Name",
-    placeholder: "College Name",
-    required: true,
-    condition: (answers: Answers) => {
-        const isMember = typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize);
-        const isSame = Array.isArray(answers.member3CollegeSame) && answers.member3CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
-  },
-  {
     id: 'member3Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 3 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
@@ -213,30 +201,21 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member4CollegeSame',
-    type: 'checkbox',
-    question: "Member 4 College",
-    options: ["Same as Leader"],
-    required: false,
+    id: 'member4College',
+    type: 'combobox',
+    question: "Member 4 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
   {
-    id: 'member4College',
-    type: 'text',
-    question: "Member 4 College Name",
-    placeholder: "College Name",
-    required: true,
-    condition: (answers: Answers) => {
-        const isMember = typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize);
-        const isSame = Array.isArray(answers.member4CollegeSame) && answers.member4CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
-  },
-  {
     id: 'member4Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 4 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
@@ -448,7 +427,130 @@ const ThankYouScreen = ({ track }: { track: string }) => (
    </div>
 );
 
-const InputRenderer = ({ question, value, onChange, onCheckbox }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void }) => {
+// ── Combobox (searchable dropdown + free text) ──
+const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+  placeholder: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter suggestions based on input (fuzzy: split by space, match all tokens)
+  const filtered = React.useMemo(() => {
+    if (!value || value.length < 2) return [];
+    const tokens = value.toLowerCase().split(/\s+/).filter(Boolean);
+    return suggestions
+      .filter(s => {
+        const lower = s.toLowerCase();
+        return tokens.every(t => lower.includes(t));
+      })
+      .slice(0, 8); // Max 8 suggestions for performance
+  }, [value, suggestions]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightIndex] as HTMLElement;
+      item?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIndex]);
+
+  // Auto-focus
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen || filtered.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev + 1) % filtered.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev - 1 + filtered.length) % filtered.length);
+    } else if (e.key === 'Enter' && highlightIndex >= 0) {
+      e.preventDefault();
+      onChange(filtered[highlightIndex]);
+      setIsOpen(false);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setHighlightIndex(-1);
+          setIsOpen(true);
+        }}
+        onFocus={() => { if (value && value.length >= 2) setIsOpen(true); }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder.toUpperCase()}
+        autoComplete="off"
+        className="w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide"
+      />
+
+      {/* Dropdown */}
+      {isOpen && filtered.length > 0 && (
+        <ul
+          ref={listRef}
+          className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-slate-900 border border-slate-700 rounded shadow-2xl"
+        >
+          {filtered.map((item, idx) => (
+            <li
+              key={item}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent input blur
+                onChange(item);
+                setIsOpen(false);
+              }}
+              onMouseEnter={() => setHighlightIndex(idx)}
+              className={`px-4 py-3 cursor-pointer font-mono text-sm transition-colors ${
+                idx === highlightIndex
+                  ? 'bg-orange-500/20 text-orange-400'
+                  : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Hint text */}
+      {value && value.length >= 2 && filtered.length === 0 && isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded text-slate-500 text-xs font-mono">
+          No matches — your custom entry will be used
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -575,6 +677,62 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: { question: Qu
       );
   }
 
+  if (question.type === 'combobox' && question.suggestions) {
+    const leaderField = question.sameAsLeaderField;
+    const leaderValue = leaderField ? (answers[leaderField] as string) || '' : '';
+    const isSameAsLeader = leaderField ? (value as string) === leaderValue && leaderValue !== '' : false;
+
+    return (
+      <div className="w-full">
+        {leaderField && leaderValue && (
+          <label className="flex items-center gap-2 mb-3 cursor-pointer select-none group">
+            <span
+              className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                isSameAsLeader
+                  ? 'bg-orange-500 border-orange-500'
+                  : 'border-slate-600 group-hover:border-orange-500/50'
+              }`}
+              onClick={() => {
+                if (isSameAsLeader) {
+                  onChange('');
+                } else {
+                  onChange(leaderValue);
+                }
+              }}
+            >
+              {isSameAsLeader && <Check className="w-3 h-3 text-white" />}
+            </span>
+            <span
+              className="text-sm font-mono text-slate-400 group-hover:text-slate-300 transition-colors"
+              onClick={() => {
+                if (isSameAsLeader) {
+                  onChange('');
+                } else {
+                  onChange(leaderValue);
+                }
+              }}
+            >
+              Same as Leader ({leaderValue})
+            </span>
+          </label>
+        )}
+        {!isSameAsLeader && (
+          <ComboboxInput
+            value={(value as string) || ''}
+            onChange={onChange}
+            suggestions={question.suggestions}
+            placeholder={question.placeholder || ''}
+          />
+        )}
+        {isSameAsLeader && (
+          <div className="w-full bg-transparent border-b-2 border-orange-500/50 text-xl md:text-2xl py-2 font-mono text-orange-400 tracking-wide opacity-60">
+            {leaderValue}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <input
       ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
@@ -633,7 +791,21 @@ export default function HackathonForm() {
   });
 
   const totalSteps = QUESTIONS.length;
-  // Progress is separate from "Folder" but we can integrate it.
+
+  // Compute visible step count (questions whose conditions are met)
+  const visibleSteps = React.useMemo(() => {
+    return QUESTIONS.filter(q => !q.condition || q.condition(answers)).length;
+  }, [answers]);
+
+  // Compute visible step index (1-based) for current position
+  const visibleStepIndex = React.useMemo(() => {
+    let idx = 0;
+    for (let i = 0; i <= currentStep; i++) {
+      const q = QUESTIONS[i];
+      if (!q.condition || q.condition(answers)) idx++;
+    }
+    return idx;
+  }, [currentStep, answers]);
 
   const currentQuestion = QUESTIONS[currentStep];
 
@@ -656,29 +828,26 @@ export default function HackathonForm() {
   const sendOtp = React.useCallback(async () => {
       setLoading(true);
       setErrorMsg("");
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setShowOtpInput(true); setLoading(false); alert("CODE: 123456"); }, 1000);
-          return;
-      }
+      
       try {
           const res = await fetch('/api/send-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 email: answers.leaderEmail,
-                purpose: 'REGISTRATION' // ✅ NEW: Include purpose
+                purpose: 'REGISTRATION',
+                track: answers.track?.includes('IdeaSprint') ? 'IDEA_SPRINT' : 'BUILD_STORM'
               }),
           });
           const response = await res.json();
           
-          // ✅ NEW: Handle structured response
           if (!response.success) {
             setErrorMsg(response.message);
             setLoading(false);
             return;
           }
           
-          // ✅ NEW: Show debug OTP in development
+          // Show debug OTP in development
           if (response.debugOtp) {
             console.log('Debug OTP:', response.debugOtp);
             alert(`Development Mode - OTP: ${response.debugOtp}`);
@@ -690,39 +859,42 @@ export default function HackathonForm() {
       } finally {
           setLoading(false);
       }
-  }, [answers.leaderEmail]);
+  }, [answers.leaderEmail, answers.track]);
 
   const submitForm = React.useCallback(async () => {
       setLoading(true);
 
-      // DEMO MODE BYPASS
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setIsCompleted(true); setLoading(false); }, 1500); 
-          return;
+      // Client-side duplicate email check
+      const emailFields = [
+        answers.leaderEmail,
+        answers.member2Email,
+        answers.member3Email,
+        answers.member4Email,
+      ].filter((e): e is string => typeof e === 'string' && e.trim() !== '');
+
+      const normalizedEmails = emailFields.map(e => e.toLowerCase().trim());
+      const uniqueEmails = new Set(normalizedEmails);
+      if (uniqueEmails.size !== normalizedEmails.length) {
+        const dupes = normalizedEmails.filter((e, i) => normalizedEmails.indexOf(e) !== i);
+        setErrorMsg(`Duplicate email found: ${dupes[0]}. Each team member must have a unique email.`);
+        setLoading(false);
+        return;
       }
       
       try {
           // Flatten College Logic
           const finalAnswers = { ...answers };
-          if (finalAnswers.member2CollegeSame && finalAnswers.member2CollegeSame.includes("Same as Leader")) finalAnswers.member2College = finalAnswers.leaderCollege;
-          if (finalAnswers.member3CollegeSame && finalAnswers.member3CollegeSame.includes("Same as Leader")) finalAnswers.member3College = finalAnswers.leaderCollege;
-          if (finalAnswers.member4CollegeSame && finalAnswers.member4CollegeSame.includes("Same as Leader")) finalAnswers.member4College = finalAnswers.leaderCollege;
+          // "Same as Leader" college values are already set inline by the combobox checkbox
 
           if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
           if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
-
-          // ✅ NEW: Get session token
-          const sessionToken = localStorage.getItem('session_token');
 
           const res = await fetch('/api/register', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                // ✅ NEW: Include authorization header
-                ...(sessionToken && { 'Authorization': `Bearer ${sessionToken}` }),
               },
               body: JSON.stringify({
-                // ✅ NEW: Include idempotency key
                 idempotencyKey,
                 ...finalAnswers,
               }),
@@ -730,14 +902,12 @@ export default function HackathonForm() {
           
           const response = await res.json();
           
-          // ✅ NEW: Handle structured response
           if (!response.success) {
             setErrorMsg(response.message);
             setLoading(false);
             return;
           }
           
-          // ✅ NEW: Log success data
           console.log('Registration successful:', response.data);
           setIsCompleted(true);
       } catch (err: unknown) {
@@ -808,19 +978,7 @@ export default function HackathonForm() {
   const verifyOtp = React.useCallback(async () => {
       setLoading(true);
       setErrorMsg("");
-      if (answers.leaderEmail === "demo@indianext.in") {
-           if (otpValue === "123456") {
-              setTimeout(() => {
-                  setEmailVerified(true);
-                  setShowOtpInput(false);
-                  const nextStep = getNextValidStep(currentStep, 1, answers);
-                  setDirection(1);
-                  setCurrentStep(nextStep);
-                  setLoading(false);
-              }, 1000);
-              return;
-           } else { setErrorMsg("INVALID CODE"); setLoading(false); return; }
-      }
+      
       try {
           const res = await fetch('/api/verify-otp', {
               method: 'POST',
@@ -828,25 +986,23 @@ export default function HackathonForm() {
               body: JSON.stringify({ 
                 email: answers.leaderEmail, 
                 otp: otpValue,
-                purpose: 'REGISTRATION' // ✅ NEW: Include purpose
+                purpose: 'REGISTRATION'
               }),
           });
           
           const response = await res.json();
           
-          // ✅ NEW: Handle structured response
           if (!response.success) {
             setErrorMsg(response.message);
             setLoading(false);
             return;
           }
           
-          // ✅ NEW: Store session token
-          if (response.data?.session) {
-            localStorage.setItem('session_token', response.data.session.token);
-            localStorage.setItem('session_expires', response.data.session.expiresAt);
+          // Session is now stored in HttpOnly cookie by server
+          if (response.data?.user) {
+            // Only store non-sensitive user info for UI purposes
             localStorage.setItem('user_email', response.data.user.email);
-            console.log('Session token stored:', response.data.session.token.substring(0, 10) + '...');
+            console.log('OTP verified successfully for:', response.data.user.email);
           }
           
           setEmailVerified(true);
@@ -943,7 +1099,7 @@ export default function HackathonForm() {
                        >
                            <div className="flex items-center gap-2 mb-6">
                                <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                                   STEP {currentStep + 1} / {totalSteps}
+                                   STEP {visibleStepIndex} / {visibleSteps}
                                </span>
                                {currentQuestion.required && <span className="text-red-500 text-xs uppercase tracking-wider">* Mandatory</span>}
                            </div>
@@ -964,6 +1120,7 @@ export default function HackathonForm() {
                                     value={answers[currentQuestion.id]} 
                                     onChange={handleAnswer} 
                                     onCheckbox={handleCheckbox}
+                                    answers={answers}
                                />
                            </div>
                            

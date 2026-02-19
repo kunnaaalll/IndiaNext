@@ -151,13 +151,14 @@ model Team {
   @@index([status, createdAt])
   @@index([rank])
   @@index([createdBy])
+  @@unique([createdBy, track]) // One team per leader per track (belt-and-suspenders with transaction check)
   @@map("teams")
 }
 
 model TeamMember {
   id        String     @id @default(cuid())
   role      MemberRole @default(MEMBER)
-  userId    String
+  userId    String     @unique // Each user can only be in ONE team (global uniqueness)
   teamId    String
   
   // Member-specific data
@@ -167,9 +168,7 @@ model TeamMember {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, teamId])
   @@index([teamId])
-  @@index([userId])
   @@map("team_members")
 }
 
@@ -377,6 +376,70 @@ model EmailCampaign {
   @@index([status])
   @@index([createdAt])
   @@map("email_campaigns")
+}
+
+// ═══════════════════════════════════════════════════════════
+// EMAIL LOGGING & TRACKING
+// ═══════════════════════════════════════════════════════════
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  to          String
+  from        String
+  subject     String
+  type        EmailType
+  status      EmailStatus @default(PENDING)
+  provider    String   @default("resend")
+  messageId   String?  @unique
+  error       String?  @db.Text
+  attempts    Int      @default(0)
+  lastAttempt DateTime?
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  openedAt    DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([to])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([messageId])
+  @@map("email_logs")
+}
+
+enum EmailType {
+  OTP
+  CONFIRMATION
+  MEMBER_NOTIFICATION
+  STATUS_UPDATE
+  REMINDER
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  DELIVERED
+  OPENED
+  BOUNCED
+  FAILED
+}
+
+// ═══════════════════════════════════════════════════════════
+// IDEMPOTENCY
+// ═══════════════════════════════════════════════════════════
+
+model IdempotencyKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  response  Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime // 24 hours from creation
+  
+  @@index([key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }
 
 // ═══════════════════════════════════════════════════════════

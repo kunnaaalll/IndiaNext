@@ -20,16 +20,8 @@ export function getTRPCClient() {
       httpBatchLink({
         url: `${getBaseUrl()}/api/trpc`,
         transformer: superjson,
-        headers() {
-          // Get token from cookie or localStorage
-          const token = typeof window !== "undefined" 
-            ? localStorage.getItem("session_token")
-            : null;
-          
-          return {
-            authorization: token ? `Bearer ${token}` : "",
-          };
-        },
+        // Session token is sent automatically via HttpOnly cookie.
+        // No Authorization header needed — cookies are included by the browser.
       }),
     ],
   });

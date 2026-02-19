@@ -554,6 +554,24 @@ export const adminRouter = router({
       }
       
       const userId = ctx.session.user.id;
+
+      // ✅ SECURITY: Prevent privilege escalation
+      // Only SUPER_ADMIN can grant ADMIN or SUPER_ADMIN roles
+      const privilegedRoles = ["ADMIN", "SUPER_ADMIN"];
+      if (privilegedRoles.includes(input.role) && ctx.session.user.role !== "SUPER_ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only SUPER_ADMIN can grant admin-level roles",
+        });
+      }
+
+      // Prevent demoting yourself
+      if (input.userId === userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot change your own role",
+        });
+      }
       
       const user = await ctx.prisma.user.update({
         where: { id: input.userId },
@@ -659,7 +677,20 @@ export const adminRouter = router({
         where,
         include: {
           members: {
-            include: { user: true },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  college: true,
+                  degree: true,
+                  year: true,
+                  role: true,
+                },
+              },
+            },
           },
           submission: true,
         },

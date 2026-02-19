@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { rateLimitByIP, createRateLimitHeaders } from '@/lib/rate-limit';
+import { rateLimitRoute, createRateLimitHeaders } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { z } from 'zod';
 import type { OtpPurpose } from '@prisma/client';
@@ -14,9 +14,13 @@ const VerifyOtpSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // ✅ FIXED: IP-based rate limiting on verify endpoint
-    // 20 requests per minute per IP (prevents brute force from single IP)
-    const rateLimit = await rateLimitByIP(req, 20, 60);
+    // Parse body once (used for both rate limiting and validation)
+    const body = await req.json();
+
+    // ✅ Sliding-window rate limiting (IP + Email)
+    // Limits centralised in lib/rate-limit.ts → RATE_LIMITS['verify-otp']
+    // IP: 20/min, Email: 5/5min — prevents brute-force from single IP or per email
+    const rateLimit = await rateLimitRoute('verify-otp', req, body.email ?? '');
 
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -33,8 +37,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Parse and validate input
-    const body = await req.json();
+    // Validate input
     const validation = VerifyOtpSchema.safeParse(body);
 
     if (!validation.success) {
@@ -212,7 +215,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(
+    // ✅ SECURITY FIX: Set session as HttpOnly cookie instead of returning in response
+    const response = NextResponse.json(
       {
         success: true,
         message: 'OTP verified successfully',
@@ -223,16 +227,24 @@ export async function POST(req: Request) {
             name: user.name,
             role: user.role,
           },
-          session: {
-            token: session.token,
-            expiresAt: session.expiresAt,
-          },
+          // ❌ DO NOT return token in response body
         },
       },
       {
         headers: createRateLimitHeaders(rateLimit),
       }
     );
+
+    // Set HttpOnly, Secure, SameSite cookie
+    response.cookies.set('session_token', session.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      expires: expiresAt,
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('[OTP Verify] Error:', error);
 

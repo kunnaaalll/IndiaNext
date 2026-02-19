@@ -1,215 +1,293 @@
-// Rate Limiting with Redis (Upstash)
+/**
+ * Rate Limiting System — Sliding Window Counter
+ *
+ * Algorithm:
+ *   estimatedCount = floor(prevWindowCount × (1 − elapsed/window)) + currentWindowCount
+ *   This prevents the burst-at-boundary problem of fixed-window counters.
+ *
+ * Storage:
+ *   Production → Redis (Upstash), atomic pipeline (INCR + GET + EXPIRE in 1 RTT)
+ *   Development → In-memory Map (auto-cleaned every 5 min)
+ *
+ * Route configs are centralised in RATE_LIMITS so every limit lives in one place.
+ */
+
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis client
-const redis = process.env.UPSTASH_REDIS_URL && process.env.UPSTASH_REDIS_TOKEN
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_URL,
-      token: process.env.UPSTASH_REDIS_TOKEN,
-    })
-  : null;
+// ─── Redis (lazy singleton) ────────────────────────────────────────────────────
 
-// In-memory fallback for development (single instance only)
-const memoryStore = new Map<string, { count: number; resetAt: number }>();
+let _redis: Redis | null = null;
 
-interface RateLimitResult {
+function getRedis(): Redis | null {
+  if (_redis) return _redis;
+  const { UPSTASH_REDIS_URL, UPSTASH_REDIS_TOKEN } = process.env;
+  if (UPSTASH_REDIS_URL && UPSTASH_REDIS_TOKEN) {
+    _redis = new Redis({ url: UPSTASH_REDIS_URL, token: UPSTASH_REDIS_TOKEN });
+  }
+  return _redis;
+}
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+
+export interface RateLimitResult {
   success: boolean;
   limit: number;
   remaining: number;
-  reset: number;
+  reset: number; // epoch ms — start of next window
 }
 
-/**
- * Check rate limit using Redis (production) or in-memory (development)
- * 
- * @param identifier - Unique identifier (email, IP, etc.)
- * @param limit - Maximum number of requests
- * @param windowSeconds - Time window in seconds
- * @returns Rate limit result
- */
-export async function checkRateLimit(
+interface RateLimitConfig {
+  /** Maximum requests allowed in the window */
+  limit: number;
+  /** Window size in seconds */
+  window: number;
+}
+
+// ─── Centralised route configs ─────────────────────────────────────────────────
+// Dev values are relaxed for testing; production values are tight.
+
+const isDev = () => process.env.NODE_ENV === 'development';
+
+export const RATE_LIMITS = {
+  /** OTP sending — combined IP + email */
+  'send-otp': {
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 10, window: 60 }),
+    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  3, window: 60 }),
+  },
+  /** OTP verification — combined IP + email (tight to block brute-force) */
+  'verify-otp': {
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 20, window: 60  }),
+    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  5, window: 300 }),
+  },
+  /** Registration — IP only */
+  'register': {
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 :  5, window: 3600 }),
+  },
+} as const;
+
+// ─── In-memory store (sliding window) ──────────────────────────────────────────
+
+interface WindowRecord { count: number; windowStart: number }
+
+const memoryStore = new Map<string, WindowRecord[]>();
+
+// ─── Sliding window — Redis ────────────────────────────────────────────────────
+
+async function slidingWindowRedis(
   identifier: string,
   limit: number,
-  windowSeconds: number
+  windowSeconds: number,
 ): Promise<RateLimitResult> {
-  const key = `ratelimit:${identifier}`;
+  const client = getRedis()!;
   const now = Date.now();
-  const resetTime = now + windowSeconds * 1000;
+  const windowMs = windowSeconds * 1000;
+  const currentStart = Math.floor(now / windowMs) * windowMs;
 
-  // Use Redis if available (production)
-  if (redis) {
-    try {
-      // Increment counter
-      const count = await redis.incr(key);
+  const currentKey  = `rl:${identifier}:${currentStart}`;
+  const previousKey = `rl:${identifier}:${currentStart - windowMs}`;
 
-      // Set expiry on first request
-      if (count === 1) {
-        await redis.expire(key, windowSeconds);
-      }
+  // Single round-trip: INCR current, GET previous, EXPIRE current
+  const pipe = client.pipeline();
+  pipe.incr(currentKey);
+  pipe.get(previousKey);
+  pipe.expire(currentKey, windowSeconds * 2);
 
-      // Get TTL for reset time
-      const ttl = await redis.ttl(key);
-      const reset = ttl > 0 ? now + ttl * 1000 : resetTime;
+  const results = await pipe.exec();
 
-      return {
-        success: count <= limit,
-        limit,
-        remaining: Math.max(0, limit - count),
-        reset,
-      };
-    } catch (error) {
-      console.error('[Rate Limit] Redis error:', error);
-      // Fall through to memory store on Redis error
-    }
-  }
+  const currentCount  = (results[0] as number) ?? 0;
+  const previousCount = Number(results[1]) || 0;
 
-  // Fallback to in-memory store (development only)
-  console.warn('[Rate Limit] Using in-memory store. Configure Redis for production!');
-  
-  const record = memoryStore.get(key);
-
-  if (!record || now > record.resetAt) {
-    memoryStore.set(key, { count: 1, resetAt: resetTime });
-    return {
-      success: true,
-      limit,
-      remaining: limit - 1,
-      reset: resetTime,
-    };
-  }
-
-  record.count++;
-  const success = record.count <= limit;
+  // Weighted estimate
+  const elapsed = now - currentStart;
+  const weight  = Math.max(0, 1 - elapsed / windowMs);
+  const estimated = Math.floor(previousCount * weight) + currentCount;
 
   return {
-    success,
+    success:   estimated <= limit,
     limit,
-    remaining: Math.max(0, limit - record.count),
-    reset: record.resetAt,
+    remaining: Math.max(0, limit - estimated),
+    reset:     currentStart + windowMs,
   };
 }
 
-/**
- * Rate limit by IP address
- * 
- * @param req - Request object
- * @param limit - Maximum number of requests
- * @param windowSeconds - Time window in seconds
- * @returns Rate limit result
- */
+// ─── Sliding window — Memory ───────────────────────────────────────────────────
+
+function slidingWindowMemory(
+  identifier: string,
+  limit: number,
+  windowSeconds: number,
+): RateLimitResult {
+  const now = Date.now();
+  const windowMs = windowSeconds * 1000;
+  const currentStart  = Math.floor(now / windowMs) * windowMs;
+  const previousStart = currentStart - windowMs;
+
+  const key     = `rl:${identifier}`;
+  const records = memoryStore.get(key) ?? [];
+
+  let currentRec  = records.find(r => r.windowStart === currentStart);
+  const previousRec = records.find(r => r.windowStart === previousStart);
+
+  if (!currentRec) {
+    currentRec = { count: 1, windowStart: currentStart };
+    const kept = [currentRec];
+    if (previousRec) kept.push(previousRec);
+    memoryStore.set(key, kept);
+  } else {
+    currentRec.count++;
+  }
+
+  const elapsed  = now - currentStart;
+  const weight   = Math.max(0, 1 - elapsed / windowMs);
+  const estimated = Math.floor((previousRec?.count ?? 0) * weight) + currentRec.count;
+
+  return {
+    success:   estimated <= limit,
+    limit,
+    remaining: Math.max(0, limit - estimated),
+    reset:     currentStart + windowMs,
+  };
+}
+
+// ─── Core check ────────────────────────────────────────────────────────────────
+
+export async function checkRateLimit(
+  identifier: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<RateLimitResult> {
+  const client = getRedis();
+
+  if (client) {
+    try {
+      return await slidingWindowRedis(identifier, limit, windowSeconds);
+    } catch (err) {
+      console.error('[RateLimit] Redis error, falling back to memory:', err);
+    }
+  } else {
+    console.warn('[RateLimit] No Redis — using in-memory store. Configure Upstash for production!');
+  }
+
+  return slidingWindowMemory(identifier, limit, windowSeconds);
+}
+
+// ─── Convenience helpers ───────────────────────────────────────────────────────
+
 export async function rateLimitByIP(
   req: Request,
   limit: number,
-  windowSeconds: number
+  windowSeconds: number,
 ): Promise<RateLimitResult> {
-  const ip = getClientIP(req);
-  return checkRateLimit(`ip:${ip}`, limit, windowSeconds);
+  return checkRateLimit(`ip:${getClientIP(req)}`, limit, windowSeconds);
 }
 
-/**
- * Rate limit by email
- * 
- * @param email - Email address
- * @param limit - Maximum number of requests
- * @param windowSeconds - Time window in seconds
- * @returns Rate limit result
- */
 export async function rateLimitByEmail(
   email: string,
   limit: number,
-  windowSeconds: number
+  windowSeconds: number,
 ): Promise<RateLimitResult> {
-  return checkRateLimit(`email:${email}`, limit, windowSeconds);
+  return checkRateLimit(`email:${email.toLowerCase().trim()}`, limit, windowSeconds);
 }
 
 /**
- * Combined rate limit (both IP and email must pass)
- * 
- * @param req - Request object
- * @param email - Email address
- * @param ipLimit - IP rate limit
- * @param emailLimit - Email rate limit
- * @param windowSeconds - Time window in seconds
- * @returns Rate limit result (most restrictive)
+ * Combined IP + email rate limit (both must pass).
+ * Kept for backward-compat — prefer `rateLimitRoute()` for new code.
  */
 export async function rateLimitCombined(
   req: Request,
   email: string,
   ipLimit: number,
   emailLimit: number,
-  windowSeconds: number
+  windowSeconds: number,
 ): Promise<RateLimitResult> {
-  const [ipResult, emailResult] = await Promise.all([
+  const [ipRes, emailRes] = await Promise.all([
     rateLimitByIP(req, ipLimit, windowSeconds),
     rateLimitByEmail(email, emailLimit, windowSeconds),
   ]);
 
-  // Return the most restrictive result
-  if (!ipResult.success) return ipResult;
-  if (!emailResult.success) return emailResult;
+  if (!ipRes.success)    return ipRes;
+  if (!emailRes.success) return emailRes;
 
   return {
-    success: true,
-    limit: Math.min(ipResult.limit, emailResult.limit),
-    remaining: Math.min(ipResult.remaining, emailResult.remaining),
-    reset: Math.max(ipResult.reset, emailResult.reset),
+    success:   true,
+    limit:     Math.min(ipRes.limit,     emailRes.limit),
+    remaining: Math.min(ipRes.remaining, emailRes.remaining),
+    reset:     Math.max(ipRes.reset,     emailRes.reset),
   };
 }
 
+// ─── Route-level helpers (use centralised configs) ─────────────────────────────
+
 /**
- * Get client IP address from request
- * 
- * @param req - Request object
- * @returns IP address
+ * Rate limit a route that uses both IP + email limits (send-otp, verify-otp).
+ * Each leg uses its own window size from RATE_LIMITS.
  */
+export async function rateLimitRoute(
+  route: 'send-otp' | 'verify-otp',
+  req: Request,
+  email: string,
+): Promise<RateLimitResult> {
+  const cfg = RATE_LIMITS[route];
+  const ipCfg    = cfg.ip();
+  const emailCfg = cfg.email();
+
+  const [ipRes, emailRes] = await Promise.all([
+    rateLimitByIP(req, ipCfg.limit, ipCfg.window),
+    rateLimitByEmail(email, emailCfg.limit, emailCfg.window),
+  ]);
+
+  if (!ipRes.success)    return ipRes;
+  if (!emailRes.success) return emailRes;
+
+  return {
+    success:   true,
+    limit:     Math.min(ipRes.limit,     emailRes.limit),
+    remaining: Math.min(ipRes.remaining, emailRes.remaining),
+    reset:     Math.max(ipRes.reset,     emailRes.reset),
+  };
+}
+
+/** Rate limit the register endpoint (IP-only, uses centralised config). */
+export async function rateLimitRegister(req: Request): Promise<RateLimitResult> {
+  const { limit, window } = RATE_LIMITS.register.ip();
+  return rateLimitByIP(req, limit, window);
+}
+
+// ─── Header helper ─────────────────────────────────────────────────────────────
+
 export function getClientIP(req: Request): string {
-  // Check various headers for IP address
   const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
+  if (forwarded) return forwarded.split(',')[0].trim();
 
   const realIP = req.headers.get('x-real-ip');
-  if (realIP) {
-    return realIP;
-  }
+  if (realIP) return realIP;
 
-  const cfConnectingIP = req.headers.get('cf-connecting-ip');
-  if (cfConnectingIP) {
-    return cfConnectingIP;
-  }
+  const cfIP = req.headers.get('cf-connecting-ip');
+  if (cfIP) return cfIP;
 
   return 'unknown';
 }
 
-/**
- * Create rate limit response headers
- * 
- * @param result - Rate limit result
- * @returns Headers object
- */
 export function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
   return {
-    'X-RateLimit-Limit': result.limit.toString(),
+    'X-RateLimit-Limit':     result.limit.toString(),
     'X-RateLimit-Remaining': result.remaining.toString(),
-    'X-RateLimit-Reset': new Date(result.reset).toISOString(),
+    'X-RateLimit-Reset':     new Date(result.reset).toISOString(),
   };
 }
 
-/**
- * Clean up expired entries from memory store (development only)
- * Call this periodically if using in-memory store
- */
-export function cleanupMemoryStore() {
+// ─── Memory store cleanup ──────────────────────────────────────────────────────
+
+export function cleanupMemoryStore(): void {
   const now = Date.now();
-  for (const [key, record] of memoryStore.entries()) {
-    if (now > record.resetAt) {
-      memoryStore.delete(key);
-    }
+  const MAX_AGE = 2 * 3600 * 1000; // 2 hours
+  for (const [key, records] of memoryStore.entries()) {
+    const valid = records.filter(r => now - r.windowStart < MAX_AGE);
+    if (valid.length === 0) memoryStore.delete(key);
+    else memoryStore.set(key, valid);
   }
 }
 
-// Clean up memory store every 5 minutes (development only)
-if (!redis && typeof setInterval !== 'undefined') {
+if (typeof setInterval !== 'undefined') {
   setInterval(cleanupMemoryStore, 5 * 60 * 1000);
 }

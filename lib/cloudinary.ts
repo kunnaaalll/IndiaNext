@@ -31,6 +31,10 @@ export async function getUploadSignature(folder: string = "indianext") {
   };
 }
 
+// Maximum upload size: 10 MB
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'application/pdf'];
+
 // Upload file from server (if needed)
 export async function uploadFile(
   file: Buffer,
@@ -38,8 +42,23 @@ export async function uploadFile(
     folder?: string;
     resourceType?: "image" | "video" | "raw" | "auto";
     publicId?: string;
+    mimeType?: string;
   } = {}
 ) {
+  // Validate file size
+  if (file.length > MAX_UPLOAD_SIZE) {
+    throw new Error(`File too large. Maximum size is ${MAX_UPLOAD_SIZE / 1024 / 1024} MB.`);
+  }
+
+  if (file.length === 0) {
+    throw new Error('File is empty.');
+  }
+
+  // Validate MIME type if provided
+  if (options.mimeType && !ALLOWED_MIME_PREFIXES.some(p => options.mimeType!.startsWith(p))) {
+    throw new Error(`Unsupported file type: ${options.mimeType}`);
+  }
+
   try {
     const result = await cloudinary.uploader.upload(
       `data:${options.resourceType || "auto"};base64,${file.toString("base64")}`,
@@ -66,6 +85,11 @@ export async function uploadFile(
 
 // Delete file
 export async function deleteFile(publicId: string) {
+  // Validate publicId format to prevent path traversal
+  if (!publicId || /[<>"|?*]/.test(publicId)) {
+    throw new Error('Invalid public ID');
+  }
+
   try {
     await cloudinary.uploader.destroy(publicId);
     return { success: true };

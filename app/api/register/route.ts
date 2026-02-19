@@ -1,17 +1,22 @@
-// REST Registration Endpoint
-//
-// Part of the PUBLIC registration flow (REST-based, OTP auth):
-//   /api/send-otp   → Generate & email OTP
-//   /api/verify-otp → Verify OTP, create session
-//   /api/register   → Create team + submission (this file)
-//
-// The ADMIN panel uses tRPC (/api/trpc/*) instead — see server/trpc.ts.
-
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { rateLimitByIP, createRateLimitHeaders } from '@/lib/rate-limit';
+import { rateLimitRegister, createRateLimitHeaders } from '@/lib/rate-limit';
+import { sendRegistrationBatchEmails } from '@/lib/email';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
+
+// Idempotency response type
+interface IdempotencyResponse {
+  success: boolean;
+  message: string;
+  data: {
+    teamId: string;
+    submissionId: string;
+    teamName: string;
+    track: 'IDEA_SPRINT' | 'BUILD_STORM';
+  };
+}
 
 // Comprehensive input validation schema
 const RegisterSchema = z.object({
@@ -62,47 +67,73 @@ const RegisterSchema = z.object({
   // Meta
   hearAbout: z.string().optional(),
   additionalNotes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Collect all non-empty emails
+  const emails: string[] = [data.leaderEmail];
+  if (data.member2Email) emails.push(data.member2Email);
+  if (data.member3Email) emails.push(data.member3Email);
+  if (data.member4Email) emails.push(data.member4Email);
+
+  // Normalize to lowercase and check for duplicates
+  const normalized = emails.map(e => e.toLowerCase().trim());
+  const seen = new Set<string>();
+  for (let i = 0; i < normalized.length; i++) {
+    if (seen.has(normalized[i])) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Duplicate email: ${emails[i]} — each team member must have a unique email`,
+        path: i === 0 ? ['leaderEmail'] : [`member${i + 1}Email`],
+      });
+    }
+    seen.add(normalized[i]);
+  }
 });
 
-// Idempotency store (use Redis in production)
-interface IdempotencyResponse {
-  success: boolean;
-  message: string;
-  data: {
-    teamId: string;
-    submissionId: string;
-    teamName: string;
-    track: 'IDEA_SPRINT' | 'BUILD_STORM';
-  };
-}
-
-const idempotencyStore = new Map<string, { response: IdempotencyResponse; timestamp: number }>();
-
-function checkIdempotency(key: string): IdempotencyResponse | null {
-  const record = idempotencyStore.get(key);
-  if (!record) return null;
-  
-  // Expire after 24 hours
-  if (Date.now() - record.timestamp > 24 * 60 * 60 * 1000) {
-    idempotencyStore.delete(key);
+// Idempotency using database (serverless-safe)
+async function checkIdempotency(key: string): Promise<IdempotencyResponse | null> {
+  try {
+    const record = await prisma.idempotencyKey.findUnique({
+      where: { key },
+    });
+    
+    if (!record) return null;
+    
+    // Check if expired
+    if (record.expiresAt < new Date()) {
+      // Clean up expired record
+      await prisma.idempotencyKey.delete({ where: { key } });
+      return null;
+    }
+    
+    return record.response as unknown as IdempotencyResponse;
+  } catch (error) {
+    console.error('[Idempotency] Check failed:', error);
     return null;
   }
-  
-  return record.response;
 }
 
-function storeIdempotency(key: string, response: IdempotencyResponse) {
-  idempotencyStore.set(key, {
-    response,
-    timestamp: Date.now(),
-  });
+async function storeIdempotency(key: string, response: IdempotencyResponse) {
+  try {
+    await prisma.idempotencyKey.create({
+      data: {
+        key,
+        response: response as any,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+  } catch (error) {
+    // Ignore duplicate key errors (race condition)
+    if (!(error instanceof Error && error.message.includes('Unique constraint'))) {
+      console.error('[Idempotency] Store failed:', error);
+    }
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    // ✅ FIXED: IP-based rate limiting on register endpoint
-    // 5 registrations per hour per IP (prevents spam registrations)
-    const rateLimit = await rateLimitByIP(req, 5, 3600);
+    // ✅ Sliding-window rate limiting (IP only)
+    // Limits centralised in lib/rate-limit.ts → RATE_LIMITS['register']
+    const rateLimit = await rateLimitRegister(req);
 
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -142,14 +173,59 @@ export async function POST(req: Request) {
 
     // Check idempotency
     if (data.idempotencyKey) {
-      const cachedResponse = checkIdempotency(data.idempotencyKey);
+      const cachedResponse = await checkIdempotency(data.idempotencyKey);
       if (cachedResponse) {
         console.log(`[Register] Returning cached response for idempotency key: ${data.idempotencyKey}`);
         return NextResponse.json(cachedResponse);
       }
     }
 
-    // Verify OTP was verified
+    // Verify OTP was verified AND validate session token
+    // ✅ SECURITY FIX: Validate session token from cookie
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session_token')?.value;
+    
+    if (!sessionToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'UNAUTHORIZED',
+          message: 'Session token required. Please verify your email first.',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Validate session token
+    const session = await prisma.session.findUnique({
+      where: { token: sessionToken },
+      include: { user: true },
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SESSION_EXPIRED',
+          message: 'Session expired. Please verify your email again.',
+        },
+        { status: 401 }
+      );
+    }
+
+    // Verify session user matches the leader email
+    if (session.user.email !== data.leaderEmail) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'EMAIL_MISMATCH',
+          message: 'Session email does not match leader email.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Verify OTP was verified for this email
     const otpRecord = await prisma.otp.findUnique({
       where: {
         email_purpose: {
@@ -240,27 +316,39 @@ export async function POST(req: Request) {
       });
     }
 
-    // Create team with all related data in a transaction
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Check if leader already has a team in this track (inside transaction)
-      const existingTeam = await tx.team.findFirst({
-        where: {
-          track: trackEnum,
-          members: {
-            some: {
-              user: {
-                email: data.leaderEmail,
-              },
-              role: 'LEADER',
-            },
-          },
+    // ✅ GLOBAL DUPLICATE CHECK: No email can appear in ANY team (leader or member)
+    const allEmails = members.map(m => m.email.toLowerCase().trim());
+
+    const existingMembers = await prisma.teamMember.findMany({
+      where: {
+        user: { email: { in: allEmails } },
+        team: { deletedAt: null }, // Only count active (non-deleted) teams
+      },
+      include: {
+        user: { select: { email: true } },
+        team: { select: { name: true, track: true } },
+      },
+    });
+
+    if (existingMembers.length > 0) {
+      const dupes = [...new Set(existingMembers.map(m => m.user.email))];
+      const details = existingMembers.map(m =>
+        `${m.user.email} is already in team "${m.team.name}" (${m.team.track})`
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'DUPLICATE_EMAIL',
+          message: `The following email(s) are already registered in another team: ${dupes.join(', ')}`,
+          details,
         },
-      });
+        { status: 409, headers: createRateLimitHeaders(rateLimit) }
+      );
+    }
 
-      if (existingTeam) {
-        throw new Error(`DUPLICATE_REGISTRATION:You have already registered for ${trackEnum === 'IDEA_SPRINT' ? 'IdeaSprint' : 'BuildStorm'}`);
-      }
-
+    // Create team with all related data in a transaction
+    // Increase timeout to 15 seconds for complex operations
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 1. Create or find users for all members
       const userIds: { userId: string; role: 'LEADER' | 'MEMBER' }[] = [];
 
@@ -359,7 +447,21 @@ export async function POST(req: Request) {
         },
       });
 
+      // 6. ✅ SECURITY FIX: Delete OTP record after successful registration
+      await tx.otp.delete({
+        where: {
+          email_purpose: {
+            email: data.leaderEmail,
+            purpose: 'REGISTRATION',
+          },
+        },
+      }).catch(() => {
+        // Ignore if already deleted
+      });
+
       return { team, submission };
+    }, {
+      timeout: 15000, // 15 seconds timeout for complex registration
     });
 
     const response = {
@@ -375,8 +477,32 @@ export async function POST(req: Request) {
 
     // Store idempotency response
     if (data.idempotencyKey) {
-      storeIdempotency(data.idempotencyKey, response);
+      await storeIdempotency(data.idempotencyKey, response);
     }
+
+    // ✅ BATCH API: Send ALL registration emails in 1 Resend API call
+    // Async fire-and-forget — don't block the response
+    const trackLabel = trackEnum === 'IDEA_SPRINT' 
+      ? 'IdeaSprint: Build MVP in 24 Hours' 
+      : 'BuildStorm: Solve Problem Statement in 24 Hours';
+
+    sendRegistrationBatchEmails({
+      leaderEmail: data.leaderEmail,
+      teamId: result.team.id,
+      teamName: result.team.name,
+      track: trackLabel,
+      members: members.map(m => ({ name: m.name, email: m.email, role: m.role })),
+      leaderName: data.leaderName,
+    }).then(results => {
+      const failed = results.filter(r => !r.success);
+      if (failed.length > 0) {
+        console.error(`[Register] ${failed.length}/${results.length} email(s) failed in batch`);
+      } else {
+        console.log(`[Register] ✅ All ${results.length} registration email(s) sent via batch API`);
+      }
+    }).catch(err => {
+      console.error('[Register] Batch email send error:', err);
+    });
 
     return NextResponse.json(response, {
       headers: createRateLimitHeaders(rateLimit),
@@ -402,8 +528,8 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: 'DUPLICATE_ENTRY',
-            message: 'A team member is already registered in another team for this track',
+            error: 'DUPLICATE_EMAIL',
+            message: 'One or more email addresses are already registered in another team. Each person can only be in one team.',
           },
           { status: 409 }
         );

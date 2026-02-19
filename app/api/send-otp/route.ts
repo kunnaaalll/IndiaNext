@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendOtpEmail } from '@/lib/email';
-import { rateLimitCombined, createRateLimitHeaders } from '@/lib/rate-limit';
+import { sendOtpEmail, OTP_EXPIRY_MINUTES } from '@/lib/email';
+import { rateLimitRoute, createRateLimitHeaders } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { z } from 'zod';
 import type { OtpPurpose } from '@prisma/client';
@@ -10,6 +10,7 @@ import type { OtpPurpose } from '@prisma/client';
 const SendOtpSchema = z.object({
   email: z.string().email('Invalid email format'),
   purpose: z.enum(['REGISTRATION', 'LOGIN', 'PASSWORD_RESET', 'EMAIL_VERIFICATION']).default('REGISTRATION'),
+  track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']).optional(),
 });
 
 export async function POST(req: Request) {
@@ -30,12 +31,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, purpose } = validation.data;
+    const { email, purpose, track } = validation.data;
 
-    // ✅ FIXED: Combined rate limiting (IP + Email)
-    // IP: 10 requests per minute (prevents spam from single IP)
-    // Email: 3 requests per minute (prevents abuse of specific email)
-    const rateLimit = await rateLimitCombined(req, email, 10, 3, 60);
+    // ✅ Sliding-window rate limiting (IP + Email)
+    // Limits centralised in lib/rate-limit.ts → RATE_LIMITS['send-otp']
+    const rateLimit = await rateLimitRoute('send-otp', req, email);
 
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -52,13 +52,37 @@ export async function POST(req: Request) {
       );
     }
 
+    // ✅ Check if email is already registered in any team (leader or member)
+    if (purpose === 'REGISTRATION') {
+      const existingMembership = await prisma.teamMember.findFirst({
+        where: {
+          user: { email: email.toLowerCase().trim() },
+          team: { deletedAt: null },
+        },
+        include: {
+          team: { select: { name: true, track: true } },
+        },
+      });
+
+      if (existingMembership) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ALREADY_REGISTERED',
+            message: `This email is already registered in team "${existingMembership.team.name}" (${existingMembership.team.track}). Each person can only be in one team.`,
+          },
+          { status: 409, headers: createRateLimitHeaders(rateLimit) }
+        );
+      }
+    }
+
     // Generate 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     
     // Hash OTP before storage (SHA-256)
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
     
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
     // Upsert OTP record with hashed value
     await prisma.otp.upsert({
@@ -84,11 +108,11 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log(`[OTP] Generated for ${email}: ${otp} (hash: ${otpHash.substring(0, 8)}...)`);
+    console.log(`[OTP] Generated for ${email}: hash=${otpHash.substring(0, 8)}... (${purpose})`);
 
     // Send email using Resend
     try {
-      await sendOtpEmail(email, otp);
+      await sendOtpEmail(email, otp, track);
       
       return NextResponse.json(
         {

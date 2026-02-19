@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { rateLimitRegister, createRateLimitHeaders } from '@/lib/rate-limit';
@@ -481,27 +482,31 @@ export async function POST(req: Request) {
     }
 
     // ✅ BATCH API: Send ALL registration emails in 1 Resend API call
-    // Async fire-and-forget — don't block the response
+    // Uses next/server `after()` so Vercel keeps the function alive after the
+    // response is sent, instead of fire-and-forget which gets killed on serverless.
     const trackLabel = trackEnum === 'IDEA_SPRINT' 
       ? 'IdeaSprint: Build MVP in 24 Hours' 
       : 'BuildStorm: Solve Problem Statement in 24 Hours';
 
-    sendRegistrationBatchEmails({
-      leaderEmail: data.leaderEmail,
-      teamId: result.team.id,
-      teamName: result.team.name,
-      track: trackLabel,
-      members: members.map(m => ({ name: m.name, email: m.email, role: m.role })),
-      leaderName: data.leaderName,
-    }).then(results => {
-      const failed = results.filter(r => !r.success);
-      if (failed.length > 0) {
-        console.error(`[Register] ${failed.length}/${results.length} email(s) failed in batch`);
-      } else {
-        console.log(`[Register] ✅ All ${results.length} registration email(s) sent via batch API`);
+    after(async () => {
+      try {
+        const results = await sendRegistrationBatchEmails({
+          leaderEmail: data.leaderEmail,
+          teamId: result.team.id,
+          teamName: result.team.name,
+          track: trackLabel,
+          members: members.map(m => ({ name: m.name, email: m.email, role: m.role })),
+          leaderName: data.leaderName,
+        });
+        const failed = results.filter(r => !r.success);
+        if (failed.length > 0) {
+          console.error(`[Register] ${failed.length}/${results.length} email(s) failed in batch`);
+        } else {
+          console.log(`[Register] ✅ All ${results.length} registration email(s) sent via batch API`);
+        }
+      } catch (err) {
+        console.error('[Register] Batch email send error:', err);
       }
-    }).catch(err => {
-      console.error('[Register] Batch email send error:', err);
     });
 
     return NextResponse.json(response, {

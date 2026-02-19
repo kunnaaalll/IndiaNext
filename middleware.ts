@@ -8,11 +8,24 @@ import type { NextRequest } from 'next/server';
 // originate from our own domain, preventing cross-site request forgery.
 
 export function middleware(request: NextRequest) {
-  const ALLOWED_ORIGINS = new Set([
+  // Build allowed origins from env + Vercel system URLs
+  const origins: string[] = [
     process.env.NEXT_PUBLIC_APP_URL,
     'http://localhost:3000',
     'http://localhost:3001',
-  ].filter(Boolean) as string[]);
+    'https://india-next-one.vercel.app'
+  ].filter(Boolean) as string[];
+
+  // Vercel sets VERCEL_URL (e.g. my-app-abc123.vercel.app) for every deployment
+  if (process.env.VERCEL_URL) {
+    origins.push(`https://${process.env.VERCEL_URL}`);
+  }
+  // Vercel also sets VERCEL_PROJECT_PRODUCTION_URL for the production domain
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    origins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+  }
+
+  const ALLOWED_ORIGINS = new Set(origins);
 
   // Only validate state-changing methods
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {

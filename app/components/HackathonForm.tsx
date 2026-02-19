@@ -3,21 +3,32 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, Check, Loader2, Upload } from 'lucide-react';
+import { Check } from 'lucide-react';
+import Link from 'next/link';
+import { INDIAN_COLLEGES } from '@/lib/data/colleges';
+import { INDIAN_DEGREES } from '@/lib/data/degrees';
 
-// Design Constants
-const THEME = {
-  bg: 'bg-slate-950',
-  text: 'text-slate-100',
-  primary: 'bg-orange-600 hover:bg-orange-700',
-  secondary: 'bg-emerald-600',
-  accent: 'text-orange-500', 
-  border: 'border-slate-800',
-  inputBg: 'bg-slate-900',
-  glow: 'shadow-[0_0_50px_rgba(234,88,12,0.15)]',
-};
+// ── Types ───────────────────────────────────────
+type Answers = Record<string, string | string[] | undefined>;
 
-const QUESTIONS = [
+interface Question {
+  id: string;
+  type: string;
+  question: string;
+  subtext?: string;
+  text?: string;
+  placeholder?: string;
+  options?: string[];
+  suggestions?: string[];
+  sameAsLeaderField?: string;
+  required?: boolean;
+  isEmail?: boolean;
+  noPaste?: boolean;
+  guidance?: string;
+  condition?: (answers: Answers) => boolean;
+}
+
+const QUESTIONS: Question[] = [
   // --- SECTION 1: TRACK SELECTION ---
   {
     id: 'track',
@@ -38,7 +49,7 @@ const QUESTIONS = [
       question: "MISSION BRIEFING",
       subtext: "Review your objective before proceeding.",
       text: "PROBLEM STATEMENT:\n\nDisaster Response Coordination\n\nObjective: Build a real-time, offline-first system to connect flood victims with local rescue teams.",
-      condition: (answers: any) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+      condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
   // --- SECTION 3: TEAM DETAILS ---
@@ -82,16 +93,18 @@ const QUESTIONS = [
   },
   {
     id: 'leaderCollege',
-    type: 'text',
+    type: 'combobox',
     question: "College / University Name",
-    placeholder: "University Name",
+    placeholder: "Search or type your college...",
+    suggestions: INDIAN_COLLEGES,
     required: true,
   },
   {
     id: 'leaderDegree',
-    type: 'text',
+    type: 'combobox',
     question: "Degree / Course",
-    placeholder: "e.g. B.Tech CSE",
+    placeholder: "Search or type your degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
   },
   
@@ -103,7 +116,7 @@ const QUESTIONS = [
     question: "Member 2 Full Name",
     placeholder: "Full Name",
     required: true,
-    condition: (answers: any) => ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member2Email',
@@ -111,35 +124,26 @@ const QUESTIONS = [
     question: "Member 2 Email",
     placeholder: "Email Address",
     required: true,
-    condition: (answers: any) => ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member2CollegeSame',
-    type: 'checkbox',
-    question: "Member 2 College",
-    options: ["Same as Leader"],
-    required: false,
-    condition: (answers: any) => ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member2College',
-    type: 'text',
+    type: 'combobox',
     question: "Member 2 College Name",
-    placeholder: "College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
     required: true,
-    condition: (answers: any) => {
-        const isMember = ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize);
-        const isSame = answers.member2CollegeSame && answers.member2CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member2Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 2 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
-    condition: (answers: any) => ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
 
   // Member 3
@@ -149,7 +153,7 @@ const QUESTIONS = [
     question: "Member 3 Full Name",
     placeholder: "Full Name",
     required: true,
-    condition: (answers: any) => ["3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member3Email',
@@ -157,35 +161,26 @@ const QUESTIONS = [
     question: "Member 3 Email",
     placeholder: "Email Address",
     required: true,
-    condition: (answers: any) => ["3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member3CollegeSame',
-    type: 'checkbox',
-    question: "Member 3 College",
-    options: ["Same as Leader"],
-    required: false,
-    condition: (answers: any) => ["3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member3College',
-    type: 'text',
+    type: 'combobox',
     question: "Member 3 College Name",
-    placeholder: "College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
     required: true,
-    condition: (answers: any) => {
-        const isMember = ["3 Members", "4 Members"].includes(answers.teamSize);
-        const isSame = answers.member3CollegeSame && answers.member3CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member3Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 3 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
-    condition: (answers: any) => ["3 Members", "4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
 
   // Member 4
@@ -195,7 +190,7 @@ const QUESTIONS = [
     question: "Member 4 Full Name",
     placeholder: "Full Name",
     required: true,
-    condition: (answers: any) => ["4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member4Email',
@@ -203,35 +198,26 @@ const QUESTIONS = [
     question: "Member 4 Email",
     placeholder: "Email Address",
     required: true,
-    condition: (answers: any) => ["4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member4CollegeSame',
-    type: 'checkbox',
-    question: "Member 4 College",
-    options: ["Same as Leader"],
-    required: false,
-    condition: (answers: any) => ["4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member4College',
-    type: 'text',
+    type: 'combobox',
     question: "Member 4 College Name",
-    placeholder: "College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
     required: true,
-    condition: (answers: any) => {
-        const isMember = ["4 Members"].includes(answers.teamSize);
-        const isSame = answers.member4CollegeSame && answers.member4CollegeSame.includes("Same as Leader");
-        return isMember && !isSame;
-    },
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
   {
     id: 'member4Degree',
-    type: 'text',
+    type: 'combobox',
     question: "Member 4 Degree/Course",
-    placeholder: "e.g. BTech CSE",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
     required: true,
-    condition: (answers: any) => ["4 Members"].includes(answers.teamSize),
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
 
   // --- SECTION 6: SUBMISSION DETAILS (TRACK 1) ---
@@ -241,7 +227,7 @@ const QUESTIONS = [
     question: "Idea Title",
     placeholder: "Title of your idea",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'problemStatement',
@@ -250,7 +236,7 @@ const QUESTIONS = [
     subtext: "Describe the problem clearly in 4–6 lines.",
     placeholder: "The problem we are solving is...",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'proposedSolution',
@@ -259,7 +245,7 @@ const QUESTIONS = [
     subtext: "Explain your idea and approach.",
     placeholder: "Our solution is...",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
     noPaste: true,
     guidance: "Suggested Format:\n\n1. The Gap: What is missing today?\n2. The Solution: Your core value proposition.\n3. Implementation: How will you build it?\n4. Feasibility: Why is this possible now?",
   },
@@ -269,7 +255,7 @@ const QUESTIONS = [
     question: "Target Users / Beneficiaries",
     placeholder: "e.g. Students, Hospitals, Small Businesses",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'expectedImpact',
@@ -277,7 +263,7 @@ const QUESTIONS = [
     question: "Expected Impact",
     placeholder: "Social or economic impact...",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'techStack',
@@ -285,7 +271,7 @@ const QUESTIONS = [
     question: "Technology Stack (Recommended)",
     placeholder: "e.g. React, Python, AI/ML, Blockchain",
     required: false,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'docLink',
@@ -294,7 +280,7 @@ const QUESTIONS = [
     subtext: "Upload Idea Deck (PDF), Prototype, or Research to Drive/Dropbox and paste public link here. (Max 10 slides)",
     placeholder: "https://drive.google.com/...",
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
     id: 'ideaRules',
@@ -311,7 +297,7 @@ const QUESTIONS = [
       "I agree to maintain respectful communication."
     ],
     required: true,
-    condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
       id: 'ideaAdditionalNotes',
@@ -319,7 +305,7 @@ const QUESTIONS = [
       question: "Additional Notes / Message",
       placeholder: "Any special requirements...",
       required: false,
-      condition: (answers: any) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+      condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
 
 
@@ -331,7 +317,7 @@ const QUESTIONS = [
     subtext: "Describe how you plan to solve the given problem (without copy-paste).",
     placeholder: "Our approach...",
     required: true,
-    condition: (answers: any) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+    condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
     noPaste: true,
     guidance: "PROBLEM STATEMENT:\nDisaster Response Coordination - Build a real-time, offline-first system to connect flood victims with local rescue teams.\n\nSuggested Response Pattern:\n\n1. Analysis: Breakdown of the specific problem statement.\n2. Technical Approach: Architecture & Stack choice.\n3. Innovation: What makes your fix unique?\n4. Execution Plan: 24-hour timeline strategy.",
   },
@@ -341,7 +327,7 @@ const QUESTIONS = [
     question: "GitHub Team Repo Link",
     placeholder: "https://github.com/...",
     required: false,
-    condition: (answers: any) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+    condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
   {
     id: 'buildRules',
@@ -358,7 +344,7 @@ const QUESTIONS = [
       "I agree organizers decision is final."
     ],
     required: true,
-    condition: (answers: any) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+    condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
     {
       id: 'buildAdditionalNotes',
@@ -366,7 +352,7 @@ const QUESTIONS = [
       question: "Additional Notes / Special Requirements",
       placeholder: "Any special requirements...",
       required: false,
-      condition: (answers: any) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+      condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
   // --- COMMON FINAL SECTION ---
@@ -400,7 +386,8 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
 
      <div className="z-10 text-center">
         <div className="inline-block border border-orange-500/50 bg-orange-500/10 px-3 py-1 mb-6 text-orange-400 text-xs tracking-[0.2em] uppercase">
-            // Classified Access
+            {/* Classified Access */}
+            {`// Classified Access`}
         </div>
         <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
           India<span className="text-orange-500">Next</span>
@@ -433,14 +420,137 @@ const ThankYouScreen = ({ track }: { track: string }) => (
            Subject registered for protocol: <strong className="text-white">{track}</strong>.<br/>
            Directives have been forwarded to the designated communication channel (Email).
          </p>
-         <a href="/" className="inline-block px-6 py-2 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
+         <Link href="/" className="inline-block px-6 py-2 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
              [ Return to HQ ]
-         </a>
+         </Link>
       </div>
    </div>
 );
 
-const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
+// ── Combobox (searchable dropdown + free text) ──
+const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+  placeholder: string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter suggestions based on input (fuzzy: split by space, match all tokens)
+  const filtered = React.useMemo(() => {
+    if (!value || value.length < 2) return [];
+    const tokens = value.toLowerCase().split(/\s+/).filter(Boolean);
+    return suggestions
+      .filter(s => {
+        const lower = s.toLowerCase();
+        return tokens.every(t => lower.includes(t));
+      })
+      .slice(0, 8); // Max 8 suggestions for performance
+  }, [value, suggestions]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightIndex >= 0 && listRef.current) {
+      const item = listRef.current.children[highlightIndex] as HTMLElement;
+      item?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightIndex]);
+
+  // Auto-focus
+  useEffect(() => {
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen || filtered.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev + 1) % filtered.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev - 1 + filtered.length) % filtered.length);
+    } else if (e.key === 'Enter' && highlightIndex >= 0) {
+      e.preventDefault();
+      onChange(filtered[highlightIndex]);
+      setIsOpen(false);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setHighlightIndex(-1);
+          setIsOpen(true);
+        }}
+        onFocus={() => { if (value && value.length >= 2) setIsOpen(true); }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder.toUpperCase()}
+        autoComplete="off"
+        className="w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide"
+      />
+
+      {/* Dropdown */}
+      {isOpen && filtered.length > 0 && (
+        <ul
+          ref={listRef}
+          className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-slate-900 border border-slate-700 rounded shadow-2xl"
+        >
+          {filtered.map((item, idx) => (
+            <li
+              key={item}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent input blur
+                onChange(item);
+                setIsOpen(false);
+              }}
+              onMouseEnter={() => setHighlightIndex(idx)}
+              className={`px-4 py-3 cursor-pointer font-mono text-sm transition-colors ${
+                idx === highlightIndex
+                  ? 'bg-orange-500/20 text-orange-400'
+                  : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Hint text */}
+      {value && value.length >= 2 && filtered.length === 0 && isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded text-slate-500 text-xs font-mono">
+          No matches — your custom entry will be used
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -453,10 +563,9 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
   if (question.type === 'choice') {
     return (
       <div className="flex flex-col gap-2 max-w-lg w-full">
-        {question.options.map((opt: string, idx: number) => (
+        {question.options?.map((opt: string, _idx: number) => (
           <OptionButton 
             key={opt} 
-            idx={idx} 
             opt={opt} 
             selected={value === opt} 
             onSelect={() => onChange(opt)} 
@@ -470,7 +579,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
     const selected = value || [];
     return (
       <div className="flex flex-col gap-2 max-w-xl w-full">
-        {question.options.map((opt: string, idx: number) => (
+        {question.options?.map((opt: string, idx: number) => (
            <button
              key={idx}
              onClick={() => onCheckbox(opt)}
@@ -496,7 +605,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
     return (
       <div className="flex flex-col md:flex-row gap-6 w-full">
          <textarea
-            ref={inputRef as any}
+            ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             onPaste={(e) => {
@@ -538,7 +647,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
             <span className="text-xl md:text-2xl text-slate-400 font-mono">+91</span>
          </div>
          <input
-            ref={inputRef as any}
+            ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
             type="tel"
             value={value || ''}
             maxLength={10}
@@ -568,9 +677,65 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
       );
   }
 
+  if (question.type === 'combobox' && question.suggestions) {
+    const leaderField = question.sameAsLeaderField;
+    const leaderValue = leaderField ? (answers[leaderField] as string) || '' : '';
+    const isSameAsLeader = leaderField ? (value as string) === leaderValue && leaderValue !== '' : false;
+
+    return (
+      <div className="w-full">
+        {leaderField && leaderValue && (
+          <label className="flex items-center gap-2 mb-3 cursor-pointer select-none group">
+            <span
+              className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                isSameAsLeader
+                  ? 'bg-orange-500 border-orange-500'
+                  : 'border-slate-600 group-hover:border-orange-500/50'
+              }`}
+              onClick={() => {
+                if (isSameAsLeader) {
+                  onChange('');
+                } else {
+                  onChange(leaderValue);
+                }
+              }}
+            >
+              {isSameAsLeader && <Check className="w-3 h-3 text-white" />}
+            </span>
+            <span
+              className="text-sm font-mono text-slate-400 group-hover:text-slate-300 transition-colors"
+              onClick={() => {
+                if (isSameAsLeader) {
+                  onChange('');
+                } else {
+                  onChange(leaderValue);
+                }
+              }}
+            >
+              Same as Leader ({leaderValue})
+            </span>
+          </label>
+        )}
+        {!isSameAsLeader && (
+          <ComboboxInput
+            value={(value as string) || ''}
+            onChange={onChange}
+            suggestions={question.suggestions}
+            placeholder={question.placeholder || ''}
+          />
+        )}
+        {isSameAsLeader && (
+          <div className="w-full bg-transparent border-b-2 border-orange-500/50 text-xl md:text-2xl py-2 font-mono text-orange-400 tracking-wide opacity-60">
+            {leaderValue}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <input
-      ref={inputRef as any}
+      ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
       type={question.type}
       value={value || ''}
       onChange={(e) => onChange(e.target.value)}
@@ -581,7 +746,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox }: any) => {
   );
 };
 
-const OptionButton = ({ opt, selected, onSelect }: any) => {
+const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: boolean; onSelect: () => void }) => {
    return (
       <button
         onClick={onSelect}
@@ -604,7 +769,7 @@ const OptionButton = ({ opt, selected, onSelect }: any) => {
 export default function HackathonForm() {
   const [started, setStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<any>({});
+  const [answers, setAnswers] = useState<Answers>({});
   const [isCompleted, setIsCompleted] = useState(false);
   const [direction, setDirection] = useState(0);
 
@@ -615,15 +780,39 @@ export default function HackathonForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // ✅ NEW: Generate idempotency key once per form session
+  const [idempotencyKey] = useState(() => {
+    // Use crypto.randomUUID() if available
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for older browsers
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  });
+
   const totalSteps = QUESTIONS.length;
-  // Progress is separate from "Folder" but we can integrate it.
+
+  // Compute visible step count (questions whose conditions are met)
+  const visibleSteps = React.useMemo(() => {
+    return QUESTIONS.filter(q => !q.condition || q.condition(answers)).length;
+  }, [answers]);
+
+  // Compute visible step index (1-based) for current position
+  const visibleStepIndex = React.useMemo(() => {
+    let idx = 0;
+    for (let i = 0; i <= currentStep; i++) {
+      const q = QUESTIONS[i];
+      if (!q.condition || q.condition(answers)) idx++;
+    }
+    return idx;
+  }, [currentStep, answers]);
 
   const currentQuestion = QUESTIONS[currentStep];
 
   const handleStart = () => setStarted(true);
 
   // Logic Helpers
-  const getNextValidStep = (current: number, dir: number, currentAnswers: any) => {
+  const getNextValidStep = React.useCallback((current: number, dir: number, currentAnswers: Answers) => {
     let nextStep = current + dir;
     while (nextStep >= 0 && nextStep < totalSteps) {
        const q = QUESTIONS[nextStep];
@@ -634,65 +823,99 @@ export default function HackathonForm() {
        }
     }
     return nextStep;
-  };
+  }, [totalSteps]);
 
   const sendOtp = React.useCallback(async () => {
       setLoading(true);
       setErrorMsg("");
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setShowOtpInput(true); setLoading(false); alert("CODE: 123456"); }, 1000);
-          return;
-      }
+      
       try {
           const res = await fetch('/api/send-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: answers.leaderEmail }),
+              body: JSON.stringify({ 
+                email: answers.leaderEmail,
+                purpose: 'REGISTRATION',
+                track: answers.track?.includes('IdeaSprint') ? 'IDEA_SPRINT' : 'BUILD_STORM'
+              }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error);
+          const response = await res.json();
+          
+          if (!response.success) {
+            setErrorMsg(response.message);
+            setLoading(false);
+            return;
+          }
+          
+          // Show debug OTP in development
+          if (response.debugOtp) {
+            console.log('Debug OTP:', response.debugOtp);
+            alert(`Development Mode - OTP: ${response.debugOtp}`);
+          }
+          
           setShowOtpInput(true);
-      } catch (err: any) {
-          setErrorMsg(err.message);
+      } catch (err: unknown) {
+          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
       } finally {
           setLoading(false);
       }
-  }, [answers.leaderEmail]);
+  }, [answers.leaderEmail, answers.track]);
 
   const submitForm = React.useCallback(async () => {
       setLoading(true);
 
-      // DEMO MODE BYPASS
-      if (answers.leaderEmail === "demo@indianext.in") {
-          setTimeout(() => { setIsCompleted(true); setLoading(false); }, 1500); 
-          return;
+      // Client-side duplicate email check
+      const emailFields = [
+        answers.leaderEmail,
+        answers.member2Email,
+        answers.member3Email,
+        answers.member4Email,
+      ].filter((e): e is string => typeof e === 'string' && e.trim() !== '');
+
+      const normalizedEmails = emailFields.map(e => e.toLowerCase().trim());
+      const uniqueEmails = new Set(normalizedEmails);
+      if (uniqueEmails.size !== normalizedEmails.length) {
+        const dupes = normalizedEmails.filter((e, i) => normalizedEmails.indexOf(e) !== i);
+        setErrorMsg(`Duplicate email found: ${dupes[0]}. Each team member must have a unique email.`);
+        setLoading(false);
+        return;
       }
       
       try {
           // Flatten College Logic
           const finalAnswers = { ...answers };
-          if (finalAnswers.member2CollegeSame && finalAnswers.member2CollegeSame.includes("Same as Leader")) finalAnswers.member2College = finalAnswers.leaderCollege;
-          if (finalAnswers.member3CollegeSame && finalAnswers.member3CollegeSame.includes("Same as Leader")) finalAnswers.member3College = finalAnswers.leaderCollege;
-          if (finalAnswers.member4CollegeSame && finalAnswers.member4CollegeSame.includes("Same as Leader")) finalAnswers.member4College = finalAnswers.leaderCollege;
+          // "Same as Leader" college values are already set inline by the combobox checkbox
 
           if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
           if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
 
           const res = await fetch('/api/register', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(finalAnswers),
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                idempotencyKey,
+                ...finalAnswers,
+              }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Submission failed');
           
+          const response = await res.json();
+          
+          if (!response.success) {
+            setErrorMsg(response.message);
+            setLoading(false);
+            return;
+          }
+          
+          console.log('Registration successful:', response.data);
           setIsCompleted(true);
-      } catch (err: any) {
-          setErrorMsg(err.message);
+      } catch (err: unknown) {
+          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
       } finally {
           setLoading(false);
       }
-  }, [answers, setIsCompleted]);
+  }, [answers, idempotencyKey, setIsCompleted]);
 
   const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
@@ -721,7 +944,7 @@ export default function HackathonForm() {
 
     // 3. Phone Validation regex
     if (q.type === 'tel') {
-        if (!/^[0-9]{10}$/.test(ans)) {
+        if (typeof ans !== 'string' || !/^[0-9]{10}$/.test(ans)) {
             setErrorMsg("Invalid Format: 10 Digits Required.");
             return;
         }
@@ -729,7 +952,7 @@ export default function HackathonForm() {
 
     // 4. Email format check
     if (q.type === 'email' || q.id.includes('Email')) {
-        if (!ans.includes('@') || !ans.includes('.')) {
+        if (typeof ans !== 'string' || !ans.includes('@') || !ans.includes('.')) {
              setErrorMsg("Invalid Email Format.");
              return;
         }
@@ -750,31 +973,38 @@ export default function HackathonForm() {
     } else {
       await submitForm();
     }
-  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm]);
+  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep]);
 
   const verifyOtp = React.useCallback(async () => {
       setLoading(true);
       setErrorMsg("");
-      if (answers.leaderEmail === "demo@indianext.in") {
-           if (otpValue === "123456") {
-              setTimeout(() => {
-                  setEmailVerified(true);
-                  setShowOtpInput(false);
-                  const nextStep = getNextValidStep(currentStep, 1, answers);
-                  setDirection(1);
-                  setCurrentStep(nextStep);
-                  setLoading(false);
-              }, 1000);
-              return;
-           } else { setErrorMsg("INVALID CODE"); setLoading(false); return; }
-      }
+      
       try {
           const res = await fetch('/api/verify-otp', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: answers.leaderEmail, otp: otpValue }),
+              body: JSON.stringify({ 
+                email: answers.leaderEmail, 
+                otp: otpValue,
+                purpose: 'REGISTRATION'
+              }),
           });
-          if (!res.ok) throw new Error((await res.json()).error);
+          
+          const response = await res.json();
+          
+          if (!response.success) {
+            setErrorMsg(response.message);
+            setLoading(false);
+            return;
+          }
+          
+          // Session is now stored in HttpOnly cookie by server
+          if (response.data?.user) {
+            // Only store non-sensitive user info for UI purposes
+            localStorage.setItem('user_email', response.data.user.email);
+            console.log('OTP verified successfully for:', response.data.user.email);
+          }
+          
           setEmailVerified(true);
           setShowOtpInput(false);
           setTimeout(() => {
@@ -782,22 +1012,22 @@ export default function HackathonForm() {
              setDirection(1);
              setCurrentStep(nextStep);
           }, 500);
-      } catch (err: any) {
-          setErrorMsg(err.message);
+      } catch (err: unknown) {
+          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
       } finally {
           setLoading(false);
       }
-  }, [answers.leaderEmail, otpValue, currentStep, answers]);
+  }, [otpValue, currentStep, answers, getNextValidStep]);
 
   const handlePrev = () => {
     if (showOtpInput) { setShowOtpInput(false); return; }
     const prevStep = getNextValidStep(currentStep, -1, answers);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
-  const handleAnswer = (value: any) => { setAnswers((prev: any) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
+  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
   const handleCheckbox = (option: string) => {
-     const currentVals = answers[currentQuestion.id] || [];
-     let newVals;
+     const currentVals = (answers[currentQuestion.id] as string[]) || [];
+     let newVals: string[];
      if (currentVals.includes(option)) newVals = currentVals.filter((v: string) => v !== option);
      else newVals = [...currentVals, option];
      handleAnswer(newVals);
@@ -821,7 +1051,7 @@ export default function HackathonForm() {
 
 
   if (!started) return <WelcomeScreen onStart={handleStart} />;
-  if (isCompleted) return <ThankYouScreen track={answers.track} />;
+  if (isCompleted) return <ThankYouScreen track={typeof answers.track === 'string' ? answers.track : ''} />;
 
   // FOLDER THEME UI
   return (
@@ -869,7 +1099,7 @@ export default function HackathonForm() {
                        >
                            <div className="flex items-center gap-2 mb-6">
                                <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                                   STEP {currentStep + 1} / {totalSteps}
+                                   STEP {visibleStepIndex} / {visibleSteps}
                                </span>
                                {currentQuestion.required && <span className="text-red-500 text-xs uppercase tracking-wider">* Mandatory</span>}
                            </div>
@@ -890,6 +1120,7 @@ export default function HackathonForm() {
                                     value={answers[currentQuestion.id]} 
                                     onChange={handleAnswer} 
                                     onCheckbox={handleCheckbox}
+                                    answers={answers}
                                />
                            </div>
                            

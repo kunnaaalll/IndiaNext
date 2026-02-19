@@ -1,80 +1,166 @@
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendOtpEmail, OTP_EXPIRY_MINUTES } from '@/lib/email';
+import { rateLimitRoute, createRateLimitHeaders } from '@/lib/rate-limit';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { z } from 'zod';
+import type { OtpPurpose } from '@prisma/client';
+
+// Input validation schema
+const SendOtpSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  purpose: z.enum(['REGISTRATION', 'LOGIN', 'PASSWORD_RESET', 'EMAIL_VERIFICATION']).default('REGISTRATION'),
+  track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']).optional(),
+});
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    // Parse and validate input
+    const body = await req.json();
+    const validation = SendOtpSchema.safeParse(body);
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: validation.error.errors[0].message,
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
     }
 
-    // Check if user is already registered in EITHER track
-    // If you want to check specific track, you need to pass it.
-    // For now, let's keep it simple: just send OTP. 
-    // We will validate registration uniqueness at the final submission step
-    // because at this stage we might not know which track they are finalizing yet 
-    // (though the new flow asks for track first, the OTP is usually generic).
-    
-    // Actually, prompt says: "One registration allowed per Mail id, of one track. People can apply in both track differently."
-    // So sending OTP is fine even if they are registered in one track, as they might be applying for the other.
+    const { email, purpose, track } = validation.data;
 
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+    // ✅ Sliding-window rate limiting (IP + Email)
+    // Limits centralised in lib/rate-limit.ts → RATE_LIMITS['send-otp']
+    const rateLimit = await rateLimitRoute('send-otp', req, email);
 
-    // Upsert OTP record
-    await prisma.otp.upsert({
-      where: { email },
-      update: {
-        otp,
-        expiresAt,
-        verified: false,
-      },
-      create: {
-        email,
-        otp,
-        expiresAt,
-        verified: false,
-      },
-    });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many OTP requests. Please wait before trying again.',
+          retryAfter: Math.ceil((rateLimit.reset - Date.now()) / 1000),
+        },
+        { 
+          status: 429,
+          headers: createRateLimitHeaders(rateLimit),
+        }
+      );
+    }
 
-    console.log(`Generated OTP for ${email}: ${otp}`);
-
-    // Send email (Mock in dev if no creds, or try to send if env vars present)
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+    // ✅ Check if email is already registered in any team (leader or member)
+    if (purpose === 'REGISTRATION') {
+      const existingMembership = await prisma.teamMember.findFirst({
+        where: {
+          user: { email: email.toLowerCase().trim() },
+          team: { deletedAt: null },
+        },
+        include: {
+          team: { select: { name: true, track: true } },
         },
       });
 
-      await transporter.sendMail({
-        from: `"IndiaNext Hackathon" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Your Verification Code',
-        text: `Your OTP for IndiaNext Hackathon registration is: ${otp}. It expires in 10 minutes.`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #FF6600;">IndiaNext Login</h2>
-            <p>Your verification code is:</p>
-            <h1 style="color: #000; letter-spacing: 5px;">${otp}</h1>
-            <p>This code expires in 10 minutes.</p>
-          </div>
-        `,
-      });
-      return NextResponse.json({ message: 'OTP sent successfully' });
-    } else {
-      // In development without credentials, just return success (OTP is logged)
-      return NextResponse.json({ message: 'OTP generated (check console)', debugOpt: otp });
+      if (existingMembership) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'ALREADY_REGISTERED',
+            message: `This email is already registered in team "${existingMembership.team.name}" (${existingMembership.team.track}). Each person can only be in one team.`,
+          },
+          { status: 409, headers: createRateLimitHeaders(rateLimit) }
+        );
+      }
     }
 
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    
+    // Hash OTP before storage (SHA-256)
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    // Upsert OTP record with hashed value
+    await prisma.otp.upsert({
+      where: {
+        email_purpose: {
+          email,
+          purpose: purpose as OtpPurpose,
+        },
+      },
+      update: {
+        otp: otpHash, // Store hash, not plain text
+        expiresAt,
+        verified: false,
+        attempts: 0,
+      },
+      create: {
+        email,
+        otp: otpHash, // Store hash, not plain text
+        purpose: purpose as OtpPurpose,
+        expiresAt,
+        verified: false,
+        attempts: 0,
+      },
+    });
+
+    console.log(`[OTP] Generated for ${email}: hash=${otpHash.substring(0, 8)}... (${purpose})`);
+
+    // Send email using Resend
+    try {
+      await sendOtpEmail(email, otp, track);
+      
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'OTP sent successfully',
+          expiresIn: 600, // seconds
+        },
+        {
+          headers: createRateLimitHeaders(rateLimit),
+        }
+      );
+    } catch (emailError) {
+      console.error('[OTP] Failed to send email:', emailError);
+
+      // In development, return OTP for testing
+      if (process.env.NODE_ENV === 'development') {
+        return NextResponse.json(
+          {
+            success: true,
+            message: 'OTP generated (email service unavailable)',
+            debugOtp: otp, // Only in development
+            expiresIn: 600,
+          },
+          {
+            headers: createRateLimitHeaders(rateLimit),
+          }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'EMAIL_SEND_FAILED',
+          message: 'Failed to send OTP email. Please try again.',
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error sending OTP:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[OTP] Error:', error);
+    
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred. Please try again.',
+      },
+      { status: 500 }
+    );
   }
 }

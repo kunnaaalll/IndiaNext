@@ -45,6 +45,7 @@
     "resend": "^4.0.1",
     "sonner": "^2.0.7",
     "superjson": "^2.2.2",
+    "ws": "^8.19.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -60,6 +61,7 @@
     "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.0.18",
     "cross-env": "^10.1.0",

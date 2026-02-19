@@ -1,10 +1,7 @@
-// Prisma Client Setup (Prisma 7 — Neon serverless driver for fast connections)
+// Prisma Client Setup (Prisma 7 — client engine with pg adapter)
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-
-// Use WebSockets on serverless (Vercel) — eliminates Neon TCP cold start (~5s → ~100ms)
-neonConfig.useSecureWebSocket = true;
+import { Pool } from "pg";
 
 const globalForPrisma = global as unknown as {
   prisma: PrismaClient | undefined;
@@ -13,8 +10,6 @@ const globalForPrisma = global as unknown as {
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    // During build/prerender, DATABASE_URL may not exist — return a dummy that
-    // will throw at query time rather than at import time.
     console.warn("DATABASE_URL is not set — Prisma queries will fail at runtime.");
     return new Proxy({} as PrismaClient, {
       get(_, prop) {

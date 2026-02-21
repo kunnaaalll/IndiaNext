@@ -1,15 +1,13 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check } from 'lucide-react';
-import Link from 'next/link';
+import { Check, Trash2, Plus, Upload } from 'lucide-react';
 import { INDIAN_COLLEGES } from '@/lib/data/colleges';
 import { INDIAN_DEGREES } from '@/lib/data/degrees';
 
 // ── Types ───────────────────────────────────────
-type Answers = Record<string, string | string[] | undefined>;
+type Answers = Record<string, any>;
 
 interface Question {
   id: string;
@@ -41,15 +39,15 @@ const QUESTIONS: Question[] = [
     ],
     required: true,
   },
-  
+
   // --- MISSION BRIEFING --
   {
-      id: 'buildBrief',
-      type: 'info',
-      question: "MISSION BRIEFING",
-      subtext: "Review your objective before proceeding.",
-      text: "PROBLEM STATEMENT:\n\nDisaster Response Coordination\n\nObjective: Build a real-time, offline-first system to connect flood victims with local rescue teams.",
-      condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+    id: 'buildBrief',
+    type: 'info',
+    question: "MISSION BRIEFING",
+    subtext: "Review your objective before proceeding.",
+    text: "PROBLEM STATEMENT:\n\nDisaster Response Coordination\n\nObjective: Build a real-time, offline-first system to connect flood victims with local rescue teams.",
+    condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
   // --- SECTION 3: TEAM DETAILS ---
@@ -58,13 +56,6 @@ const QUESTIONS: Question[] = [
     type: 'text',
     question: "Team Name",
     placeholder: "e.g. Innovation Squad",
-    required: true,
-  },
-  {
-    id: 'teamSize',
-    type: 'choice',
-    question: "Team Size",
-    options: ["Solo (1)", "2 Members", "3 Members", "4 Members"],
     required: true,
   },
 
@@ -88,7 +79,7 @@ const QUESTIONS: Question[] = [
     id: 'leaderMobile',
     type: 'tel',
     question: "Team Leader Mobile Number",
-    placeholder: "9876543210", 
+    placeholder: "9876543210",
     required: true,
   },
   {
@@ -107,117 +98,14 @@ const QUESTIONS: Question[] = [
     suggestions: INDIAN_DEGREES,
     required: true,
   },
-  
+
   // --- SECTION 5: TEAM MEMBER DETAILS ---
-  // Member 2
   {
-    id: 'member2Name',
-    type: 'text',
-    question: "Member 2 Full Name",
-    placeholder: "Full Name",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member2Email',
-    type: 'email',
-    question: "Member 2 Email",
-    placeholder: "Email Address",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member2College',
-    type: 'combobox',
-    question: "Member 2 College Name",
-    placeholder: "Search or type college...",
-    suggestions: INDIAN_COLLEGES,
-    sameAsLeaderField: 'leaderCollege',
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member2Degree',
-    type: 'combobox',
-    question: "Member 2 Degree/Course",
-    placeholder: "Search or type degree...",
-    suggestions: INDIAN_DEGREES,
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
-  },
-
-  // Member 3
-  {
-    id: 'member3Name',
-    type: 'text',
-    question: "Member 3 Full Name",
-    placeholder: "Full Name",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member3Email',
-    type: 'email',
-    question: "Member 3 Email",
-    placeholder: "Email Address",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member3College',
-    type: 'combobox',
-    question: "Member 3 College Name",
-    placeholder: "Search or type college...",
-    suggestions: INDIAN_COLLEGES,
-    sameAsLeaderField: 'leaderCollege',
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member3Degree',
-    type: 'combobox',
-    question: "Member 3 Degree/Course",
-    placeholder: "Search or type degree...",
-    suggestions: INDIAN_DEGREES,
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
-  },
-
-  // Member 4
-  {
-    id: 'member4Name',
-    type: 'text',
-    question: "Member 4 Full Name",
-    placeholder: "Full Name",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member4Email',
-    type: 'email',
-    question: "Member 4 Email",
-    placeholder: "Email Address",
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member4College',
-    type: 'combobox',
-    question: "Member 4 College Name",
-    placeholder: "Search or type college...",
-    suggestions: INDIAN_COLLEGES,
-    sameAsLeaderField: 'leaderCollege',
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
-  },
-  {
-    id: 'member4Degree',
-    type: 'combobox',
-    question: "Member 4 Degree/Course",
-    placeholder: "Search or type degree...",
-    suggestions: INDIAN_DEGREES,
-    required: true,
-    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
+    id: 'teamMembers',
+    type: 'member-list',
+    question: "Team Members",
+    subtext: "Add your team members (Max 3 additional members).",
+    required: false,
   },
 
   // --- SECTION 6: SUBMISSION DETAILS (TRACK 1) ---
@@ -300,12 +188,12 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
   {
-      id: 'ideaAdditionalNotes',
-      type: 'long-text',
-      question: "Additional Notes / Message",
-      placeholder: "Any special requirements...",
-      required: false,
-      condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+    id: 'ideaAdditionalNotes',
+    type: 'long-text',
+    question: "Additional Notes / Message",
+    placeholder: "Any special requirements...",
+    required: false,
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
 
 
@@ -346,13 +234,13 @@ const QUESTIONS: Question[] = [
     required: true,
     condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
-    {
-      id: 'buildAdditionalNotes',
-      type: 'long-text',
-      question: "Additional Notes / Special Requirements",
-      placeholder: "Any special requirements...",
-      required: false,
-      condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
+  {
+    id: 'buildAdditionalNotes',
+    type: 'long-text',
+    question: "Additional Notes / Special Requirements",
+    placeholder: "Any special requirements...",
+    required: false,
+    condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
   // --- COMMON FINAL SECTION ---
@@ -380,51 +268,51 @@ const QUESTIONS: Question[] = [
 // Subcomponents
 
 const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
-  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono">
-     {/* Grid Background */}
-     <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono p-4">
+    {/* Grid Background */}
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-     <div className="z-10 text-center">
-        <div className="inline-block border border-orange-500/50 bg-orange-500/10 px-3 py-1 mb-6 text-orange-400 text-xs tracking-[0.2em] uppercase">
-            {/* Classified Access */}
-            {`// Classified Access`}
-        </div>
-        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
-          India<span className="text-orange-500">Next</span>
-        </h1>
-        <div className="flex items-center justify-center gap-2 text-slate-500 text-sm mb-12 tracking-widest uppercase">
-           <span>IdeaSprint</span>
-           <div className="w-1 h-1 bg-slate-500 rounded-full" />
-           <span>BuildStorm</span>
-        </div>
-        
-        <button 
-          onClick={onStart}
-          className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-white transition-all duration-200 bg-orange-600 font-mono tracking-widest border border-orange-500 hover:bg-orange-500 focus:outline-none ring-offset-2 focus:ring-2"
-        >
-           [ OPEN_DOSSIER ]
-        </button>
-     </div>
+    <div className="z-10 text-center w-full max-w-4xl">
+      <div className="inline-block border border-orange-500/50 bg-orange-500/10 px-3 py-1 mb-6 text-orange-400 text-[10px] md:text-xs tracking-[0.2em] uppercase">
+        {/* Classified Access */}
+        {`// Classified Access`}
+      </div>
+      <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
+        India<span className="text-orange-500">Next</span>
+      </h1>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-slate-500 text-xs sm:text-sm mb-12 tracking-widest uppercase">
+        <span>IdeaSprint</span>
+        <div className="hidden sm:block w-1 h-1 bg-slate-500 rounded-full" />
+        <span>BuildStorm</span>
+      </div>
+
+      <button
+        onClick={onStart}
+        className="group relative inline-flex items-center justify-center px-8 py-3 sm:px-10 sm:py-4 font-bold text-white transition-all duration-200 bg-orange-600 font-mono tracking-widest border border-orange-500 hover:bg-orange-500 focus:outline-none ring-offset-2 focus:ring-2 text-sm sm:text-base w-full sm:w-auto"
+      >
+        [ OPEN_DOSSIER ]
+      </button>
+    </div>
   </div>
 );
 
 const ThankYouScreen = ({ track }: { track: string }) => (
-   <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 font-mono text-white p-4">
-      <div className="w-full max-w-2xl border-2 border-green-500/50 bg-green-500/5 p-8 relative">
-         <div className="absolute top-0 right-0 p-2 text-xs text-green-500 border-l border-b border-green-500/50">STATUS: APPROVED</div>
-         <div className="text-green-400 text-6xl mb-6">
-             <Check size={64} strokeWidth={1.5} />
-         </div>
-         <h1 className="text-3xl md:text-4xl font-bold mb-4 uppercase tracking-tight">Transmission Received</h1>
-         <p className="text-lg text-green-400/80 mb-8 leading-relaxed">
-           Subject registered for protocol: <strong className="text-white">{track}</strong>.<br/>
-           Directives have been forwarded to the designated communication channel (Email).
-         </p>
-         <Link href="/" className="inline-block px-6 py-2 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
-             [ Return to HQ ]
-         </Link>
+  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 font-mono text-white p-4">
+    <div className="w-full max-w-2xl border-2 border-green-500/50 bg-green-500/5 p-6 sm:p-8 relative">
+      <div className="absolute top-0 right-0 p-2 text-[10px] sm:text-xs text-green-500 border-l border-b border-green-500/50">STATUS: APPROVED</div>
+      <div className="text-green-400 text-4xl sm:text-6xl mb-6">
+        <Check size={48} strokeWidth={1.5} className="sm:w-16 sm:h-16" />
       </div>
-   </div>
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 uppercase tracking-tight">Transmission Received</h1>
+      <p className="text-base sm:text-lg text-green-400/80 mb-8 leading-relaxed">
+        Subject registered for protocol: <strong className="text-white block sm:inline mt-1 sm:mt-0">{track}</strong>.<br />
+        Directives have been forwarded to the designated communication channel (Email).
+      </p>
+      <button onClick={() => window.location.reload()} className="inline-block w-full sm:w-auto text-center px-6 py-3 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
+        [ Return to HQ ]
+      </button>
+    </div>
+  </div>
 );
 
 // ── Combobox (searchable dropdown + free text) ──
@@ -528,11 +416,10 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
                 setIsOpen(false);
               }}
               onMouseEnter={() => setHighlightIndex(idx)}
-              className={`px-4 py-3 cursor-pointer font-mono text-sm transition-colors ${
-                idx === highlightIndex
-                  ? 'bg-orange-500/20 text-orange-400'
-                  : 'text-slate-300 hover:bg-slate-800'
-              }`}
+              className={`px-4 py-3 cursor-pointer font-mono text-sm transition-colors ${idx === highlightIndex
+                ? 'bg-orange-500/20 text-orange-400'
+                : 'text-slate-300 hover:bg-slate-800'
+                }`}
             >
               {item}
             </li>
@@ -550,12 +437,121 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
+const MemberList = ({ value, onChange, leaderCollege }: { value: any[], onChange: (val: any[]) => void, leaderCollege: string }) => {
+  // Value is array of objects: [{ name: '', email: '', collegeSame: false, college: '', degree: '' }]
+  const members = Array.isArray(value) ? value : [];
+
+  const addMember = () => {
+    if (members.length < 3) {
+      onChange([...members, { name: '', email: '', collegeSame: false, college: '', degree: '' }]);
+    }
+  };
+
+  const removeMember = (index: number) => {
+    const newMembers = [...members];
+    newMembers.splice(index, 1);
+    onChange(newMembers);
+  };
+
+  const updateMember = (index: number, field: string, val: any) => {
+    const newMembers = [...members];
+    newMembers[index] = { ...newMembers[index], [field]: val };
+    onChange(newMembers);
+  };
+
+  return (
+    <div className="w-full max-w-2xl">
+      <div className="space-y-6 mb-6">
+        {members.map((member: any, index: number) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-4 bg-slate-900/50 p-4 sm:p-6 rounded border border-slate-700 hover:border-orange-500/50 transition-colors group relative"
+          >
+            <button
+              onClick={() => removeMember(index)}
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 text-slate-600 hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+              title="Remove Member"
+            >
+              <Trash2 size={18} />
+            </button>
+
+            <div className="space-y-4 mt-2 sm:mt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="FULL NAME"
+                  value={member.name}
+                  onChange={(e) => updateMember(index, 'name', e.target.value)}
+                  className="w-full bg-transparent border-b border-slate-700 text-sm sm:text-base pb-1 focus:outline-none focus:border-orange-500 transition-colors font-mono text-white placeholder-slate-600 uppercase"
+                />
+                <input
+                  type="email"
+                  placeholder="EMAIL ADDRESS"
+                  value={member.email}
+                  onChange={(e) => updateMember(index, 'email', e.target.value)}
+                  className="w-full bg-transparent border-b border-slate-700 text-sm sm:text-base pb-1 focus:outline-none focus:border-orange-500 transition-colors font-mono text-slate-400 focus:text-white placeholder-slate-700"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 font-mono cursor-pointer select-none">
+                  <div
+                    className={`w-4 h-4 border flex items-center justify-center transition-colors ${member.collegeSame ? 'border-orange-500 bg-orange-500' : 'border-slate-600'}`}
+                    onClick={() => updateMember(index, 'collegeSame', !member.collegeSame)}
+                  >
+                    {member.collegeSame && <Check size={12} className="text-black" strokeWidth={3} />}
+                  </div>
+                  <span onClick={() => updateMember(index, 'collegeSame', !member.collegeSame)}>COLLEGE: SAME AS LEADER ({leaderCollege})</span>
+                </label>
+
+                {!member.collegeSame && (
+                  <ComboboxInput
+                    value={member.college}
+                    onChange={(val) => updateMember(index, 'college', val)}
+                    suggestions={INDIAN_COLLEGES}
+                    placeholder="COLLEGE NAME"
+                  />
+                )}
+              </div>
+
+              <ComboboxInput
+                value={member.degree}
+                onChange={(val) => updateMember(index, 'degree', val)}
+                suggestions={INDIAN_DEGREES}
+                placeholder="DEGREE / COURSE"
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {members.length < 3 ? (
+        <button
+          onClick={addMember}
+          className="flex items-center gap-3 text-orange-500 hover:text-white hover:bg-orange-500 transition-all border border-dashed border-slate-700 hover:border-orange-500 px-6 py-4 rounded w-full justify-center group font-mono tracking-widest uppercase text-xs sm:text-sm"
+        >
+          <div className="w-5 h-5 rounded-full border border-orange-500 flex items-center justify-center group-hover:border-white transition-colors">
+            <Plus size={12} />
+          </div>
+          <span>Add Operative {members.length + 2}</span>
+        </button>
+      ) : (
+        <p className="text-center text-slate-500 text-xs font-mono border border-slate-800 rounded p-3 uppercase tracking-widest">
+          Maximum Squad Capacity Reached
+        </p>
+      )}
+    </div>
+  );
+};
+
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | any[] | undefined; onChange: (val: any) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-       if (inputRef.current) inputRef.current.focus();
+      if (inputRef.current) inputRef.current.focus();
     }, 100);
     return () => clearTimeout(timer);
   }, [question]);
@@ -564,11 +560,11 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
     return (
       <div className="flex flex-col gap-2 max-w-lg w-full">
         {question.options?.map((opt: string, _idx: number) => (
-          <OptionButton 
-            key={opt} 
-            opt={opt} 
-            selected={value === opt} 
-            onSelect={() => onChange(opt)} 
+          <OptionButton
+            key={opt}
+            opt={opt}
+            selected={value === opt}
+            onSelect={() => onChange(opt)}
           />
         ))}
       </div>
@@ -576,26 +572,26 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   }
 
   if (question.type === 'checkbox') {
-    const selected = value || [];
+    const selected = (value as string[]) || [];
     return (
       <div className="flex flex-col gap-2 max-w-xl w-full">
         {question.options?.map((opt: string, idx: number) => (
-           <button
-             key={idx}
-             onClick={() => onCheckbox(opt)}
-             className={`text-left px-4 py-3 border text-sm md:text-base font-mono transition-all flex items-start gap-4 w-full
-                ${selected.includes(opt) 
-                    ? 'bg-orange-500/10 border-orange-500 text-white' 
-                    : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500'}
+          <button
+            key={idx}
+            onClick={() => onCheckbox(opt)}
+            className={`text-left px-4 py-3 border text-sm md:text-base font-mono transition-all flex items-start gap-4 w-full
+                ${selected.includes(opt)
+                ? 'bg-orange-500/10 border-orange-500 text-white'
+                : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500'}
              `}
-           >
-             <div className={`mt-0.5 w-5 h-5 flex items-center justify-center shrink-0 border
+          >
+            <div className={`mt-0.5 w-5 h-5 flex items-center justify-center shrink-0 border
                 ${selected.includes(opt) ? 'bg-orange-500 border-orange-500 text-black' : 'border-slate-600'}
              `}>
-               {selected.includes(opt) && <Check size={14} strokeWidth={3} />}
-             </div>
-             <span className="leading-snug">{opt}</span>
-           </button>
+              {selected.includes(opt) && <Check size={14} strokeWidth={3} />}
+            </div>
+            <span className="leading-snug">{opt}</span>
+          </button>
         ))}
       </div>
     );
@@ -604,37 +600,37 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   if (question.type === 'long-text') {
     return (
       <div className="flex flex-col md:flex-row gap-6 w-full">
-         <textarea
-            ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            onPaste={(e) => {
-                if (question.noPaste) {
-                    e.preventDefault();
-                    // Optional: Toast or simple alert
-                    alert("Pasting is disabled for this section. Please type your response.");
-                }
-            }}
-            placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
-            className="flex-1 bg-slate-900/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed"
-         />
-         
-         {/* Guidance Panel */}
-         {question.guidance && (
-             <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
-                 <div className="text-orange-500 font-bold mb-2 uppercase tracking-wider text-xs border-b border-orange-500/20 pb-1">
-                     RESPONSE PATTERN
-                 </div>
-                 <div className="whitespace-pre-wrap leading-relaxed text-xs">
-                     {question.guidance}
-                 </div>
-                 {question.noPaste && (
-                     <div className="mt-4 text-xs text-red-500 border border-red-900/50 bg-red-900/10 p-2 text-center uppercase tracking-widest font-bold">
-                         [ NO PASTE ALLOWED ]
-                     </div>
-                 )}
-             </div>
-         )}
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
+          value={(value as string) || ''}
+          onChange={(e) => onChange(e.target.value)}
+          onPaste={(e) => {
+            if (question.noPaste) {
+              e.preventDefault();
+              // Optional: Toast or simple alert
+              alert("Pasting is disabled for this section. Please type your response.");
+            }
+          }}
+          placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
+          className="flex-1 bg-slate-900/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed"
+        />
+
+        {/* Guidance Panel */}
+        {question.guidance && (
+          <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
+            <div className="text-orange-500 font-bold mb-2 uppercase tracking-wider text-xs border-b border-orange-500/20 pb-1">
+              RESPONSE PATTERN
+            </div>
+            <div className="whitespace-pre-wrap leading-relaxed text-xs">
+              {question.guidance}
+            </div>
+            {question.noPaste && (
+              <div className="mt-4 text-xs text-red-500 border border-red-900/50 bg-red-900/10 p-2 text-center uppercase tracking-widest font-bold">
+                [ NO PASTE ALLOWED ]
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -642,39 +638,49 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   if (question.type === 'tel') {
     return (
       <div className="flex items-center gap-4 border-b-2 border-slate-700 py-2 focus-within:border-orange-500 transition-all">
-         <div className="flex items-center gap-2 select-none opacity-80">
-            <span className="text-xl">🇮🇳</span>
-            <span className="text-xl md:text-2xl text-slate-400 font-mono">+91</span>
-         </div>
-         <input
-            ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
-            type="tel"
-            value={value || ''}
-            maxLength={10}
-            onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '');
-                onChange(val);
-            }}
-            placeholder="9876543210"
-            className="w-full bg-transparent focus:outline-none text-xl md:text-3xl text-orange-400 font-mono tracking-[0.2em] placeholder-slate-800"
-         />
+        <div className="flex items-center gap-2 select-none opacity-80">
+          <span className="text-xl">🇮🇳</span>
+          <span className="text-xl md:text-2xl text-slate-400 font-mono">+91</span>
+        </div>
+        <input
+          ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
+          type="tel"
+          value={(value as string) || ''}
+          maxLength={10}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            onChange(val);
+          }}
+          placeholder="9876543210"
+          className="w-full bg-transparent focus:outline-none text-xl md:text-3xl text-orange-400 font-mono tracking-[0.2em] placeholder-slate-800"
+        />
       </div>
     );
   }
 
   if (question.type === 'info') {
-      return (
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
-              <div className="flex items-center gap-2 text-orange-400 font-bold mb-4 uppercase tracking-widest text-xs">
-                  <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
-                  Classified Intelligence
-              </div>
-              <div className="text-xl md:text-2xl font-mono text-white leading-relaxed whitespace-pre-wrap">
-                  {question.text}
-              </div>
-          </div>
-      );
+    return (
+      <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
+        <div className="flex items-center gap-2 text-orange-400 font-bold mb-4 uppercase tracking-widest text-xs">
+          <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
+          Classified Intelligence
+        </div>
+        <div className="text-xl md:text-2xl font-mono text-white leading-relaxed whitespace-pre-wrap">
+          {question.text}
+        </div>
+      </div>
+    );
+  }
+
+  if (question.type === 'member-list') {
+    return (
+      <MemberList
+        value={(value as any[]) || []}
+        onChange={onChange}
+        leaderCollege={answers.leaderCollege as string || ''}
+      />
+    );
   }
 
   if (question.type === 'combobox' && question.suggestions) {
@@ -687,11 +693,10 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
         {leaderField && leaderValue && (
           <label className="flex items-center gap-2 mb-3 cursor-pointer select-none group">
             <span
-              className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
-                isSameAsLeader
-                  ? 'bg-orange-500 border-orange-500'
-                  : 'border-slate-600 group-hover:border-orange-500/50'
-              }`}
+              className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${isSameAsLeader
+                ? 'bg-orange-500 border-orange-500'
+                : 'border-slate-600 group-hover:border-orange-500/50'
+                }`}
               onClick={() => {
                 if (isSameAsLeader) {
                   onChange('');
@@ -737,7 +742,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
     <input
       ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
       type={question.type}
-      value={value || ''}
+      value={(value as string) || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
       className={`w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide
@@ -746,24 +751,24 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   );
 };
 
-const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: boolean; onSelect: () => void }) => {
-   return (
-      <button
-        onClick={onSelect}
-        className={`text-left px-4 py-3 border flex items-center gap-4 w-full transition-all
-           ${selected 
-             ? 'bg-orange-500 border-orange-500 text-black' 
-             : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'}
+const OptionButton: React.FC<{ opt: string; selected: boolean; onSelect: () => void }> = ({ opt, selected, onSelect }) => {
+  return (
+    <button
+      onClick={onSelect}
+      className={`text-left px-4 py-3 border flex items-center gap-4 w-full transition-all
+           ${selected
+          ? 'bg-orange-500 border-orange-500 text-black'
+          : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'}
         `}
-      >
-        <div className={`w-4 h-4 border flex items-center justify-center shrink-0
+    >
+      <div className={`w-4 h-4 border flex items-center justify-center shrink-0
            ${selected ? 'border-black bg-black' : 'border-slate-600'}
         `}>
-          {selected && <div className="w-2 h-2 bg-orange-500" />}
-        </div>
-        <span className="font-mono text-sm uppercase tracking-wider">{opt}</span>
-      </button>
-   );
+        {selected && <div className="w-2 h-2 bg-orange-500" />}
+      </div>
+      <span className="font-mono text-sm uppercase tracking-wider">{opt}</span>
+    </button>
+  );
 };
 
 export default function HackathonForm() {
@@ -815,106 +820,119 @@ export default function HackathonForm() {
   const getNextValidStep = React.useCallback((current: number, dir: number, currentAnswers: Answers) => {
     let nextStep = current + dir;
     while (nextStep >= 0 && nextStep < totalSteps) {
-       const q = QUESTIONS[nextStep];
-       if (q.condition && !q.condition(currentAnswers)) {
-         nextStep += dir;
-       } else {
-         return nextStep;
-       }
+      const q = QUESTIONS[nextStep];
+      if (q.condition && !q.condition(currentAnswers)) {
+        nextStep += dir;
+      } else {
+        return nextStep;
+      }
     }
     return nextStep;
   }, [totalSteps]);
 
   const sendOtp = React.useCallback(async () => {
-      setLoading(true);
-      setErrorMsg("");
-      
-      try {
-          const res = await fetch('/api/send-otp', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                email: answers.leaderEmail,
-                purpose: 'REGISTRATION',
-                track: answers.track?.includes('IdeaSprint') ? 'IDEA_SPRINT' : 'BUILD_STORM'
-              }),
-          });
-          const response = await res.json();
-          
-          if (!response.success) {
-            setErrorMsg(response.message);
-            setLoading(false);
-            return;
-          }
-          
-          // Show debug OTP in development
-          if (response.debugOtp) {
-            console.log('Debug OTP:', response.debugOtp);
-            alert(`Development Mode - OTP: ${response.debugOtp}`);
-          }
-          
-          setShowOtpInput(true);
-      } catch (err: unknown) {
-          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
-      } finally {
-          setLoading(false);
-      }
-  }, [answers.leaderEmail, answers.track]);
+    setLoading(true);
+    setErrorMsg("");
 
-  const submitForm = React.useCallback(async () => {
-      setLoading(true);
+    try {
+      const res = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: answers.leaderEmail,
+          purpose: 'REGISTRATION',
+          track: answers.track?.includes('IdeaSprint') ? 'IDEA_SPRINT' : 'BUILD_STORM'
+        }),
+      });
+      const response = await res.json();
 
-      // Client-side duplicate email check
-      const emailFields = [
-        answers.leaderEmail,
-        answers.member2Email,
-        answers.member3Email,
-        answers.member4Email,
-      ].filter((e): e is string => typeof e === 'string' && e.trim() !== '');
-
-      const normalizedEmails = emailFields.map(e => e.toLowerCase().trim());
-      const uniqueEmails = new Set(normalizedEmails);
-      if (uniqueEmails.size !== normalizedEmails.length) {
-        const dupes = normalizedEmails.filter((e, i) => normalizedEmails.indexOf(e) !== i);
-        setErrorMsg(`Duplicate email found: ${dupes[0]}. Each team member must have a unique email.`);
+      if (!response.success) {
+        setErrorMsg(response.message);
         setLoading(false);
         return;
       }
-      
-      try {
-          // Flatten College Logic
-          const finalAnswers = { ...answers };
-          // "Same as Leader" college values are already set inline by the combobox checkbox
 
-          if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
-          if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
-
-          const res = await fetch('/api/register', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                idempotencyKey,
-                ...finalAnswers,
-              }),
-          });
-          
-          const response = await res.json();
-          
-          if (!response.success) {
-            setErrorMsg(response.message);
-            setLoading(false);
-            return;
-          }
-          
-          console.log('Registration successful:', response.data);
-          setIsCompleted(true);
-      } catch (err: unknown) {
-          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
-      } finally {
-          setLoading(false);
+      // Show debug OTP in development
+      if (response.debugOtp) {
+        console.log('Debug OTP:', response.debugOtp);
+        alert(`Development Mode - OTP: ${response.debugOtp}`);
       }
+
+      setShowOtpInput(true);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [answers.leaderEmail, answers.track]);
+
+  const submitForm = React.useCallback(async () => {
+    setLoading(true);
+
+    // Client-side duplicate email check
+    const emailFields = [
+      answers.leaderEmail,
+      ...(answers.teamMembers || []).map((m: any) => m.email)
+    ].filter((e): e is string => typeof e === 'string' && e.trim() !== '');
+
+    const normalizedEmails = emailFields.map(e => e.toLowerCase().trim());
+    const uniqueEmails = new Set(normalizedEmails);
+    if (uniqueEmails.size !== normalizedEmails.length) {
+      const dupes = normalizedEmails.filter((e, i) => normalizedEmails.indexOf(e) !== i);
+      setErrorMsg(`Duplicate email found: ${dupes[0]}. Each team member must have a unique email.`);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Flatten College Logic
+      const finalAnswers = { ...answers };
+
+      // Flatten team members for API compatibility
+      if (Array.isArray(finalAnswers.teamMembers)) {
+        finalAnswers.teamMembers.forEach((member: any, index: number) => {
+          const suffix = index + 2; // Member 2, 3, 4
+          finalAnswers[`member${suffix}Name`] = member.name;
+          finalAnswers[`member${suffix}Email`] = member.email;
+          finalAnswers[`member${suffix}College`] = member.collegeSame ? finalAnswers.leaderCollege : member.college;
+          finalAnswers[`member${suffix}Degree`] = member.degree;
+        });
+        // Set teamSize based on members count + 1 (leader)
+        const count = finalAnswers.teamMembers.length + 1;
+        finalAnswers.teamSize = count === 1 ? "Solo (1)" : `${count} Members`;
+      } else {
+        finalAnswers.teamSize = "Solo (1)";
+      }
+
+      if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
+      if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
+
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idempotencyKey,
+          ...finalAnswers,
+        }),
+      });
+
+      const response = await res.json();
+
+      if (!response.success) {
+        setErrorMsg(response.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Registration successful:', response.data);
+      setIsCompleted(true);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }, [answers, idempotencyKey, setIsCompleted]);
 
   const handleNext = React.useCallback(async () => {
@@ -924,165 +942,189 @@ export default function HackathonForm() {
 
     // Trim string values before validation
     if (typeof ans === 'string') {
-        ans = ans.trim();
-        // Store trimmed value back
-        setAnswers((prev: Answers) => ({ ...prev, [q.id]: ans }));
+      ans = ans.trim();
+      // Store trimmed value back
+      setAnswers((prev: Answers) => ({ ...prev, [q.id]: ans }));
     }
 
     // 1. Required Field Check (catches empty + whitespace-only)
     if (q.required) {
-        if (!ans || (typeof ans === 'string' && ans.trim().length === 0)) {
-            setErrorMsg("Field Required.");
-            return;
-        }
-        if (Array.isArray(ans) && ans.length === 0) {
-            setErrorMsg("Field Required.");
-            return;
-        }
+      if (!ans || (typeof ans === 'string' && ans.trim().length === 0)) {
+        setErrorMsg("Field Required.");
+        return;
+      }
+      if (Array.isArray(ans) && ans.length === 0) {
+        setErrorMsg("Field Required.");
+        return;
+      }
     }
 
     // 2. Checkbox: Accept ALL
     if (q.type === 'checkbox' && q.required) {
-        if (q.options && Array.isArray(ans) && ans.length !== q.options.length) {
-            setErrorMsg("Must accept all conditions.");
-            return;
-        }
+      if (q.options && Array.isArray(ans) && ans.length !== q.options.length) {
+        setErrorMsg("Must accept all conditions.");
+        return;
+      }
     }
 
     // 3. Phone Validation regex
     if (q.type === 'tel') {
-        if (typeof ans !== 'string' || !/^[0-9]{10}$/.test(ans)) {
-            setErrorMsg("Invalid Format: 10 Digits Required.");
-            return;
-        }
-        // Block numbers starting with 0-5 (invalid Indian mobiles)
-        if (/^[0-5]/.test(ans)) {
-            setErrorMsg("Invalid mobile number. Must start with 6-9.");
-            return;
-        }
+      if (typeof ans !== 'string' || !/^[0-9]{10}$/.test(ans)) {
+        setErrorMsg("Invalid Format: 10 Digits Required.");
+        return;
+      }
+      // Block numbers starting with 0-5 (invalid Indian mobiles)
+      if (/^[0-5]/.test(ans)) {
+        setErrorMsg("Invalid mobile number. Must start with 6-9.");
+        return;
+      }
     }
 
     // 4. Email format check (proper regex)
     if (q.type === 'email' || q.id.includes('Email')) {
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (typeof ans !== 'string' || !emailRegex.test(ans.trim())) {
-             setErrorMsg("Invalid Email Format. Enter a valid email (e.g. name@example.com).");
-             return;
-        }
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (typeof ans !== 'string' || !emailRegex.test(ans.trim())) {
+        setErrorMsg("Invalid Email Format. Enter a valid email (e.g. name@example.com).");
+        return;
+      }
     }
 
     // 5. URL validation for link fields
     if (q.type === 'url' && typeof ans === 'string' && ans.trim().length > 0) {
-        const urlRegex = /^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]$/;
-        if (!urlRegex.test(ans.trim())) {
-            setErrorMsg("Invalid URL. Must start with http:// or https://");
-            return;
-        }
+      const urlRegex = /^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]$/;
+      if (!urlRegex.test(ans.trim())) {
+        setErrorMsg("Invalid URL. Must start with http:// or https://");
+        return;
+      }
     }
 
     // 6. Name fields: must contain at least one letter, no only-numbers/special-chars
     if ((q.id.includes('Name') && q.type === 'text') && typeof ans === 'string') {
-        const trimmed = ans.trim();
-        if (trimmed.length < 2) {
-            setErrorMsg("Name must be at least 2 characters.");
-            return;
-        }
-        if (!/[a-zA-Z]/.test(trimmed)) {
-            setErrorMsg("Name must contain at least one letter.");
-            return;
-        }
-        if (/[^a-zA-Z\s.''-]/.test(trimmed)) {
-            setErrorMsg("Name can only contain letters, spaces, dots, and hyphens.");
-            return;
-        }
+      const trimmed = ans.trim();
+      if (trimmed.length < 2) {
+        setErrorMsg("Name must be at least 2 characters.");
+        return;
+      }
+      if (!/[a-zA-Z]/.test(trimmed)) {
+        setErrorMsg("Name must contain at least one letter.");
+        return;
+      }
+      if (/[^a-zA-Z\s.''-]/.test(trimmed)) {
+        setErrorMsg("Name can only contain letters, spaces, dots, and hyphens.");
+        return;
+      }
     }
 
     // 7. Team name: min 2 chars, no whitespace-only
     if (q.id === 'teamName' && typeof ans === 'string') {
-        const trimmed = ans.trim();
-        if (trimmed.length < 2) {
-            setErrorMsg("Team name must be at least 2 characters.");
-            return;
-        }
+      const trimmed = ans.trim();
+      if (trimmed.length < 2) {
+        setErrorMsg("Team name must be at least 2 characters.");
+        return;
+      }
     }
 
     // 8. Long text fields: min length for required ones
     if (q.type === 'long-text' && q.required && typeof ans === 'string') {
-        const trimmed = ans.trim();
-        if (trimmed.length < 10) {
-            setErrorMsg("Response too short. Please provide at least 10 characters.");
-            return;
-        }
+      const trimmed = ans.trim();
+      if (trimmed.length < 10) {
+        setErrorMsg("Response too short. Please provide at least 10 characters.");
+        return;
+      }
     }
 
     // 9. Idea title min length
     if (q.id === 'ideaTitle' && typeof ans === 'string') {
-        const trimmed = ans.trim();
-        if (trimmed.length < 3) {
-            setErrorMsg("Idea title must be at least 3 characters.");
+      const trimmed = ans.trim();
+      if (trimmed.length < 3) {
+        setErrorMsg("Idea title must be at least 3 characters.");
+        return;
+      }
+    }
+
+    // 10. Member List Validation
+    if (q.type === 'member-list') {
+      if (Array.isArray(ans) && ans.length > 0) {
+        for (const member of ans) {
+          if (!member.name || !member.name.trim()) {
+            setErrorMsg("All member names are required.");
             return;
+          }
+          if (!member.email || !member.email.includes('@') || !member.email.includes('.')) {
+            setErrorMsg("All member emails must be valid.");
+            return;
+          }
+          if (!member.collegeSame && (!member.college || !member.college.trim())) {
+            setErrorMsg("College name is required for all members.");
+            return;
+          }
+          if (!member.degree || !member.degree.trim()) {
+            setErrorMsg("Degree/Course is required for all members.");
+            return;
+          }
         }
+      }
     }
 
     // OTP Logic
     if (currentQuestion.id === 'leaderEmail' && !emailVerified) {
-        await sendOtp();
-        return;
+      await sendOtp();
+      return;
     }
 
     const nextStep = getNextValidStep(currentStep, 1, answers);
-    
+
     if (nextStep < totalSteps) {
       setDirection(1);
       setCurrentStep(nextStep);
-      setErrorMsg(""); 
+      setErrorMsg("");
     } else {
       await submitForm();
     }
   }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep]);
 
   const verifyOtp = React.useCallback(async () => {
-      setLoading(true);
-      setErrorMsg("");
-      
-      try {
-          const res = await fetch('/api/verify-otp', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                email: answers.leaderEmail, 
-                otp: otpValue,
-                purpose: 'REGISTRATION'
-              }),
-          });
-          
-          const response = await res.json();
-          
-          if (!response.success) {
-            setErrorMsg(response.message);
-            setLoading(false);
-            return;
-          }
-          
-          // Session is now stored in HttpOnly cookie by server
-          if (response.data?.user) {
-            // Only store non-sensitive user info for UI purposes
-            localStorage.setItem('user_email', response.data.user.email);
-            console.log('OTP verified successfully for:', response.data.user.email);
-          }
-          
-          setEmailVerified(true);
-          setShowOtpInput(false);
-          setTimeout(() => {
-             const nextStep = getNextValidStep(currentStep, 1, answers);
-             setDirection(1);
-             setCurrentStep(nextStep);
-          }, 500);
-      } catch (err: unknown) {
-          setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
-      } finally {
-          setLoading(false);
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const res = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: answers.leaderEmail,
+          otp: otpValue,
+          purpose: 'REGISTRATION'
+        }),
+      });
+
+      const response = await res.json();
+
+      if (!response.success) {
+        setErrorMsg(response.message);
+        setLoading(false);
+        return;
       }
+
+      // Session is now stored in HttpOnly cookie by server
+      if (response.data?.user) {
+        // Only store non-sensitive user info for UI purposes
+        localStorage.setItem('user_email', response.data.user.email);
+        console.log('OTP verified successfully for:', response.data.user.email);
+      }
+
+      setEmailVerified(true);
+      setShowOtpInput(false);
+      setTimeout(() => {
+        const nextStep = getNextValidStep(currentStep, 1, answers);
+        setDirection(1);
+        setCurrentStep(nextStep);
+      }, 500);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }, [otpValue, currentStep, answers, getNextValidStep]);
 
   const handlePrev = () => {
@@ -1090,13 +1132,13 @@ export default function HackathonForm() {
     const prevStep = getNextValidStep(currentStep, -1, answers);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
-  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
+  const handleAnswer = (value: any) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
   const handleCheckbox = (option: string) => {
-     const currentVals = (answers[currentQuestion.id] as string[]) || [];
-     let newVals: string[];
-     if (currentVals.includes(option)) newVals = currentVals.filter((v: string) => v !== option);
-     else newVals = [...currentVals, option];
-     handleAnswer(newVals);
+    const currentVals = (answers[currentQuestion.id] as string[]) || [];
+    let newVals: string[];
+    if (currentVals.includes(option)) newVals = currentVals.filter((v: string) => v !== option);
+    else newVals = [...currentVals, option];
+    handleAnswer(newVals);
   };
 
   // Keys
@@ -1104,10 +1146,10 @@ export default function HackathonForm() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && started && !isCompleted && !loading) {
         if (showOtpInput) { if (otpValue.length === 6) verifyOtp(); return; }
-        if (currentQuestion.type !== 'long-text' && currentQuestion.type !== 'checkbox' && !e.metaKey && !e.ctrlKey) { 
-           e.preventDefault();
-           if (currentQuestion.required && !answers[currentQuestion.id]) return;
-           handleNext();
+        if (currentQuestion.type !== 'long-text' && currentQuestion.type !== 'checkbox' && currentQuestion.type !== 'member-list' && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          if (currentQuestion.required && !answers[currentQuestion.id]) return;
+          handleNext();
         }
       }
     };
@@ -1127,126 +1169,126 @@ export default function HackathonForm() {
 
       {/* Main Folder Container */}
       <div className="w-full max-w-6xl relative z-10 flex flex-col">
-          
-          {/* Tabs */}
-          <div className="flex pl-8">
-              <div className="bg-slate-800 text-orange-500 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-l border-r border-slate-700 tracking-widest uppercase flex items-center gap-2">
-                 <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                 Registration Protocol
-              </div>
-              <div className="bg-slate-900/50 text-slate-600 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-r border-slate-800 tracking-widest uppercase ml-[-1px] z-[-1]">
-                 Classified // V.2.0
-              </div>
+
+        {/* Tabs */}
+        <div className="flex pl-8">
+          <div className="bg-slate-800 text-orange-500 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-l border-r border-slate-700 tracking-widest uppercase flex items-center gap-2">
+            <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+            Registration Protocol
           </div>
+          <div className="bg-slate-900/50 text-slate-600 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-r border-slate-800 tracking-widest uppercase ml-[-1px] z-[-1]">
+            Classified // V.2.0
+          </div>
+        </div>
 
-          {/* Folder Body */}
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-b-lg rounded-tr-lg p-1 shadow-2xl relative min-h-[500px] md:min-h-[600px] flex flex-col">
-              {/* Inner 'Paper' or Interface */}
-              <div className="bg-slate-900 flex-1 rounded border border-slate-700/50 p-6 md:p-12 relative overflow-hidden flex flex-col">
-                 
-                 {/* Decor elements */}
-                 <div className="absolute top-4 right-4 text-[10px] text-slate-600 font-mono tracking-widest">
-                     DOC_ID: {Math.floor(Date.now() / 1000)}
-                 </div>
-                 <div className="absolute bottom-4 left-4 text-[10px] text-slate-600 font-mono tracking-widest">
-                      SECURE CONNECTION ESTABLISHED
-                 </div>
+        {/* Folder Body */}
+        <div className="bg-slate-800 border-2 border-slate-700 rounded-b-lg rounded-tr-lg p-1 shadow-2xl relative min-h-[500px] md:min-h-[600px] flex flex-col">
+          {/* Inner 'Paper' or Interface */}
+          <div className="bg-slate-900 flex-1 rounded border border-slate-700/50 p-6 md:p-12 relative overflow-hidden flex flex-col">
 
-                 <AnimatePresence mode="wait" custom={direction}>
-                    {!showOtpInput ? (
-                       <motion.div
-                         key={currentStep}
-                         custom={direction}
-                         initial={{ opacity: 0, x: direction > 0 ? 20 : -20 }}
-                         animate={{ opacity: 1, x: 0 }}
-                         exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
-                         transition={{ duration: 0.2 }}
-                         className="flex-1 flex flex-col justify-center"
-                       >
-                           <div className="flex items-center gap-2 mb-6">
-                               <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                                   STEP {visibleStepIndex} / {visibleSteps}
-                               </span>
-                               {currentQuestion.required && <span className="text-red-500 text-xs uppercase tracking-wider">* Mandatory</span>}
-                           </div>
+            {/* Decor elements */}
+            <div className="absolute top-4 right-4 text-[10px] text-slate-600 font-mono tracking-widest">
+              DOC_ID: {Math.floor(Date.now() / 1000)}
+            </div>
+            <div className="absolute bottom-4 left-4 text-[10px] text-slate-600 font-mono tracking-widest">
+              SECURE CONNECTION ESTABLISHED
+            </div>
 
-                           <h2 className="text-2xl md:text-4xl font-bold mb-2 uppercase tracking-tight text-slate-100">
-                               {currentQuestion.question}
-                           </h2>
-                           
-                           {currentQuestion.subtext && (
-                               <p className="text-slate-400 text-sm md:text-base mb-8 border-l-2 border-slate-700 pl-4 py-1 italic">
-                                   {currentQuestion.subtext}
-                               </p>
-                           )}
+            <AnimatePresence mode="wait" custom={direction}>
+              {!showOtpInput ? (
+                <motion.div
+                  key={currentStep}
+                  custom={direction}
+                  initial={{ opacity: 0, x: direction > 0 ? 20 : -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex-1 flex flex-col justify-center"
+                >
+                  <div className="flex items-center gap-2 mb-6">
+                    <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                      STEP {visibleStepIndex} / {visibleSteps}
+                    </span>
+                    {currentQuestion.required && <span className="text-red-500 text-xs uppercase tracking-wider">* Mandatory</span>}
+                  </div>
 
-                           <div className="mt-4 mb-8">
-                               <InputRenderer 
-                                    question={currentQuestion} 
-                                    value={answers[currentQuestion.id]} 
-                                    onChange={handleAnswer} 
-                                    onCheckbox={handleCheckbox}
-                                    answers={answers}
-                               />
-                           </div>
-                           
-                           {errorMsg && (
-                               <div className="bg-red-900/20 border-l-2 border-red-500 text-red-400 p-3 mb-6 text-sm font-bold flex items-center gap-2">
-                                   <span>[ERROR]</span> {errorMsg}
-                               </div>
-                           )}
+                  <h2 className="text-2xl md:text-4xl font-bold mb-2 uppercase tracking-tight text-slate-100">
+                    {currentQuestion.question}
+                  </h2>
 
-                           <div className="mt-auto flex items-center gap-4">
-                               <button 
-                                  onClick={handleNext}
-                                  className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold uppercase tracking-widest px-8 py-3 clip-path-polygon disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                  disabled={loading}
-                               >
-                                  {loading ? "PROCESSING..." : "CONFIRM DATA >>"}
-                               </button>
-                               {currentStep > 0 && (
-                                   <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">
-                                       [ BACK ]
-                                   </button>
-                               )}
-                           </div>
-                       </motion.div>
-                    ) : (
-                       <motion.div
-                          key="otp"
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                          className="flex-1 flex flex-col justify-center items-center text-center"
-                       >
-                           <div className="w-16 h-16 border-2 border-orange-500 rounded-full flex items-center justify-center mb-6 animate-pulse text-orange-500">
-                               <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                           </div>
-                           <h2 className="text-2xl font-bold uppercase tracking-widest mb-2">Identity Verification</h2>
-                           <p className="text-slate-400 text-sm mb-8">TRANSMITTED KEY TO: {answers.leaderEmail}</p>
+                  {currentQuestion.subtext && (
+                    <p className="text-slate-400 text-sm md:text-base mb-8 border-l-2 border-slate-700 pl-4 py-1 italic">
+                      {currentQuestion.subtext}
+                    </p>
+                  )}
 
-                           <input
-                            type="text"
-                            maxLength={6}
-                            value={otpValue}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g,''); if(v.length<=6) setOtpValue(v); }}
-                            className="bg-slate-950 border-b-2 border-orange-500 w-48 text-center text-3xl tracking-[0.5em] font-mono text-white p-2 focus:outline-none mb-6"
-                            placeholder="______"
-                           />
-                           
-                           {errorMsg && <p className="text-red-500 text-xs font-bold mb-4">{errorMsg}</p>}
+                  <div className="mt-4 mb-8">
+                    <InputRenderer
+                      question={currentQuestion}
+                      value={answers[currentQuestion.id]}
+                      onChange={handleAnswer}
+                      onCheckbox={handleCheckbox}
+                      answers={answers}
+                    />
+                  </div>
 
-                           <button 
-                                onClick={verifyOtp} 
-                                className="bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-2 text-sm uppercase tracking-widest disabled:opacity-50"
-                                disabled={otpValue.length !== 6 || loading}
-                           >
-                               {loading ? "VERIFYING..." : "AUTHENTICATE"}
-                           </button>
-                       </motion.div>
+                  {errorMsg && (
+                    <div className="bg-red-900/20 border-l-2 border-red-500 text-red-400 p-3 mb-6 text-sm font-bold flex items-center gap-2">
+                      <span>[ERROR]</span> {errorMsg}
+                    </div>
+                  )}
+
+                  <div className="mt-auto flex items-center gap-4">
+                    <button
+                      onClick={handleNext}
+                      className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold uppercase tracking-widest px-8 py-3 clip-path-polygon disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      disabled={loading}
+                    >
+                      {loading ? "PROCESSING..." : "CONFIRM DATA >>"}
+                    </button>
+                    {currentStep > 0 && (
+                      <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">
+                        [ BACK ]
+                      </button>
                     )}
-                 </AnimatePresence>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="otp"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="flex-1 flex flex-col justify-center items-center text-center"
+                >
+                  <div className="w-16 h-16 border-2 border-orange-500 rounded-full flex items-center justify-center mb-6 animate-pulse text-orange-500">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                  </div>
+                  <h2 className="text-2xl font-bold uppercase tracking-widest mb-2">Identity Verification</h2>
+                  <p className="text-slate-400 text-sm mb-8">TRANSMITTED KEY TO: {answers.leaderEmail}</p>
 
-              </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpValue}
+                    onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); if (v.length <= 6) setOtpValue(v); }}
+                    className="bg-slate-950 border-b-2 border-orange-500 w-48 text-center text-3xl tracking-[0.5em] font-mono text-white p-2 focus:outline-none mb-6"
+                    placeholder="______"
+                  />
+
+                  {errorMsg && <p className="text-red-500 text-xs font-bold mb-4">{errorMsg}</p>}
+
+                  <button
+                    onClick={verifyOtp}
+                    className="bg-orange-600 hover:bg-orange-500 text-white font-bold px-8 py-2 text-sm uppercase tracking-widest disabled:opacity-50"
+                    disabled={otpValue.length !== 6 || loading}
+                  >
+                    {loading ? "VERIFYING..." : "AUTHENTICATE"}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
           </div>
+        </div>
       </div>
     </div>
   );

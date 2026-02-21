@@ -920,11 +920,18 @@ export default function HackathonForm() {
   const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
     const q = currentQuestion;
-    const ans = answers[q.id];
+    let ans = answers[q.id];
 
-    // 1. Required Field Check
+    // Trim string values before validation
+    if (typeof ans === 'string') {
+        ans = ans.trim();
+        // Store trimmed value back
+        setAnswers((prev: Answers) => ({ ...prev, [q.id]: ans }));
+    }
+
+    // 1. Required Field Check (catches empty + whitespace-only)
     if (q.required) {
-        if (!ans) {
+        if (!ans || (typeof ans === 'string' && ans.trim().length === 0)) {
             setErrorMsg("Field Required.");
             return;
         }
@@ -948,13 +955,72 @@ export default function HackathonForm() {
             setErrorMsg("Invalid Format: 10 Digits Required.");
             return;
         }
+        // Block numbers starting with 0-5 (invalid Indian mobiles)
+        if (/^[0-5]/.test(ans)) {
+            setErrorMsg("Invalid mobile number. Must start with 6-9.");
+            return;
+        }
     }
 
-    // 4. Email format check
+    // 4. Email format check (proper regex)
     if (q.type === 'email' || q.id.includes('Email')) {
-        if (typeof ans !== 'string' || !ans.includes('@') || !ans.includes('.')) {
-             setErrorMsg("Invalid Email Format.");
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (typeof ans !== 'string' || !emailRegex.test(ans.trim())) {
+             setErrorMsg("Invalid Email Format. Enter a valid email (e.g. name@example.com).");
              return;
+        }
+    }
+
+    // 5. URL validation for link fields
+    if (q.type === 'url' && typeof ans === 'string' && ans.trim().length > 0) {
+        const urlRegex = /^https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]$/;
+        if (!urlRegex.test(ans.trim())) {
+            setErrorMsg("Invalid URL. Must start with http:// or https://");
+            return;
+        }
+    }
+
+    // 6. Name fields: must contain at least one letter, no only-numbers/special-chars
+    if ((q.id.includes('Name') && q.type === 'text') && typeof ans === 'string') {
+        const trimmed = ans.trim();
+        if (trimmed.length < 2) {
+            setErrorMsg("Name must be at least 2 characters.");
+            return;
+        }
+        if (!/[a-zA-Z]/.test(trimmed)) {
+            setErrorMsg("Name must contain at least one letter.");
+            return;
+        }
+        if (/[^a-zA-Z\s.''-]/.test(trimmed)) {
+            setErrorMsg("Name can only contain letters, spaces, dots, and hyphens.");
+            return;
+        }
+    }
+
+    // 7. Team name: min 2 chars, no whitespace-only
+    if (q.id === 'teamName' && typeof ans === 'string') {
+        const trimmed = ans.trim();
+        if (trimmed.length < 2) {
+            setErrorMsg("Team name must be at least 2 characters.");
+            return;
+        }
+    }
+
+    // 8. Long text fields: min length for required ones
+    if (q.type === 'long-text' && q.required && typeof ans === 'string') {
+        const trimmed = ans.trim();
+        if (trimmed.length < 10) {
+            setErrorMsg("Response too short. Please provide at least 10 characters.");
+            return;
+        }
+    }
+
+    // 9. Idea title min length
+    if (q.id === 'ideaTitle' && typeof ans === 'string') {
+        const trimmed = ans.trim();
+        if (trimmed.length < 3) {
+            setErrorMsg("Idea title must be at least 3 characters.");
+            return;
         }
     }
 

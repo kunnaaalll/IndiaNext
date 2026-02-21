@@ -246,7 +246,7 @@ const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
 // --- Components ---
 
 const Navbar = () => (
-  <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-black/40 backdrop-blur-2xl">
+  <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-transparent backdrop-blur-md">
     <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       <Link href="/" className="flex items-center gap-3 group">
          <motion.div 
@@ -269,7 +269,8 @@ const Navbar = () => (
             { label: './ABOUT', href: '#about' },
             { label: './TRACKS', href: '#tracks' },
             { label: './BOUNTY', href: '#bounty' },
-            { label: './RULES', href: '/rules' }
+            { label: './RULES', href: '/rules' },
+            { label: './FAQ', href: '/faq' }
         ].map((link) => (
             <Link key={link.label} href={link.href} className="hover:text-white transition-colors relative group">
                 {link.label}
@@ -286,6 +287,12 @@ const Navbar = () => (
             REGISTER <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </span>
         </Link>
+
+        {/* KES Logos */}
+        <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10">
+          <Image src="/KES Society Logo (1).png" alt="KES Logo" width={32} height={40} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
+          <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={56} height={32} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
+        </div>
       </div>
     </div>
   </nav>
@@ -689,9 +696,18 @@ const TimelineSection = () => {
                             return (
                                 <motion.div 
                                     key={i}
-                                    initial={{ opacity: 0, y: 30 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true, margin: "-100px" }}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: false, amount: 0.3 }}
+                                    variants={{
+                                        hidden: { opacity: 0, x: i % 2 === 0 ? -120 : 120 },
+                                        visible: { 
+                                            opacity: 1, 
+                                            x: 0,
+                                            transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] }
+                                        }
+                                    }}
+                                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                                     className={`relative flex items-center gap-12 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} ${isPast ? 'opacity-40' : 'opacity-100'}`}
                                 >
                                     {/* Center Point */}
@@ -820,6 +836,10 @@ const Footer = () => (
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left">
                 <div className="col-span-1 md:col-span-2">
+                    <div className="flex items-center gap-4 mb-6">
+                        <Image src="/KES Society Logo (1).png" alt="KES Logo" width={48} height={60} className="object-contain" />
+                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={100} height={56} className="object-contain" />
+                    </div>
                     <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
                     <p className="text-gray-500 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
                         Autonomous | NAAC &apos;A&apos; Grade (3.58 CGPA)<br/>

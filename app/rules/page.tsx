@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -31,12 +31,6 @@ import {
   Presentation,
   Globe,
   Ban,
-  HelpCircle,
-  ChevronDown,
-  Mail,
-  Award,
-  Users,
-  Trophy,
 } from "lucide-react";
 
 // --- Theme Colors ---
@@ -107,9 +101,6 @@ export default function RulesPage() {
       {/* Final Authority */}
       <FinalAuthoritySection />
 
-      {/* FAQ */}
-      <FAQSection />
-
       {/* Footer CTA */}
       <FooterCTA />
 
@@ -156,7 +147,7 @@ const RulesNavbar = () => (
           { label: "./BUILDSTORM", href: "#buildstorm" },
           { label: "./AI_POLICY", href: "#ai-policy" },
           { label: "./CONDUCT", href: "#conduct" },
-          { label: "./FAQ", href: "#faq" },
+          { label: "./FAQ", href: "/faq" },
         ].map((link) => (
           <Link key={link.label} href={link.href} className="hover:text-white transition-colors relative group">
             {link.label}
@@ -210,13 +201,12 @@ const RulesHero = () => (
       </motion.p>
 
       {/* Quick Nav Cards */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto mt-12">
+      <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-12">
         {[
           { icon: <Lightbulb size={20} />, label: "IdeaSprint", href: "#ideasprint", color: GREEN },
           { icon: <Zap size={20} />, label: "BuildStorm", href: "#buildstorm", color: ORANGE },
           { icon: <Bot size={20} />, label: "AI Policy", href: "#ai-policy", color: CYAN },
           { icon: <Shield size={20} />, label: "Conduct", href: "#conduct", color: "#f59e0b" },
-          { icon: <HelpCircle size={20} />, label: "FAQ", href: "#faq", color: "#a855f7" },
         ].map((item, i) => (
           <Link key={i} href={item.href}>
             <motion.div
@@ -803,321 +793,8 @@ const FinalAuthoritySection = () => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// Section 6 — FAQ
+// Footer CTA
 // ─────────────────────────────────────────────────────────────
-
-interface FAQItemProps {
-  question: string;
-  answer: React.ReactNode;
-  index: number;
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-const FAQItem = ({ question, answer, index, isOpen, onToggle }: FAQItemProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 15 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ delay: index * 0.03 }}
-    className={`border rounded-sm overflow-hidden transition-all ${
-      isOpen ? "border-purple-500/30 bg-purple-500/[0.03]" : "border-white/5 bg-white/[0.02] hover:border-white/10"
-    }`}
-  >
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center gap-4 p-5 text-left cursor-pointer group"
-    >
-      <div
-        className={`flex-shrink-0 w-8 h-8 rounded-sm flex items-center justify-center text-xs font-black font-mono border transition-all ${
-          isOpen
-            ? "border-purple-500/50 text-purple-400 bg-purple-500/10"
-            : "border-white/10 text-gray-600 bg-white/5"
-        }`}
-      >
-        {String(index + 1).padStart(2, "0")}
-      </div>
-      <span className={`flex-1 font-bold text-sm transition-colors ${
-        isOpen ? "text-white" : "text-gray-300 group-hover:text-white"
-      }`}>
-        {question}
-      </span>
-      <ChevronDown
-        size={16}
-        className={`flex-shrink-0 transition-transform duration-300 ${
-          isOpen ? "rotate-180 text-purple-400" : "text-gray-600"
-        }`}
-      />
-    </button>
-    {isOpen && (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: "auto" }}
-        transition={{ duration: 0.3 }}
-        className="px-5 pb-5 pl-[68px]"
-      >
-        <div className="text-gray-400 text-sm leading-relaxed">{answer}</div>
-      </motion.div>
-    )}
-  </motion.div>
-);
-
-const FAQSection = () => {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
-  const faqs: { question: string; answer: React.ReactNode }[] = [
-    {
-      question: "Who can participate in INDIANEXT?",
-      answer: (
-        <p>
-          The hackathon is open to <strong className="text-white">students (undergraduate, postgraduate, diploma)</strong> from
-          any recognized institution. Individual participants and teams are welcome.
-        </p>
-      ),
-    },
-    {
-      question: "What is the maximum team size?",
-      answer: (
-        <p>
-          A team can have <strong className="text-white">1 to 4 members</strong>. Solo participation is allowed.
-        </p>
-      ),
-    },
-    {
-      question: "Can I participate in both IdeaSprint and BuildStorm?",
-      answer: (
-        <div>
-          <p className="mb-2">No. Each team can register for <strong className="text-white">only one track</strong>:</p>
-          <ul className="list-none space-y-1 ml-2">
-            <li>💡 IdeaSprint — Concept + Prototype Track</li>
-            <li>⚡ BuildStorm — 24-Hour MVP Development Track</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      question: "Is there any registration fee?",
-      answer: (
-        <p>
-          Participation is <strong className="text-white">completely free</strong>. No registration fee is required.
-        </p>
-      ),
-    },
-    {
-      question: "What domains are allowed?",
-      answer: (
-        <div>
-          <p className="mb-2">Participants can build solutions in:</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {["AI / ML", "Web Development", "Mobile Apps", "Cybersecurity", "Blockchain", "Cloud / DevOps", "Data Science", "FinTech", "HealthTech", "EdTech", "ClimateTech"].map((d) => (
-              <span key={d} className="px-3 py-1 text-[10px] font-mono font-black tracking-wider uppercase border border-white/10 bg-white/5 rounded-sm text-gray-400">
-                {d}
-              </span>
-            ))}
-          </div>
-          <p className="mt-3 text-gray-500 text-xs italic">We are technology-agnostic — innovation matters more than the tech stack.</p>
-        </div>
-      ),
-    },
-    {
-      question: "Can we use pre-built templates or frameworks?",
-      answer: (
-        <p>
-          Yes. UI kits and frameworks are allowed. However,{" "}
-          <strong className="text-white">core logic and implementation must be done during the hackathon</strong> (for BuildStorm).
-        </p>
-      ),
-    },
-    {
-      question: "Are AI tools like ChatGPT or Copilot allowed?",
-      answer: (
-        <div>
-          <p className="mb-2">Yes, AI tools are allowed for code suggestions, debugging, research, and documentation.</p>
-          <p className="text-amber-400 text-xs">
-            ⚠️ Participants must understand and explain their implementation. Blind copy-pasting is strictly prohibited.
-          </p>
-        </div>
-      ),
-    },
-    {
-      question: "Will we receive problem statements beforehand (BuildStorm)?",
-      answer: (
-        <p>
-          No. Problem statements or final confirmations will be shared on the{" "}
-          <strong className="text-white">event day</strong> or through official communication channels.
-        </p>
-      ),
-    },
-    {
-      question: "What do IdeaSprint participants need to submit?",
-      answer: (
-        <ul className="list-none space-y-2">
-          <li className="flex items-center gap-2"><FileText size={14} className="text-green-400" /> Idea Deck (Max 10 slides)</li>
-          <li className="flex items-center gap-2"><Video size={14} className="text-green-400" /> 3-minute Pitch Video</li>
-          <li className="flex items-center gap-2"><Layout size={14} className="text-green-400" /> Prototype / Mockup / Proof-of-Concept</li>
-          <li className="flex items-center gap-2"><Code size={14} className="text-green-400" /> Optional GitHub Repository</li>
-        </ul>
-      ),
-    },
-    {
-      question: "What do BuildStorm participants need to submit?",
-      answer: (
-        <ul className="list-none space-y-2">
-          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> Working MVP</li>
-          <li className="flex items-center gap-2"><Globe size={14} className="text-orange-400" /> Live Demo Link (if applicable)</li>
-          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> GitHub Repository with proper README</li>
-          <li className="flex items-center gap-2"><FileText size={14} className="text-orange-400" /> Technical Documentation</li>
-          <li className="flex items-center gap-2"><Presentation size={14} className="text-orange-400" /> Final Pitch Presentation</li>
-        </ul>
-      ),
-    },
-    {
-      question: "What happens if our project is incomplete?",
-      answer: (
-        <p>
-          A <strong className="text-white">working demo is mandatory</strong> for evaluation. Incomplete or non-functional
-          projects may be disqualified.
-        </p>
-      ),
-    },
-    {
-      question: "How will projects be evaluated?",
-      answer: (
-        <div className="flex flex-wrap gap-2">
-          {["Innovation", "Problem Relevance", "Technical Implementation", "Feasibility", "Scalability", "Presentation"].map((c) => (
-            <span key={c} className="px-3 py-1.5 text-[10px] font-mono font-black tracking-wider uppercase border border-cyan-500/20 bg-cyan-500/5 rounded-sm text-cyan-400">
-              {c}
-            </span>
-          ))}
-        </div>
-      ),
-    },
-    {
-      question: "Who owns the intellectual property of the project?",
-      answer: (
-        <p>
-          <strong className="text-white">Participants retain ownership</strong> of their project. However, organizers may use
-          project names, screenshots, or demo clips for promotional purposes.
-        </p>
-      ),
-    },
-    {
-      question: "Will there be certificates?",
-      answer: (
-        <div>
-          <p>Yes. All eligible participants will receive <strong className="text-white">Participation Certificates</strong>.</p>
-          <p className="mt-1">Winners will receive <strong className="text-orange-400">Winner / Runner-Up Certificates</strong>.</p>
-        </div>
-      ),
-    },
-    {
-      question: "What are the prizes?",
-      answer: (
-        <div>
-          <p className="text-xl font-black text-orange-500 mb-2">🏆 Total Prize Pool: ₹1,00,000++</p>
-          <ul className="list-none space-y-1 text-gray-400">
-            <li>🎓 Internship Opportunities</li>
-            <li>🧠 Mentorship & Incubation Support</li>
-            <li>🤝 Startup Networking</li>
-            <li>🎁 Swag Kits</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      question: "Where can we get updates?",
-      answer: (
-        <div>
-          <p className="mb-2">All updates will be shared via:</p>
-          <ul className="list-none space-y-1">
-            <li className="flex items-center gap-2"><Mail size={14} className="text-cyan-400" /> Registered Email</li>
-            <li className="flex items-center gap-2"><Globe size={14} className="text-cyan-400" />
-              <a href="https://www.indianexthackthon.online" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30" target="_blank" rel="noopener noreferrer">
-                www.indianexthackthon.online
-              </a>
-            </li>
-            <li className="flex items-center gap-2"><Users size={14} className="text-cyan-400" /> Official social media channels</li>
-          </ul>
-        </div>
-      ),
-    },
-    {
-      question: "Who do we contact for support?",
-      answer: (
-        <p>
-          📧 Email:{" "}
-          <a href="mailto:hackathon@kessc.edu.in" className="text-orange-400 hover:text-white transition-colors underline decoration-orange-400/30">
-            hackathon@kessc.edu.in
-          </a>
-          <span className="block text-gray-500 text-xs mt-1">Our team will respond within 24–48 hours.</span>
-        </p>
-      ),
-    },
-    {
-      question: "Can first-year students participate?",
-      answer: <p>Yes. <strong className="text-white">All years are welcome</strong> — from first year to final year.</p>,
-    },
-    {
-      question: "Can students from different colleges form a team?",
-      answer: <p>Yes. <strong className="text-white">Cross-college teams are allowed</strong> and encouraged.</p>,
-    },
-    {
-      question: "Can we modify our team after registration?",
-      answer: (
-        <p>
-          Team modifications may be allowed <strong className="text-white">before the deadline</strong>. Contact support at{" "}
-          <a href="mailto:hackathon@kessc.edu.in" className="text-orange-400 hover:text-white transition-colors underline decoration-orange-400/30">
-            hackathon@kessc.edu.in
-          </a>.
-        </p>
-      ),
-    },
-  ];
-
-  return (
-    <section id="faq" className="py-32 relative z-10 bg-[#020202] border-t border-white/5">
-      <div className="max-w-4xl mx-auto px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-16 text-center"
-        >
-          <div className="inline-flex items-center gap-3 mb-6">
-            <HelpCircle size={28} className="text-purple-400" />
-            <span className="font-mono text-[10px] font-black tracking-[0.5em] uppercase text-purple-400">
-              SECTION_06
-            </span>
-          </div>
-          <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
-            FAQ
-          </h2>
-          <div className="flex items-center justify-center gap-4 font-mono text-[10px] tracking-[0.5em] font-black uppercase text-purple-400">
-            <div className="w-12 h-px bg-purple-500/30" />
-            FREQUENTLY_ASKED_QUESTIONS
-            <div className="w-12 h-px bg-purple-500/30" />
-          </div>
-          <p className="text-gray-500 text-base font-bold tracking-tight max-w-xl mx-auto mt-6">
-            Everything you need to know before deploying your mission.
-          </p>
-        </motion.div>
-
-        <div className="flex flex-col gap-3">
-          {faqs.map((faq, i) => (
-            <FAQItem
-              key={i}
-              question={faq.question}
-              answer={faq.answer}
-              index={i}
-              isOpen={openIndex === i}
-              onToggle={() => setOpenIndex(openIndex === i ? null : i)}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
 
 // ─────────────────────────────────────────────────────────────
 // Footer CTA

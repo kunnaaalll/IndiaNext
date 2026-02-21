@@ -10,8 +10,6 @@ const globalForPrisma = global as unknown as {
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    // During build/prerender, DATABASE_URL may not exist — return a dummy that
-    // will throw at query time rather than at import time.
     console.warn("DATABASE_URL is not set — Prisma queries will fail at runtime.");
     return new Proxy({} as PrismaClient, {
       get(_, prop) {

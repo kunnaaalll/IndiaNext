@@ -44,8 +44,8 @@ interface EmailResult {
 
 const EMAIL_CONFIG = {
   from: process.env.EMAIL_FROM || "onboarding@resend.dev",
-  maxRetries: 3,
-  retryDelays: [1000, 3000, 9000], // Exponential backoff: 1s, 3s, 9s
+  maxRetries: 2,
+  retryDelays: [500, 1500], // Fast retries for serverless — 0.5s, 1.5s
   timeout: 10000, // 10 seconds
   otpExpiryMinutes: 10, // Shared constant — used in OTP HTML template AND send-otp route
 } as const;
@@ -219,7 +219,8 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
       const messageId = result.data?.id;
       console.log(`[Email] ✅ Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`);
 
-      await logEmail({
+      // Non-blocking log — don't wait for DB write
+      logEmail({
         to,
         from,
         subject,
@@ -227,7 +228,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
         status: 'SENT',
         messageId,
         attempts: attempt + 1,
-      });
+      }).catch(err => console.error('[Email] Log write failed:', err));
 
       return { success: true, messageId };
 
@@ -263,7 +264,8 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
     error: finalError,
   });
 
-  await logEmail({
+  // Non-blocking log
+  logEmail({
     to,
     from,
     subject,
@@ -271,7 +273,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
     status: 'FAILED',
     error: finalError,
     attempts: attempt,
-  });
+  }).catch(err => console.error('[Email] Log write failed:', err));
 
   return { success: false, error: finalError };
 }
@@ -371,6 +373,8 @@ interface ConfirmationEmailData {
   teamName: string;
   track: string;
   members: Array<{ name: string; email: string; role: string }>;
+  domain?: string;
+
 }
 
 export async function sendConfirmationEmail(to: string, data: ConfirmationEmailData): Promise<EmailResult> {
@@ -390,6 +394,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
   const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
 
   const subject = `✅ Registration Confirmed — IndiaNext Hackathon`;
+
   const html = `
         <!DOCTYPE html>
         <html>
@@ -399,10 +404,12 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
             <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+              
               <!-- Header -->
               <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">HACKATHON 2025</p>
+                
                 <div style="margin-top: 20px; padding: 12px 24px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
                   <span style="color: #10b981; font-size: 20px; margin-right: 8px;">✅</span>
                   <span style="color: #10b981; font-weight: bold; font-size: 14px; letter-spacing: 1px;">REGISTRATION CONFIRMED</span>
@@ -411,6 +418,13 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
 
               <!-- Main Content -->
               <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
+                
+                <p style="color: #ccc; margin: 0 0 24px 0; font-size: 16px; line-height: 1.7;">
+                  🎉 Congratulations! Your team has been successfully registered for 
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  Please keep your Team ID safe for future communication.
+                </p>
+
                 <!-- Team Info Card -->
                 <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
                   <h2 style="color: #ededed; margin: 0 0 16px 0; font-size: 20px;">Team Details</h2>
@@ -423,6 +437,14 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                       <td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td>
                       <td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">${trackIcon} ${escapeHtml(data.track)}</td>
                     </tr>
+                    ${
+                      data.domain
+                        ? `<tr>
+                            <td style="padding: 8px 0; color: #999; font-size: 14px;">Domain</td>
+                            <td style="padding: 8px 0; color: #ededed; font-size: 14px; font-weight: 500;">${escapeHtml(data.domain)}</td>
+                          </tr>`
+                        : ''
+                    }
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 14px;">Team ID</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 14px; font-family: 'Courier New', monospace;">${escapeHtml(data.teamId)}</td>
@@ -456,10 +478,11 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                 <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
                   <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">📋 What Happens Next?</h3>
                   <ol style="color: #ccc; margin: 0; padding-left: 20px; line-height: 2;">
-                    <li>Our team will review your registration</li>
-                    <li>You'll receive an email when your status updates</li>
-                    <li>Save your <strong style="color: #FF6600;">Team ID</strong> for future reference</li>
-                    ${data.track.includes('Idea') ? '<li>Prepare your pitch deck and prototype</li>' : '<li>Familiarize yourself with the problem statement</li>'}
+                    <li>Our team will review your registration details</li>
+                    <li>You will receive an email once your status is approved</li>
+                    <li>Save your <strong style="color: #FF6600;">Team ID</strong> for all future communication</li>
+                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and prototype submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
+                    <li>Follow updates on the official website</li>
                   </ol>
                 </div>
 
@@ -469,10 +492,21 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                   <p style="color: #FF6600; margin: 0; font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 4px;">${escapeHtml(data.teamId)}</p>
                 </div>
 
+                <!-- Official Website -->
+                <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <p style="color: #ccc; margin: 0; font-size: 13px;">
+                    🌐 Official Website: 
+                    <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
+                      www.indianexthackthon.online
+                    </a>
+                  </p>
+                </div>
+
                 <!-- Footer -->
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
                   <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">
-                    Need help? Contact us at <a href="mailto:support@indianext.in" style="color: #FF6600;">support@indianext.in</a>
+                    Need help? Contact us at 
+                    <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
                   </p>
                   <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">
                     © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
@@ -495,6 +529,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
   });
 }
 
+
 // ═══════════════════════════════════════════════════════════
 // TEAM MEMBER NOTIFICATION EMAIL
 // ═══════════════════════════════════════════════════════════
@@ -511,7 +546,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
 
-  const subject = `You've been added to Team ${escapeHtml(data.teamName)} — IndiaNext Hackathon`;
+  const subject = `✅ You're Added to Team ${escapeHtml(data.teamName)} — IndiaNext Hackathon`;
   const html = `
         <!DOCTYPE html>
         <html>
@@ -519,57 +554,138 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
           </head>
+
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
             <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
               <!-- Header -->
               <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
-                <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">HACKATHON 2025</p>
+                <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">
+                  IndiaNext
+                </h1>
+
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">
+                  HACKATHON 2025
+                </p>
+
+                <div style="margin-top: 18px; padding: 10px 22px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
+                  <span style="color: #FF6600; font-size: 18px; margin-right: 8px;">👥</span>
+                  <span style="color: #FF6600; font-weight: bold; font-size: 13px; letter-spacing: 1px;">
+                    TEAM MEMBER CONFIRMATION
+                  </span>
+                </div>
               </div>
 
               <!-- Main Content -->
               <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
-                <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 22px;">Hi ${escapeHtml(data.memberName)} 👋</h2>
-                <p style="color: #ccc; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
-                  <strong style="color: #FF6600;">${escapeHtml(data.leaderName)}</strong> has added you to their team for the IndiaNext Hackathon 2025.
+
+                <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 22px;">
+                  Hi ${escapeHtml(data.memberName)} 👋
+                </h2>
+
+                <p style="color: #ccc; margin: 0 0 24px 0; font-size: 15px; line-height: 1.7;">
+                  Great news! 🎉 You have been officially added to a registered team for the 
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  Please review your team details below and stay connected with your team leader.
                 </p>
 
                 <!-- Team Card -->
-                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">
+                    📌 Team Details
+                  </h3>
+
                   <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 14px; width: 120px;">Team Name</td>
-                      <td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">${escapeHtml(data.teamName)}</td>
+                      <td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">
+                        ${escapeHtml(data.teamName)}
+                      </td>
                     </tr>
+
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td>
-                      <td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">${trackIcon} ${escapeHtml(data.track)}</td>
+                      <td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">
+                        ${trackIcon} ${escapeHtml(data.track)}
+                      </td>
                     </tr>
+
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 14px;">Team Leader</td>
-                      <td style="padding: 8px 0; color: #ededed; font-size: 14px;">${escapeHtml(data.leaderName)}</td>
+                      <td style="padding: 8px 0; color: #ededed; font-size: 14px;">
+                        ${escapeHtml(data.leaderName)}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Leader Email</td>
+                      <td style="padding: 8px 0; font-size: 14px;">
+                        <a href="mailto:${escapeHtml(data.leaderEmail)}" style="color: #FF6600; text-decoration: none; font-weight: bold;">
+                          ${escapeHtml(data.leaderEmail)}
+                        </a>
+                      </td>
                     </tr>
                   </table>
                 </div>
 
-                <p style="color: #999; margin: 0 0 20px 0; font-size: 14px; line-height: 1.6;">
-                  If you did not expect to be added, please contact your team leader at
-                  <a href="mailto:${escapeHtml(data.leaderEmail)}" style="color: #FF6600; text-decoration: none;">${escapeHtml(data.leaderEmail)}</a>
-                  or reply to this email.
+                <!-- What's Next -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 16px;">
+                    🚀 What Should You Do Next?
+                  </h3>
+
+                  <ul style="color: #ccc; margin: 0; padding-left: 18px; font-size: 14px; line-height: 2;">
+                    <li>Connect with your team leader and discuss your project plan</li>
+                    <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
+                    <li>Finalize your problem statement and task distribution</li>
+                    <li>Prepare your prototype / tech stack planning</li>
+                    ${
+                      data.track.includes('Idea')
+                        ? `<li>Start working on your Idea Deck + Pitch Video + Prototype Mockup</li>`
+                        : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
+                    }
+                  </ul>
+                </div>
+
+                <!-- Security Note -->
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 18px; margin-bottom: 24px;">
+                  <p style="color: #f59e0b; margin: 0; font-size: 13px; line-height: 1.6;">
+                    ⚠️ If you did not expect to be added to this team, please immediately contact the team leader or email us.
+                  </p>
+                </div>
+
+                <!-- Official Website -->
+                <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 10px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <p style="color: #ccc; margin: 0; font-size: 13px;">
+                    🌐 Official Website:
+                    <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
+                      www.indianexthackthon.online
+                    </a>
+                  </p>
+                </div>
+
+                <p style="color: #999; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
+                  For any queries related to registration, event rules, or technical issues, feel free to reach out to us anytime.
                 </p>
 
                 <!-- Footer -->
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
                   <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">
-                    Need help? Contact us at <a href="mailto:support@indianext.in" style="color: #FF6600;">support@indianext.in</a>
+                    Need help? Contact us at 
+                    <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600; text-decoration: none;">
+                      hackathon@kessc.edu.in
+                    </a>
                   </p>
+
                   <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">
                     © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
+
                   <p style="color: #666; margin: 5px 0 0 0; font-size: 11px; text-align: center;">
                     Powered by <span style="color: #FF6600;">KESSC</span>
                   </p>
                 </div>
+
               </div>
             </div>
           </body>
@@ -583,6 +699,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
     type: 'MEMBER_NOTIFICATION',
   });
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // STATUS UPDATE EMAIL
@@ -680,25 +797,29 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   // Validate all emails first
   const validEmails: BatchEmailItem[] = [];
   const results: EmailResult[] = [];
+  const failedValidations: { to: string; from: string; subject: string; type: EmailType; error: string }[] = [];
 
   for (const email of emails) {
     const validation = validateEmail(email.to);
     if (!validation.valid) {
       console.error(`[Email] Batch validation failed for ${email.to}: ${validation.error}`);
-      await logEmail({
-        to: email.to,
-        from,
-        subject: email.subject,
-        type: email.type,
-        status: 'FAILED',
-        error: validation.error || 'Invalid email',
-        attempts: 0,
-      });
+      failedValidations.push({ to: email.to, from, subject: email.subject, type: email.type, error: validation.error || 'Invalid email' });
       results.push({ success: false, error: validation.error });
     } else {
       validEmails.push(email);
       results.push({ success: true }); // placeholder — updated below
     }
+  }
+
+  // Log validation failures in bulk (non-blocking)
+  if (failedValidations.length > 0) {
+    prisma.emailLog.createMany({
+      data: failedValidations.map(f => ({
+        to: f.to, from: f.from, subject: f.subject, type: f.type,
+        status: 'FAILED' as const, provider: 'resend', error: f.error,
+        attempts: 0, lastAttempt: new Date(),
+      })),
+    }).catch(err => console.error('[Email] Failed to log validation failures:', err));
   }
 
   if (validEmails.length === 0) return results;
@@ -727,28 +848,29 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
         });
       }
 
-      // Log each successful send
+      // Log all successful sends in a single DB call
       const batchData = batchResult.data?.data || [];
+      const logEntries: { to: string; from: string; subject: string; type: EmailType; status: 'SENT'; provider: string; messageId: string | undefined; attempts: number; lastAttempt: Date; sentAt: Date }[] = [];
       let validIdx = 0;
       for (let i = 0; i < results.length; i++) {
         if (results[i].success && validIdx < validEmails.length) {
           const messageId = batchData[validIdx]?.id;
           results[i] = { success: true, messageId };
-
-          await logEmail({
-            to: validEmails[validIdx].to,
-            from,
+          logEntries.push({
+            to: validEmails[validIdx].to, from,
             subject: validEmails[validIdx].subject,
             type: validEmails[validIdx].type,
-            status: 'SENT',
-            messageId,
-            attempts: attempt + 1,
+            status: 'SENT', provider: 'resend', messageId,
+            attempts: attempt + 1, lastAttempt: new Date(), sentAt: new Date(),
           });
-
           console.log(`[Email] ✅ ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`);
           validIdx++;
         }
       }
+
+      // Bulk insert logs — don't block the return
+      prisma.emailLog.createMany({ data: logEntries })
+        .catch(err => console.error('[Email] Failed to bulk-log sent emails:', err));
 
       console.log(`[Email] ✅ Batch complete — ${validEmails.length} emails sent in 1 API call`);
       return results;
@@ -853,81 +975,266 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-        <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
-          <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold;">IndiaNext</h1>
-          <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">HACKATHON 2025</p>
-          <div style="margin-top: 20px; padding: 12px 24px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
-            <span style="color: #10b981; font-size: 20px; margin-right: 8px;">✅</span>
-            <span style="color: #10b981; font-weight: bold; font-size: 14px; letter-spacing: 1px;">REGISTRATION CONFIRMED</span>
-          </div>
-        </div>
-        <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
-          <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-            <h2 style="color: #ededed; margin: 0 0 16px 0; font-size: 20px;">Team Details</h2>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px; width: 120px;">Team Name</td><td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">${escapeHtml(data.teamName)}</td></tr>
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td><td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">${trackIcon} ${escapeHtml(data.track)}</td></tr>
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px;">Team ID</td><td style="padding: 8px 0; color: #ededed; font-size: 14px; font-family: 'Courier New', monospace;">${escapeHtml(data.teamId)}</td></tr>
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px;">Status</td><td style="padding: 8px 0; color: #f59e0b; font-size: 14px; font-weight: bold;">⏳ PENDING REVIEW</td></tr>
-            </table>
-          </div>
-          <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-            <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">Team Members (${data.members.length})</h3>
-            <table style="width: 100%; border-collapse: collapse;"><thead><tr>
-              <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">#</th>
-              <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Name</th>
-              <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Email</th>
-              <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Role</th>
-            </tr></thead><tbody>${memberRows}</tbody></table>
-          </div>
-          <div style="background: rgba(255, 102, 0, 0.05); border: 2px solid #FF6600; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
-            <p style="color: #999; margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Save Your Team ID</p>
-            <p style="color: #FF6600; margin: 0; font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 4px;">${escapeHtml(data.teamId)}</p>
-          </div>
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
-            <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">Need help? Contact us at <a href="mailto:support@indianext.in" style="color: #FF6600;">support@indianext.in</a></p>
-            <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">© ${new Date().getFullYear()} IndiaNext Hackathon. Powered by <span style="color: #FF6600;">KESSC</span></p>
-          </div>
-        </div>
-      </div>
-    </body></html>`;
+  return `<!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+              
+              <!-- Header -->
+              <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
+                <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">HACKATHON 2025</p>
+                
+                <div style="margin-top: 20px; padding: 12px 24px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
+                  <span style="color: #10b981; font-size: 20px; margin-right: 8px;">✅</span>
+                  <span style="color: #10b981; font-weight: bold; font-size: 14px; letter-spacing: 1px;">REGISTRATION CONFIRMED</span>
+                </div>
+              </div>
+
+              <!-- Main Content -->
+              <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
+                
+                <p style="color: #ccc; margin: 0 0 24px 0; font-size: 16px; line-height: 1.7;">
+                  🎉 Congratulations! Your team has been successfully registered for 
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  Please keep your Team ID safe for future communication.
+                </p>
+
+                <!-- Team Info Card -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                  <h2 style="color: #ededed; margin: 0 0 16px 0; font-size: 20px;">Team Details</h2>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px; width: 120px;">Team Name</td>
+                      <td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">${escapeHtml(data.teamName)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td>
+                      <td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">${trackIcon} ${escapeHtml(data.track)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Team ID</td>
+                      <td style="padding: 8px 0; color: #ededed; font-size: 14px; font-family: 'Courier New', monospace;">${escapeHtml(data.teamId)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Status</td>
+                      <td style="padding: 8px 0; color: #f59e0b; font-size: 14px; font-weight: bold;">⏳ PENDING REVIEW</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- Members Table -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">Team Members (${data.members.length})</h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr>
+                        <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">#</th>
+                        <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Name</th>
+                        <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Email</th>
+                        <th style="padding: 8px 14px; text-align: left; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333;">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${memberRows}
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- What's Next -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">📋 What Happens Next?</h3>
+                  <ol style="color: #ccc; margin: 0; padding-left: 20px; line-height: 2;">
+                    <li>Our team will review your registration details</li>
+                    <li>You will receive an email once your status is approved</li>
+                    <li>Save your <strong style="color: #FF6600;">Team ID</strong> for all future communication</li>
+                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and prototype submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
+                    <li>Follow updates on the official website</li>
+                  </ol>
+                </div>
+
+                <!-- Important: Team ID -->
+                <div style="background: rgba(255, 102, 0, 0.05); border: 2px solid #FF6600; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                  <p style="color: #999; margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Save Your Team ID</p>
+                  <p style="color: #FF6600; margin: 0; font-size: 24px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 4px;">${escapeHtml(data.teamId)}</p>
+                </div>
+
+                <!-- Official Website -->
+                <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <p style="color: #ccc; margin: 0; font-size: 13px;">
+                    🌐 Official Website: 
+                    <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
+                      www.indianexthackthon.online
+                    </a>
+                  </p>
+                </div>
+
+                <!-- Footer -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
+                  <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">
+                    Need help? Contact us at 
+                    <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
+                  </p>
+                  <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                  </p>
+                  <p style="color: #666; margin: 5px 0 0 0; font-size: 11px; text-align: center;">
+                    Powered by <span style="color: #FF6600;">KESSC</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>`;
 }
 
 function buildMemberNotificationHtml(data: { memberName: string; teamName: string; leaderName: string; leaderEmail: string; track: string }): string {
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-        <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
-          <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold;">IndiaNext</h1>
-          <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">HACKATHON 2025</p>
-        </div>
-        <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
-          <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 22px;">Hi ${escapeHtml(data.memberName)} 👋</h2>
-          <p style="color: #ccc; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
-            <strong style="color: #FF6600;">${escapeHtml(data.leaderName)}</strong> has added you to their team for the IndiaNext Hackathon 2025.
-          </p>
-          <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px; width: 120px;">Team Name</td><td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">${escapeHtml(data.teamName)}</td></tr>
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td><td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">${trackIcon} ${escapeHtml(data.track)}</td></tr>
-              <tr><td style="padding: 8px 0; color: #999; font-size: 14px;">Team Leader</td><td style="padding: 8px 0; color: #ededed; font-size: 14px;">${escapeHtml(data.leaderName)}</td></tr>
-            </table>
-          </div>
-          <p style="color: #999; margin: 0 0 20px 0; font-size: 14px; line-height: 1.6;">
-            If you did not expect to be added, please contact your team leader at
-            <a href="mailto:${escapeHtml(data.leaderEmail)}" style="color: #FF6600; text-decoration: none;">${escapeHtml(data.leaderEmail)}</a>.
-          </p>
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
-            <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">Need help? Contact us at <a href="mailto:support@indianext.in" style="color: #FF6600;">support@indianext.in</a></p>
-            <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">© ${new Date().getFullYear()} IndiaNext Hackathon. Powered by <span style="color: #FF6600;">KESSC</span></p>
-          </div>
-        </div>
-      </div>
-    </body></html>`;
+  return `<!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+              <!-- Header -->
+              <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 40px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
+                <h1 style="color: #FF6600; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">
+                  IndiaNext
+                </h1>
+
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 16px; letter-spacing: 2px;">
+                  HACKATHON 2025
+                </p>
+
+                <div style="margin-top: 18px; padding: 10px 22px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
+                  <span style="color: #FF6600; font-size: 18px; margin-right: 8px;">👥</span>
+                  <span style="color: #FF6600; font-weight: bold; font-size: 13px; letter-spacing: 1px;">
+                    TEAM MEMBER CONFIRMATION
+                  </span>
+                </div>
+              </div>
+
+              <!-- Main Content -->
+              <div style="background: #1a1a1a; padding: 40px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
+
+                <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 22px;">
+                  Hi ${escapeHtml(data.memberName)} 👋
+                </h2>
+
+                <p style="color: #ccc; margin: 0 0 24px 0; font-size: 15px; line-height: 1.7;">
+                  Great news! 🎉 You have been officially added to a registered team for the 
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  Please review your team details below and stay connected with your team leader.
+                </p>
+
+                <!-- Team Card -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 16px 0; font-size: 16px;">
+                    📌 Team Details
+                  </h3>
+
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px; width: 120px;">Team Name</td>
+                      <td style="padding: 8px 0; color: #FF6600; font-size: 14px; font-weight: bold;">
+                        ${escapeHtml(data.teamName)}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Track</td>
+                      <td style="padding: 8px 0; color: ${trackColor}; font-size: 14px; font-weight: bold;">
+                        ${trackIcon} ${escapeHtml(data.track)}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Team Leader</td>
+                      <td style="padding: 8px 0; color: #ededed; font-size: 14px;">
+                        ${escapeHtml(data.leaderName)}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style="padding: 8px 0; color: #999; font-size: 14px;">Leader Email</td>
+                      <td style="padding: 8px 0; font-size: 14px;">
+                        <a href="mailto:${escapeHtml(data.leaderEmail)}" style="color: #FF6600; text-decoration: none; font-weight: bold;">
+                          ${escapeHtml(data.leaderEmail)}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+
+                <!-- What's Next -->
+                <div style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 24px; margin-bottom: 24px;">
+                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 16px;">
+                    🚀 What Should You Do Next?
+                  </h3>
+
+                  <ul style="color: #ccc; margin: 0; padding-left: 18px; font-size: 14px; line-height: 2;">
+                    <li>Connect with your team leader and discuss your project plan</li>
+                    <li>Join your team's GitHub / WhatsApp / Discord group (if created)</li>
+                    <li>Finalize your problem statement and task distribution</li>
+                    <li>Prepare your prototype / tech stack planning</li>
+                    ${data.track.includes('Idea')
+                      ? `<li>Start working on your Idea Deck + Pitch Video + Prototype Mockup</li>`
+                      : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
+                    }
+                  </ul>
+                </div>
+
+                <!-- Security Note -->
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 18px; margin-bottom: 24px;">
+                  <p style="color: #f59e0b; margin: 0; font-size: 13px; line-height: 1.6;">
+                    ⚠️ If you did not expect to be added to this team, please immediately contact the team leader or email us.
+                  </p>
+                </div>
+
+                <!-- Official Website -->
+                <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 10px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <p style="color: #ccc; margin: 0; font-size: 13px;">
+                    🌐 Official Website:
+                    <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
+                      www.indianexthackthon.online
+                    </a>
+                  </p>
+                </div>
+
+                <p style="color: #999; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
+                  For any queries related to registration, event rules, or technical issues, feel free to reach out to us anytime.
+                </p>
+
+                <!-- Footer -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #222;">
+                  <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">
+                    Need help? Contact us at 
+                    <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600; text-decoration: none;">
+                      hackathon@kessc.edu.in
+                    </a>
+                  </p>
+
+                  <p style="color: #666; margin: 10px 0 0 0; font-size: 11px; text-align: center;">
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                  </p>
+
+                  <p style="color: #666; margin: 5px 0 0 0; font-size: 11px; text-align: center;">
+                    Powered by <span style="color: #FF6600;">KESSC</span>
+                  </p>
+                </div>
+
+              </div>
+            </div>
+          </body>
+        </html>`;
 }

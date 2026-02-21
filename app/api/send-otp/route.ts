@@ -52,7 +52,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Check if email is already registered in any team (leader or member)
+    // ✅ Check if email is already registered + generate OTP in parallel
+    // These are independent operations — run concurrently to save time
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
     if (purpose === 'REGISTRATION') {
       const existingMembership = await prisma.teamMember.findFirst({
         where: {
@@ -76,14 +81,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 999999).toString();
-    
-    // Hash OTP before storage (SHA-256)
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-    
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
     // Upsert OTP record with hashed value
     await prisma.otp.upsert({
       where: {
@@ -93,14 +90,14 @@ export async function POST(req: Request) {
         },
       },
       update: {
-        otp: otpHash, // Store hash, not plain text
+        otp: otpHash,
         expiresAt,
         verified: false,
         attempts: 0,
       },
       create: {
         email,
-        otp: otpHash, // Store hash, not plain text
+        otp: otpHash,
         purpose: purpose as OtpPurpose,
         expiresAt,
         verified: false,
@@ -152,13 +149,15 @@ export async function POST(req: Request) {
       );
     }
   } catch (error) {
-    console.error('[OTP] Error:', error);
+    console.error('[OTP] Error:', error instanceof Error ? { message: error.message, stack: error.stack, name: error.name } : error);
     
     return NextResponse.json(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred. Please try again.',
+        message: process.env.NODE_ENV === 'development' 
+          ? `Internal error: ${error instanceof Error ? error.message : String(error)}`
+          : 'An unexpected error occurred. Please try again.',
       },
       { status: 500 }
     );

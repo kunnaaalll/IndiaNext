@@ -5,7 +5,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence, Variants } from "framer-motion";
-import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Lock, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X } from "lucide-react";
+import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Lock, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
+import "./styles/bounce-slow.css";
 
 // --- Theme Colors ---
 const CYAN = "#00CCFF";
@@ -231,7 +232,7 @@ const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
                  <div className="h-[2px] w-full bg-gray-900 rounded-full overflow-hidden">
                      <motion.div 
                         className="h-full bg-gradient-to-r from-orange-500 to-cyan-500 shadow-[0_0_15px_rgba(255,102,0,0.5)]"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: progress + "%" } as React.CSSProperties}
                      />
                  </div>
                  <p className="mt-6 text-center text-cyan-400 text-[10px] animate-pulse tracking-[0.3em] font-bold uppercase">{text}</p>
@@ -281,7 +282,7 @@ const Navbar = () => {
           {/* Right side: KES logos (mobile) + hamburger */}
           <div className="flex items-center gap-3 md:hidden">
             <div className="flex items-center gap-2">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={24} height={30} className="object-contain opacity-80" />
+              <Image src="/public/public/KES Society Logo (1) (1).png" alt="KES Logo" width={24} height={30} className="object-contain opacity-80" />
               <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={40} height={24} className="object-contain opacity-80" />
             </div>
             <button
@@ -416,6 +417,26 @@ const Navbar = () => {
 };
 
 const HeroSection = () => {
+  // Arrow visibility state
+  const [showArrow, setShowArrow] = React.useState(true);
+  React.useEffect(() => {
+    const onScroll = () => {
+      setShowArrow(window.scrollY < 60);
+    };
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Scroll to next section
+  const handleArrowClick = () => {
+    const nextSection = document.getElementById('about');
+    if (nextSection) {
+      nextSection.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-20 px-4 group overflow-hidden">
        {/* Background Light Effects */}
@@ -483,6 +504,22 @@ const HeroSection = () => {
               </Link>
           </motion.div>
        </motion.div>
+
+       {/* Bouncing Down Arrow (fixed, right side, hides after scroll, clickable) */}
+       {showArrow && (
+         <button
+           type="button"
+           onClick={handleArrowClick}
+           className="fixed right-6 bottom-8 z-50 flex flex-col items-center select-none focus:outline-none group"
+           style={{ pointerEvents: 'auto' }}
+           aria-label="Scroll Down"
+         >
+           <span className="animate-bounce-slow">
+             <ChevronDown size={40} className="text-orange-400 drop-shadow-lg group-active:scale-90 transition-transform" />
+           </span>
+           <span className="text-xs text-orange-400 font-mono mt-1 tracking-widest bg-black/70 px-2 py-0.5 rounded">Scroll Down</span>
+         </button>
+       )}
        
        <motion.div 
          initial={{ opacity: 0 }}
@@ -1020,16 +1057,24 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
         >
             <motion.div 
                 className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-500"
-                style={{
-                  background: useMotionTemplate`
-                    radial-gradient(
-                      800px circle at ${x}px ${y}px,
-                      ${accent}20,
-                      transparent 80%
-                    )
-                  `,
-                }}
-            />
+            >
+                <div
+                  className="w-full h-full"
+                  style={{
+                    background: useMotionTemplate`
+                      radial-gradient(
+                        800px circle at ${x}px ${y}px,
+                        ${accent}20,
+                        transparent 80%
+                      )
+                    `,
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                  } as React.CSSProperties}
+                />
+            </motion.div>
             
             {/* Corner Markers */}
             <div className="absolute top-0 left-0 w-8 h-8 border-t border-l border-white/10" />

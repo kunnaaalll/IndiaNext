@@ -10,7 +10,7 @@ import {
   hasPermission 
 } from '@/lib/auth-admin';
 import { sendStatusUpdateEmail } from '@/lib/email';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client/edge';
 
 // ═══════════════════════════════════════════════════════════
 // INPUT SCHEMAS

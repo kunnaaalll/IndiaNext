@@ -31,7 +31,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {analytics && (
           <RegistrationChart
-            data={analytics.registrationTrends.map((item) => ({
+            data={analytics.registrationTrends.map((item: { date: string | Date; count: number }) => ({
               date: String(item.date),
               count: item.count,
             }))}

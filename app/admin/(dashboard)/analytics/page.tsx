@@ -70,13 +70,15 @@ export default function AnalyticsPage() {
   // ── Prepare chart data ────────────────────────────────
 
   // Registration trends
-  const trendData = (analytics?.registrationTrends || []).map((item) => ({
-    date: new Date(String(item.date)).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    count: item.count,
-  }));
+  const trendData = (analytics?.registrationTrends || []).map(
+    (item: { date: string | Date; count: number }) => ({
+      date: new Date(String(item.date)).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      count: item.count,
+    })
+  );
 
   // Status breakdown for pie chart
   const statusData = stats
@@ -91,7 +93,7 @@ export default function AnalyticsPage() {
 
   // Track + Status grouped data for stacked bar
   const trackStatusMap: Record<string, Record<string, number>> = {};
-  (analytics?.trackComparison || []).forEach((item) => {
+  (analytics?.trackComparison || []).forEach((item: { track: string; status: string; _count: number }) => {
     const trackLabel = TRACK_LABELS[item.track] || item.track;
     if (!trackStatusMap[trackLabel]) trackStatusMap[trackLabel] = {};
     trackStatusMap[trackLabel][STATUS_LABELS[item.status] || item.status] =
@@ -106,7 +108,7 @@ export default function AnalyticsPage() {
   const allStatuses = [
     ...new Set(
       (analytics?.trackComparison || []).map(
-        (item) => STATUS_LABELS[item.status] || item.status
+        (item: { status: string }) => STATUS_LABELS[item.status] || item.status
       )
     ),
   ];
@@ -114,16 +116,18 @@ export default function AnalyticsPage() {
   // College distribution
   const collegeData = (analytics?.collegeDistribution || [])
     .slice(0, 10)
-    .map((item) => ({
+    .map((item: { college?: string; _count: number }) => ({
       name: item.college || "Unknown",
       count: item._count,
     }));
 
   // Team size distribution
-  const sizeData = (analytics?.teamSizeDistribution || []).map((item) => ({
-    size: `${item.size} member${item.size !== 1 ? "s" : ""}`,
-    count: item._count,
-  }));
+  const sizeData = (analytics?.teamSizeDistribution || []).map(
+    (item: { size: number; _count: number }) => ({
+      size: `${item.size} member${item.size !== 1 ? "s" : ""}`,
+      count: item._count,
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -315,8 +319,8 @@ export default function AnalyticsPage() {
                   );
                   return (
                     <Bar
-                      key={status}
-                      dataKey={status}
+                      key={String(status)}
+                      dataKey={String(status)}
                       stackId="a"
                       fill={
                         originalKey

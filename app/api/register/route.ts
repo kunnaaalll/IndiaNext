@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { rateLimitRegister, createRateLimitHeaders } from '@/lib/rate-limit';
 import { sendRegistrationBatchEmails } from '@/lib/email';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client/edge';
 
 // Idempotency response type
 interface IdempotencyResponse {
@@ -332,8 +332,8 @@ export async function POST(req: Request) {
     });
 
     if (existingMembers.length > 0) {
-      const dupes = [...new Set(existingMembers.map(m => m.user.email))];
-      const details = existingMembers.map(m =>
+      const dupes = [...new Set(existingMembers.map((m: typeof existingMembers[number]) => m.user.email))];
+      const details = existingMembers.map((m: typeof existingMembers[number]) =>
         `${m.user.email} is already in team "${m.team.name}" (${m.team.track})`
       );
       return NextResponse.json(

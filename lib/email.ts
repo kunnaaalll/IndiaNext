@@ -13,7 +13,7 @@
 
 import { Resend } from "resend";
 import { prisma } from "./prisma";
-import type { EmailType, EmailStatus } from "@prisma/client";
+import type { EmailType, EmailStatus } from "@prisma/client/edge";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -1167,7 +1167,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
         status: 'FAILED' as const, provider: 'resend', error: f.error,
         attempts: 0, lastAttempt: new Date(),
       })),
-    }).catch(err => console.error('[Email] Failed to log validation failures:', err));
+    }).catch((err: unknown) => console.error('[Email] Failed to log validation failures:', err));
   }
 
   if (validEmails.length === 0) return results;
@@ -1218,7 +1218,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
 
       // Bulk insert logs — don't block the return
       prisma.emailLog.createMany({ data: logEntries })
-        .catch(err => console.error('[Email] Failed to bulk-log sent emails:', err));
+        .catch((err: unknown) => console.error('[Email] Failed to bulk-log sent emails:', err));
 
       console.log(`[Email] ✅ Batch complete — ${validEmails.length} emails sent in 1 API call`);
       return results;

@@ -32,6 +32,15 @@ function timeAgo(date: Date | string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+type ActivityLog = {
+  id: string;
+  action: string;
+  createdAt: string | Date;
+  user?: {
+    name?: string;
+  };
+};
+
 export function RecentActivity() {
   const { data, isLoading } = trpc.admin.getActivityLogs.useQuery({
     page: 1,
@@ -61,7 +70,7 @@ export function RecentActivity() {
         </div>
       ) : (
         <div className="space-y-3">
-          {data.logs.map((log) => {
+          {data.logs.map((log: ActivityLog) => {
             const Icon = actionIcons[log.action] || Clock;
             return (
               <div key={log.id} className="flex gap-3 items-start group">

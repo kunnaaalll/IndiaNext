@@ -1060,19 +1060,21 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
             >
                 <div
                   className="w-full h-full"
-                  style={{
-                    background: useMotionTemplate`
-                      radial-gradient(
-                        800px circle at ${x}px ${y}px,
-                        ${accent}20,
-                        transparent 80%
-                      )
-                    `,
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                  } as React.CSSProperties}
+                  style={
+                    {
+                      background: useMotionTemplate`
+                        radial-gradient(
+                          800px circle at ${x}px ${y}px,
+                          ${accent}20,
+                          transparent 80%
+                        )
+                      `,
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                    } as unknown as React.CSSProperties
+                  }
                 />
             </motion.div>
             

@@ -5,9 +5,7 @@ import { TRPCError } from '@trpc/server';
 import { prisma } from '@/lib/prisma';
 import { 
   requirePermission, 
-  requireRole, 
   logAdminAction,
-  hasPermission 
 } from '@/lib/auth-admin';
 import { sendStatusUpdateEmail } from '@/lib/email';
 import type { Prisma } from '@prisma/client/edge';
@@ -51,9 +49,9 @@ export const adminTeamsRouter = router({
       filters: TeamFiltersSchema.optional(),
       pagination: PaginationSchema.optional(),
     }))
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       // Check permission
-      const session = await requirePermission('VIEW_ALL_TEAMS');
+      await requirePermission('VIEW_ALL_TEAMS');
       
       const { filters = {}, pagination } = input;
       const { page = 1, pageSize = 50, sortBy = 'createdAt', sortOrder = 'desc' } = pagination ?? {};
@@ -182,7 +180,7 @@ export const adminTeamsRouter = router({
       ]);
       
       return {
-        teams: teams.map(team => ({
+        teams: teams.map((team) => ({
           id: team.id,
           name: team.name,
           track: team.track,
@@ -194,7 +192,7 @@ export const adminTeamsRouter = router({
           commentCount: team._count.comments,
           hasSubmission: !!team.submission,
           submittedAt: team.submission?.submittedAt || null,
-          tags: team.tags.map(t => t.tag),
+          tags: team.tags.map((t) => t.tag),
           createdAt: team.createdAt,
           updatedAt: team.updatedAt,
         })),
@@ -216,8 +214,8 @@ export const adminTeamsRouter = router({
     .input(z.object({
       teamId: z.string(),
     }))
-    .query(async ({ ctx, input }) => {
-      const session = await requirePermission('VIEW_ALL_TEAMS');
+    .query(async ({ input }) => {
+      await requirePermission('VIEW_ALL_TEAMS');
       
       const team = await prisma.team.findUnique({
         where: { id: input.teamId },
@@ -289,7 +287,7 @@ export const adminTeamsRouter = router({
       notes: z.string().optional(),
       sendEmail: z.boolean().default(true),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('APPROVE_TEAMS');
       
       // Get team with leader info
@@ -369,7 +367,7 @@ export const adminTeamsRouter = router({
       reason: z.string().min(10, 'Rejection reason must be at least 10 characters'),
       sendEmail: z.boolean().default(true),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('REJECT_TEAMS');
       
       // Get team with leader info
@@ -448,7 +446,7 @@ export const adminTeamsRouter = router({
       notes: z.string().optional(),
       sendEmail: z.boolean().default(true),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('APPROVE_TEAMS');
       
       // Get teams with leader info
@@ -501,19 +499,18 @@ export const adminTeamsRouter = router({
       
       // Send emails
       if (input.sendEmail) {
-        const emailPromises = teams
-          .filter(team => team.members[0])
-          .map(team => {
-            const leader = team.members[0].user;
-            return sendStatusUpdateEmail(
-              leader.email,
-              team.name,
-              'APPROVED',
-              input.notes
-            ).catch(error => {
-              console.error(`[Admin] Failed to send approval email to ${leader.email}:`, error);
-            });
+        const teamsWithLeaders = teams.filter((team) => team.members[0]);
+        const emailPromises = teamsWithLeaders.map((team) => {
+          const leader = team.members[0].user;
+          return sendStatusUpdateEmail(
+            leader.email,
+            team.name,
+            'APPROVED',
+            input.notes
+          ).catch((error) => {
+            console.error(`[Admin] Failed to send approval email to ${leader.email}:`, error);
           });
+        });
         
         await Promise.allSettled(emailPromises);
       }
@@ -534,7 +531,7 @@ export const adminTeamsRouter = router({
       reason: z.string().min(10),
       sendEmail: z.boolean().default(true),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('REJECT_TEAMS');
       
       // Get teams with leader info
@@ -587,19 +584,18 @@ export const adminTeamsRouter = router({
       
       // Send emails
       if (input.sendEmail) {
-        const emailPromises = teams
-          .filter(team => team.members[0])
-          .map(team => {
-            const leader = team.members[0].user;
-            return sendStatusUpdateEmail(
-              leader.email,
-              team.name,
-              'REJECTED',
-              input.reason
-            ).catch(error => {
-              console.error(`[Admin] Failed to send rejection email to ${leader.email}:`, error);
-            });
+        const teamsWithLeaders = teams.filter((team) => team.members[0]);
+        const emailPromises = teamsWithLeaders.map((team) => {
+          const leader = team.members[0].user;
+          return sendStatusUpdateEmail(
+            leader.email,
+            team.name,
+            'REJECTED',
+            input.reason
+          ).catch((error) => {
+            console.error(`[Admin] Failed to send rejection email to ${leader.email}:`, error);
           });
+        });
         
         await Promise.allSettled(emailPromises);
       }
@@ -620,7 +616,7 @@ export const adminTeamsRouter = router({
       content: z.string().min(1),
       isInternal: z.boolean().default(true),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('ADD_COMMENTS');
       
       const comment = await prisma.comment.create({
@@ -657,7 +653,7 @@ export const adminTeamsRouter = router({
       tag: z.string().min(1).max(50),
       color: z.string().regex(/^#[0-9A-F]{6}$/i).default('#6366f1'),
     }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const session = await requirePermission('EDIT_TEAMS');
       
       const tag = await prisma.teamTag.create({
@@ -680,8 +676,8 @@ export const adminTeamsRouter = router({
     .input(z.object({
       tagId: z.string(),
     }))
-    .mutation(async ({ ctx, input }) => {
-      const session = await requirePermission('EDIT_TEAMS');
+    .mutation(async ({ input }) => {
+      await requirePermission('EDIT_TEAMS');
       
       await prisma.teamTag.delete({
         where: { id: input.tagId },
@@ -698,8 +694,8 @@ export const adminTeamsRouter = router({
     .input(z.object({
       teamId: z.string(),
     }))
-    .query(async ({ ctx, input }) => {
-      const session = await requirePermission('VIEW_ALL_TEAMS');
+    .query(async ({ input }) => {
+      await requirePermission('VIEW_ALL_TEAMS');
       
       const activities = await prisma.activityLog.findMany({
         where: {

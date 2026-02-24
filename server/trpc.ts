@@ -104,15 +104,34 @@ const isAdmin = t.middleware(({ ctx, next }) => {
   if (!ctx.session?.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
-  
+
   const allowedRoles = ["ADMIN", "SUPER_ADMIN", "ORGANIZER"];
   if (!allowedRoles.includes(ctx.session.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
   }
-  
+
   return next({ ctx });
+});
+
+// Judge middleware
+const isJudge = t.middleware(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  }
+
+  const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
+  if (!allowedRoles.includes(ctx.session.user.role)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Judge access required" });
+  }
+
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
 });
 
 // Protected procedures
 export const protectedProcedure = t.procedure.use(isAuthed);
 export const adminProcedure = t.procedure.use(isAdmin);
+export const judgeProcedure = t.procedure.use(isJudge);

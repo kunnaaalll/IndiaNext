@@ -8,11 +8,13 @@ import { router } from "../trpc";
 import { adminRouter } from "./admin";
 import { teamRouter } from "./team";
 import { authRouter } from "./auth";
+import { judgeRouter } from "./judge";
 
 export const appRouter = router({
   admin: adminRouter,
   team: teamRouter,
   auth: authRouter,
+  judge: judgeRouter,
 });
 
 export type AppRouter = typeof appRouter;

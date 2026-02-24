@@ -27,7 +27,7 @@ export async function getSession() {
 
 export async function checkAdminAuth() {
   const session = await getSession();
-  
+
   if (!session) {
     return null;
   }
@@ -40,9 +40,24 @@ export async function checkAdminAuth() {
   return session.user;
 }
 
+export async function checkJudgeAuth() {
+  const session = await getSession();
+
+  if (!session) {
+    return null;
+  }
+
+  const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
+  if (!allowedRoles.includes(session.user.role)) {
+    return null;
+  }
+
+  return session.user;
+}
+
 export async function requireAuth() {
   const session = await getSession();
-  
+
   if (!session) {
     throw new Error("Unauthorized");
   }
@@ -52,7 +67,7 @@ export async function requireAuth() {
 
 export async function requireAdminAuth() {
   const user = await checkAdminAuth();
-  
+
   if (!user) {
     throw new Error("Admin access required");
   }

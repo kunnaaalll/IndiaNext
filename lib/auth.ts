@@ -2,6 +2,8 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
+// ── Participant auth (OTP-based, session_token cookie) ──────
+
 export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get("session_token")?.value;
@@ -25,19 +27,43 @@ export async function getSession() {
   };
 }
 
+// ── Admin auth (password-based, admin_token cookie) ─────────
+
+export async function getAdminSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  const session = await prisma.adminSession.findUnique({
+    where: { token },
+    include: { admin: true },
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return null;
+  }
+
+  return {
+    admin: session.admin,
+    token: session.token,
+  };
+}
+
 export async function checkAdminAuth() {
-  const session = await getSession();
+  const session = await getAdminSession();
 
   if (!session) {
     return null;
   }
 
-  const allowedRoles = ["ADMIN", "SUPER_ADMIN", "ORGANIZER"];
-  if (!allowedRoles.includes(session.user.role)) {
+  if (!session.admin.isActive) {
     return null;
   }
 
-  return session.user;
+  return session.admin;
 }
 
 export async function checkJudgeAuth() {
@@ -66,11 +92,11 @@ export async function requireAuth() {
 }
 
 export async function requireAdminAuth() {
-  const user = await checkAdminAuth();
+  const admin = await checkAdminAuth();
 
-  if (!user) {
+  if (!admin) {
     throw new Error("Admin access required");
   }
 
-  return user;
+  return admin;
 }

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { rateLimitRoute, createRateLimitHeaders } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { z } from 'zod';
-import type { OtpPurpose } from '@prisma/client';
+import type { OtpPurpose } from '@prisma/client/edge';
 
 // Input validation schema
 const VerifyOtpSchema = z.object({

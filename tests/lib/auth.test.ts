@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // vi.hoisted ensures these are available when vi.mock factories run
-const { mockSessionFindUnique, mockCookieGet } = vi.hoisted(() => ({
+const { mockSessionFindUnique, mockAdminSessionFindUnique, mockCookieGet } = vi.hoisted(() => ({
   mockSessionFindUnique: vi.fn(),
+  mockAdminSessionFindUnique: vi.fn(),
   mockCookieGet: vi.fn(),
 }));
 
@@ -10,6 +11,9 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     session: {
       findUnique: mockSessionFindUnique,
+    },
+    adminSession: {
+      findUnique: mockAdminSessionFindUnique,
     },
   },
 }));
@@ -84,11 +88,8 @@ describe('Auth Helpers', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
 
-      mockSessionFindUnique.mockResolvedValue({
-        token: 'user-token',
-        expiresAt: futureDate,
-        user: { id: '1', email: 'user@test.com', role: 'PARTICIPANT' },
-      });
+      // adminSession not found — user only has a participant session
+      mockAdminSessionFindUnique.mockResolvedValue(null);
 
       const result = await checkAdminAuth();
       expect(result).toBeNull();
@@ -99,11 +100,11 @@ describe('Auth Helpers', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
 
-      const adminUser = { id: '1', email: 'admin@test.com', role: 'ADMIN' };
-      mockSessionFindUnique.mockResolvedValue({
+      const adminUser = { id: '1', email: 'admin@test.com', role: 'ADMIN', isActive: true };
+      mockAdminSessionFindUnique.mockResolvedValue({
         token: 'admin-token',
         expiresAt: futureDate,
-        user: adminUser,
+        admin: adminUser,
       });
 
       const result = await checkAdminAuth();
@@ -115,11 +116,11 @@ describe('Auth Helpers', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
 
-      const superAdmin = { id: '2', email: 'super@test.com', role: 'SUPER_ADMIN' };
-      mockSessionFindUnique.mockResolvedValue({
+      const superAdmin = { id: '2', email: 'super@test.com', role: 'SUPER_ADMIN', isActive: true };
+      mockAdminSessionFindUnique.mockResolvedValue({
         token: 'super-token',
         expiresAt: futureDate,
-        user: superAdmin,
+        admin: superAdmin,
       });
 
       const result = await checkAdminAuth();
@@ -131,15 +132,30 @@ describe('Auth Helpers', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
 
-      const organizer = { id: '3', email: 'org@test.com', role: 'ORGANIZER' };
-      mockSessionFindUnique.mockResolvedValue({
+      const organizer = { id: '3', email: 'org@test.com', role: 'ORGANIZER', isActive: true };
+      mockAdminSessionFindUnique.mockResolvedValue({
         token: 'org-token',
         expiresAt: futureDate,
-        user: organizer,
+        admin: organizer,
       });
 
       const result = await checkAdminAuth();
       expect(result).toEqual(organizer);
+    });
+
+    it('should return null for inactive admin', async () => {
+      mockCookieGet.mockReturnValue({ value: 'inactive-token' });
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+
+      mockAdminSessionFindUnique.mockResolvedValue({
+        token: 'inactive-token',
+        expiresAt: futureDate,
+        admin: { id: '4', email: 'inactive@test.com', role: 'ADMIN', isActive: false },
+      });
+
+      const result = await checkAdminAuth();
+      expect(result).toBeNull();
     });
   });
 });

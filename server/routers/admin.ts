@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { router, adminProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { sendStatusUpdateEmail } from "@/lib/email";
 
 export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
@@ -241,11 +242,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
       
       const team = await ctx.prisma.team.update({
         where: { id: input.teamId },
@@ -253,7 +250,7 @@ export const adminRouter = router({
           status: input.status,
           reviewNotes: input.reviewNotes,
           rejectionReason: input.rejectionReason,
-          reviewedBy: userId,
+          reviewedBy: adminId,
           reviewedAt: new Date(),
         },
         include: {
@@ -263,14 +260,14 @@ export const adminRouter = router({
         },
       });
 
-      // Log activity
+      // Log activity (userId is null because admin IDs are in separate Admin table)
       await ctx.prisma.activityLog.create({
         data: {
-          userId,
+          userId: null,
           action: "team.status_updated",
           entity: "Team",
           entityId: input.teamId,
-          metadata: { status: input.status, previousStatus: team.status },
+          metadata: { status: input.status, previousStatus: team.status, adminId, adminName: ctx.admin.name },
         },
       });
 
@@ -287,6 +284,21 @@ export const adminRouter = router({
         data: notifications,
       });
 
+      // Send email to team leader only (non-blocking)
+      const leader = team.members.find(
+        (m: { role: string; user: { email: string; name: string | null } }) => m.role === 'LEADER'
+      );
+      if (leader?.user?.email) {
+        sendStatusUpdateEmail(
+          leader.user.email,
+          team.name,
+          input.status,
+          input.reviewNotes || input.rejectionReason
+        ).catch((err) => {
+          console.error(`[EMAIL] Failed to send status update email to ${leader.user.email}:`, err);
+        });
+      }
+
       return team;
     }),
 
@@ -299,18 +311,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
       
       const result = await ctx.prisma.team.updateMany({
         where: { id: { in: input.teamIds } },
         data: {
           status: input.status,
           reviewNotes: input.reviewNotes,
-          reviewedBy: userId,
+          reviewedBy: adminId,
           reviewedAt: new Date(),
         },
       });
@@ -318,13 +326,39 @@ export const adminRouter = router({
       // Log activity for each team
       await ctx.prisma.activityLog.createMany({
         data: input.teamIds.map((teamId) => ({
-          userId,
+          userId: null,
           action: "team.bulk_status_updated",
           entity: "Team",
           entityId: teamId,
-          metadata: { status: input.status },
+          metadata: { status: input.status, adminId, adminName: ctx.admin.name },
         })),
       });
+
+      // Send emails to team leaders (non-blocking)
+      const teams = await ctx.prisma.team.findMany({
+        where: { id: { in: input.teamIds } },
+        select: {
+          name: true,
+          members: {
+            where: { role: 'LEADER' },
+            select: { user: { select: { email: true } } },
+          },
+        },
+      });
+
+      for (const t of teams) {
+        const leaderEmail = t.members[0]?.user?.email;
+        if (leaderEmail) {
+          sendStatusUpdateEmail(
+            leaderEmail,
+            t.name,
+            input.status,
+            input.reviewNotes
+          ).catch((err) => {
+            console.error(`[EMAIL] Failed to send bulk status email to ${leaderEmail}:`, err);
+          });
+        }
+      }
 
       return { count: result.count };
     }),
@@ -332,11 +366,7 @@ export const adminRouter = router({
   deleteTeam: adminProcedure
     .input(z.object({ teamId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
       
       // Soft delete
       await ctx.prisma.team.update({
@@ -346,10 +376,11 @@ export const adminRouter = router({
 
       await ctx.prisma.activityLog.create({
         data: {
-          userId,
+          userId: null,
           action: "team.deleted",
           entity: "Team",
           entityId: input.teamId,
+          metadata: { adminId, adminName: ctx.admin.name },
         },
       });
 
@@ -369,16 +400,12 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
       
       const comment = await ctx.prisma.comment.create({
         data: {
           teamId: input.teamId,
-          authorId: userId,
+          authorId: adminId,
           content: input.content,
           isInternal: input.isInternal,
         },
@@ -386,11 +413,11 @@ export const adminRouter = router({
 
       await ctx.prisma.activityLog.create({
         data: {
-          userId,
+          userId: null,
           action: "comment.created",
           entity: "Comment",
           entityId: comment.id,
-          metadata: { teamId: input.teamId },
+          metadata: { teamId: input.teamId, adminId, adminName: ctx.admin.name },
         },
       });
 
@@ -406,18 +433,12 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
-      
       const teamTag = await ctx.prisma.teamTag.create({
         data: {
           teamId: input.teamId,
           tag: input.tag,
           color: input.color,
-          addedBy: userId,
+          addedBy: ctx.admin.id,
         },
       });
 
@@ -445,10 +466,10 @@ export const adminRouter = router({
     const registrationTrends = await ctx.prisma.$queryRaw<
       Array<{ date: Date; count: bigint }>
     >`
-      SELECT DATE(created_at) as date, COUNT(*) as count
+      SELECT DATE("createdAt") as date, COUNT(*) as count
       FROM teams
-      WHERE created_at >= ${thirtyDaysAgo} AND deleted_at IS NULL
-      GROUP BY DATE(created_at)
+      WHERE "createdAt" >= ${thirtyDaysAgo} AND "deletedAt" IS NULL
+      GROUP BY DATE("createdAt")
       ORDER BY date
     `;
 
@@ -549,27 +570,15 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
 
       // ✅ SECURITY: Prevent privilege escalation
       // Only SUPER_ADMIN can grant ADMIN or SUPER_ADMIN roles
       const privilegedRoles = ["ADMIN", "SUPER_ADMIN"];
-      if (privilegedRoles.includes(input.role) && ctx.session.user.role !== "SUPER_ADMIN") {
+      if (privilegedRoles.includes(input.role) && ctx.admin.role !== "SUPER_ADMIN") {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only SUPER_ADMIN can grant admin-level roles",
-        });
-      }
-
-      // Prevent demoting yourself
-      if (input.userId === userId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot change your own role",
         });
       }
       
@@ -580,11 +589,11 @@ export const adminRouter = router({
 
       await ctx.prisma.activityLog.create({
         data: {
-          userId,
+          userId: null,
           action: "user.role_updated",
           entity: "User",
           entityId: input.userId,
-          metadata: { newRole: input.role },
+          metadata: { newRole: input.role, adminId, adminName: ctx.admin.name },
         },
       });
 
@@ -655,11 +664,7 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new Error("Unauthorized");
-      }
-      
-      const userId = ctx.session.user.id;
+      const adminId = ctx.admin.id;
       
       const where: Record<string, unknown> = {
         deletedAt: null,
@@ -699,11 +704,11 @@ export const adminRouter = router({
       // Log export activity
       await ctx.prisma.activityLog.create({
         data: {
-          userId,
+          userId: null,
           action: "teams.exported",
           entity: "Team",
           entityId: "bulk",
-          metadata: { count: teams.length, format: input.format },
+          metadata: { count: teams.length, format: input.format, adminId, adminName: ctx.admin.name },
         },
       });
 

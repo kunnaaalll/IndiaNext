@@ -4,7 +4,8 @@ import { sendOtpEmail, OTP_EXPIRY_MINUTES } from '@/lib/email';
 import { rateLimitRoute, createRateLimitHeaders } from '@/lib/rate-limit';
 import crypto from 'crypto';
 import { z } from 'zod';
-import type { OtpPurpose } from '@prisma/client';
+// Define OtpPurpose type as a union of string literals matching your schema
+type OtpPurpose = 'REGISTRATION' | 'LOGIN' | 'PASSWORD_RESET' | 'EMAIL_VERIFICATION';
 
 // Input validation schema
 const SendOtpSchema = z.object({

@@ -116,8 +116,8 @@ export default function AnalyticsPage() {
   // College distribution
   const collegeData = (analytics?.collegeDistribution || [])
     .slice(0, 10)
-    .map((item: { college?: string; _count: number }) => ({
-      name: item.college || "Unknown",
+    .map((item: { college: string | null; _count: number }) => ({
+      name: item.college ?? "Unknown",
       count: item._count,
     }));
 

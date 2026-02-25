@@ -132,8 +132,8 @@ const CountdownTimer = () => {
   });
 
   useEffect(() => {
-    // Set target to March 17, 2026, 11:00 AM
-    const target = new Date("March 17, 2026 11:00:00").getTime();
+    // Set target to March 16, 2026, 11:00 AM
+    const target = new Date("March 16, 2026 11:00:00").getTime();
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
@@ -160,8 +160,8 @@ const CountdownTimer = () => {
       {Object.entries(timeLeft).map(([unit, value]) => (
         <div key={unit} className="flex flex-col items-center">
           <div className="relative group">
-            <div className="absolute -inset-1 bg-orange-500/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative text-2xl md:text-5xl font-black text-white bg-white/5 border border-white/10 px-3 md:px-5 py-2 w-16 md:w-28 flex items-center justify-center rounded-sm backdrop-blur-md">
+            <div className="absolute -inset-1 bg-orange-500/40 blur-sm opacity-100 group-hover:bg-orange-500/60 transition-all duration-300" />
+            <div className="relative text-xl md:text-5xl font-black text-white bg-white/5 border border-white/20 px-2 md:px-5 py-2 w-14 md:w-28 flex items-center justify-center rounded-sm backdrop-blur-md">
               <span className="tabular-nums">{String(value).padStart(2, '0')}</span>
             </div>
           </div>
@@ -260,7 +260,7 @@ const Navbar = () => {
   return (
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-transparent backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-24 flex items-center justify-between">
           {/* Left: Logo */}
           <Link href="/" className="flex items-center gap-2 md:gap-3 group">
             <motion.div 
@@ -281,9 +281,9 @@ const Navbar = () => {
 
           {/* Right side: KES logos (mobile) + hamburger */}
           <div className="flex items-center gap-3 md:hidden">
-            <div className="flex items-center gap-2">
-              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={48} height={48} className="object-contain" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={64} height={40} className="object-contain opacity-90" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={44} height={44} className="object-contain sm:w-[52px] sm:h-[52px]" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={64} height={40} className="object-contain opacity-90 sm:w-[80px] sm:h-[48px]" />
             </div>
             <button
               onClick={() => setSidebarOpen(true)}
@@ -313,10 +313,9 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {/* KES Logos (desktop) */}
-            <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10 group/kes cursor-pointer pointer-events-auto">
-              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={64} height={64} className="object-contain group-hover/kes:-translate-y-0.5 transition-transform duration-300 opacity-80 hover:opacity-100" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={96} height={60} className="object-contain opacity-80 group-hover/kes:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-5 ml-2 pl-6 border-l border-white/10 group/kes cursor-pointer pointer-events-auto">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={72} height={72} className="object-contain group-hover/kes:-translate-y-1 transition-transform duration-300 opacity-100" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={112} height={64} className="object-contain opacity-90 group-hover/kes:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>
@@ -400,9 +399,9 @@ const Navbar = () => {
 
               {/* Sidebar Footer with KES Logos */}
               <div className="px-5 py-6 border-t border-white/5">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={80} height={80} className="object-contain opacity-80" />
-                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={112} height={64} className="object-contain opacity-70" />
+                <div className="flex items-center justify-center gap-8 mb-8">
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={130} height={130} className="object-contain opacity-95" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={200} height={110} className="object-contain opacity-90" />
                 </div>
                 <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">
                   K.E.S. SHROFF COLLEGE
@@ -438,7 +437,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-20 px-4 group overflow-hidden">
+    <section className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-32 px-4 group overflow-hidden select-none">
        {/* Background Light Effects */}
        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(0,204,255,0.05),transparent_60%)]" />
        
@@ -478,7 +477,7 @@ const HeroSection = () => {
           <motion.div variants={fadeInUp} className="flex flex-col items-center gap-4 mb-12">
               <div className="flex items-center gap-4 text-gray-400 font-mono text-xs md:text-sm tracking-[0.2em] font-bold">
                  <Target size={16} className="text-orange-500" />
-                 <span>17.03.2026</span>
+                 <span>16.03.2026</span>
                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
                  <span>MUMBAI_HQ</span>
               </div>
@@ -490,16 +489,16 @@ const HeroSection = () => {
              <CountdownTimer />
           </motion.div>
 
-          <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-center gap-6">
-              <Link href="/register" className="relative group overflow-hidden active:scale-95 transition-all duration-200 block">
-                 <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-green-500 rounded-sm blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
-                 <button className="relative px-14 py-7 bg-[#050505] border border-white/10 rounded-sm leading-none flex items-center justify-center gap-6 group-hover:bg-zinc-900 transition-all overflow-hidden">
+          <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-6 mt-4">
+              <Link href="/register" className="relative group overflow-hidden active:scale-95 transition-all duration-200 w-auto">
+                 <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-green-500 rounded-sm blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                 <button className="relative px-8 md:px-12 py-4 md:py-6 bg-[#0a0a0a] border border-white/20 rounded-sm leading-none flex items-center justify-center gap-4 md:gap-6 group-hover:bg-zinc-900 transition-all overflow-hidden shadow-[0_0_40px_rgba(249,115,22,0.1)]">
                     <div className="absolute inset-0 bg-white/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 italic" />
                     <span className="flex flex-col items-start text-left">
-                         <span className="text-[0.6rem] text-gray-500 font-mono tracking-widest mb-1 italic uppercase font-bold">ACCESS_PROTOCOLS_V2</span>
-                         <span className="text-3xl text-white font-black tracking-tight group-hover:text-orange-500 transition-colors uppercase">Register Now</span>
+                         <span className="text-[0.6rem] md:text-[0.7rem] text-orange-500/70 font-mono tracking-widest mb-1 italic uppercase font-bold group-hover:text-orange-500">ACCESS_PROTOCOLS_V2</span>
+                         <span className="text-2xl md:text-4xl text-orange-500 font-black tracking-tight group-hover:text-white transition-colors uppercase drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">Register Now</span>
                     </span>
-                    <ChevronRight size={32} className="text-orange-500 group-hover:translate-x-2 transition-transform" />
+                    <ChevronRight className="w-6 h-6 md:w-10 md:h-10 text-orange-500 group-hover:translate-x-2 transition-transform" />
                  </button>
               </Link>
               
@@ -507,7 +506,7 @@ const HeroSection = () => {
                   className="apply-button" 
                   data-hackathon-slug="indianext" 
                   data-button-theme="dark-inverted"
-                  style={{ height: "44px", width: "312px" }}
+                  style={{ height: "44px", width: "312px", minHeight: "44px" }}
               ></div>
           </motion.div>
        </motion.div>
@@ -549,7 +548,7 @@ const HighStakesTicker = () => {
         <div className="relative z-20 py-16 bg-[#030303] border-y border-white/5 overflow-hidden">
              <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
                  {[
-                    { label: 'BOUNTY_POOL', value: '₹1 Lakh+', color: 'text-white' },
+                    { label: 'BOUNTY_POOL', value: '₹1 Lakh+', color: 'text-orange-500' },
                     { label: 'RUN_TIME', value: '24H', color: 'text-orange-500' },
                     { label: 'SELECTED_TEAMS', value: '100', color: 'text-green-500' },
                     { label: 'ENTRY_FEE', value: 'FREE', color: 'text-cyan-400' }
@@ -701,7 +700,7 @@ const BountySection = () => (
                     BOUNTY
                 </motion.h2>
                 <h2 className="text-7xl md:text-[10rem] font-black uppercase tracking-tighter relative z-10 leading-none">The Bounty</h2>
-                <div className="inline-block px-6 py-2 bg-orange-600 text-white font-mono text-sm tracking-[0.3em] mt-8 uppercase font-black italic">
+                <div className="inline-block px-12 py-6 bg-orange-600 text-white font-mono text-3xl md:text-6xl tracking-tighter mt-12 uppercase font-black italic shadow-[0_0_60px_rgba(234,88,12,0.6)] animate-pulse">
                    TOTAL POOL: ₹1,00,000+
                 </div>
             </div>
@@ -778,16 +777,16 @@ const TimelineSection = () => {
     const [realTimePercent, setRealTimePercent] = useState(0);
 
     const timelineEvents = [
-        { id: 1, event: "Registrations Live", timestamp: new Date("2026-02-25T09:00:00"), date: "FEB 25, 2026", day: "WEDNESDAY", time: "09:00 AM", desc: "ENLISTMENT PROTOCOL INITIATED", icon: <FastForward /> },
+        { id: 1, event: "Registrations Live", timestamp: new Date("2026-02-20T09:00:00"), date: "FEB 20, 2026", day: "FRIDAY", time: "09:00 AM", desc: "ENLISTMENT PROTOCOL INITIATED", icon: <FastForward /> },
         { id: 2, event: "Registration End", timestamp: new Date("2026-03-05T23:59:00"), date: "MAR 05, 2026", day: "THURSDAY", time: "11:59 PM", desc: "SYSTEM LOCKDOWN", icon: <Lock /> },
         { id: 3, event: "Selected Teams Announcement", timestamp: new Date("2026-03-08T18:00:00"), date: "MAR 08, 2026", day: "SUNDAY", time: "06:00 PM", desc: "SQUAD DISCOVERY PHASE", icon: <Users /> },
-        { id: 4, event: "Hackathon Check-in", timestamp: new Date("2026-03-17T08:00:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "08:00 AM", desc: "BASE CAMP ARRIVAL", icon: <Globe /> },
-        { id: 5, event: "Mission H-Hour", timestamp: new Date("2026-03-17T11:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "11:30 AM", desc: "BUILD SEQUENCE START", icon: <Rocket /> },
-        { id: 6, event: "Supply Drop I", timestamp: new Date("2026-03-17T13:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "01:30 PM", desc: "LUNCH RATIONS", icon: <Activity /> },
-        { id: 7, event: "Tactical Sync I", timestamp: new Date("2026-03-17T15:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "03:30 PM", desc: "MENTOR STRATEGY ROUND", icon: <Target /> },
-        { id: 8, event: "Supply Drop II", timestamp: new Date("2026-03-17T20:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "08:30 PM", desc: "DINNER RATIONS", icon: <Activity /> },
-        { id: 9, event: "Mission End", timestamp: new Date("2026-03-18T11:30:00"), date: "MAR 18, 2026", day: "WEDNESDAY", time: "11:30 AM", desc: "PROTOCOL SUBMISSION", icon: <Shield /> },
-        { id: 10, event: "Victory Protocol", timestamp: new Date("2026-03-18T16:30:00"), date: "MAR 18, 2026", day: "WEDNESDAY", time: "04:30 PM", desc: "AWARD ENFORCEMENT", icon: <Trophy /> }
+        { id: 4, event: "Hackathon Check-in", timestamp: new Date("2026-03-16T08:00:00"), date: "MAR 16, 2026", day: "MONDAY", time: "08:00 AM", desc: "BASE CAMP ARRIVAL", icon: <Globe /> },
+        { id: 5, event: "Mission H-Hour", timestamp: new Date("2026-03-16T11:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "11:30 AM", desc: "BUILD SEQUENCE START", icon: <Rocket /> },
+        { id: 6, event: "Supply Drop I", timestamp: new Date("2026-03-16T13:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "01:30 PM", desc: "LUNCH RATIONS", icon: <Activity /> },
+        { id: 7, event: "Tactical Sync I", timestamp: new Date("2026-03-16T15:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "03:30 PM", desc: "MENTOR STRATEGY ROUND", icon: <Target /> },
+        { id: 8, event: "Supply Drop II", timestamp: new Date("2026-03-16T20:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "08:30 PM", desc: "DINNER RATIONS", icon: <Activity /> },
+        { id: 9, event: "Mission End", timestamp: new Date("2026-03-17T11:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "11:30 AM", desc: "PROTOCOL SUBMISSION", icon: <Shield /> },
+        { id: 10, event: "Victory Protocol", timestamp: new Date("2026-03-17T16:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "04:30 PM", desc: "AWARD ENFORCEMENT", icon: <Trophy /> }
     ];
 
     useEffect(() => {
@@ -1003,9 +1002,9 @@ const Footer = () => (
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left">
                 <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-6 mb-10">
-                        <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={120} height={120} className="object-contain" />
-                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={220} height={120} className="object-contain" />
+                    <div className="flex items-center gap-10 mb-12">
+                        <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={110} height={110} className="object-contain" />
+                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={180} height={100} className="object-contain" />
                     </div>
                     <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
                     <p className="text-gray-500 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
@@ -1015,19 +1014,19 @@ const Footer = () => (
                     </p>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">DIRECTORIES</h4>
-                   <div className="flex flex-col gap-5 text-[10px] font-black tracking-widest uppercase">
+                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
+                   <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
                         <Link href="/rules" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
                         <Link href="/rules#conduct" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
                         <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">COMMS_LINK</h4>
-                   <div className="flex flex-col gap-4 text-xs font-black">
+                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
+                   <div className="flex flex-col gap-5 text-xs font-black">
                         <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
                         <p className="text-white tracking-widest italic">+91 75068 54879</p>
-                        <p className="text-gray-600 mt-4 text-[10px] border border-white/5 py-1 px-3 inline-block">@KES_SHROFF_COLLEGE</p>
+                        <p className="text-gray-600 mt-4 text-[10px] border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
                    </div>
                 </div>
             </div>
@@ -1136,7 +1135,7 @@ const TechDetail = ({ icon, title, desc, accent = CYAN }: TechDetailProps) => (
 );
 
 const CyberBackground = () => (
-    <div className="fixed inset-0 z-0 bg-[#050505] perspective-1000 overflow-hidden">
+    <div className="fixed inset-0 z-0 bg-[#000000] perspective-1000 overflow-hidden">
         {/* Deep Space Base */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0d0d1a_0%,#000000_100%)]" />
         

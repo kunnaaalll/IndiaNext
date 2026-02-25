@@ -133,7 +133,7 @@ const RulesNavbar = () => {
   return (
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-transparent backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-24 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 md:gap-3 group">
             <motion.div
               whileHover={{ rotate: 180, scale: 1.1 }}
@@ -155,9 +155,9 @@ const RulesNavbar = () => {
 
           {/* Mobile: KES logos + hamburger */}
           <div className="flex items-center gap-3 md:hidden">
-            <div className="flex items-center gap-2">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={24} height={30} className="object-contain opacity-80" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={40} height={24} className="object-contain opacity-80" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={44} height={44} className="object-contain sm:w-[52px] sm:h-[52px]" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={64} height={40} className="object-contain opacity-90 sm:w-[80px] sm:h-[48px]" />
             </div>
             <button onClick={() => setSidebarOpen(true)} className="w-10 h-10 flex items-center justify-center border border-white/10 rounded-sm bg-white/5 active:bg-white/10 transition-colors" aria-label="Open menu">
               <Menu size={20} className="text-white" />
@@ -182,9 +182,9 @@ const RulesNavbar = () => {
                 REGISTER <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
-            <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={32} height={40} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={56} height={32} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-5 ml-2 pl-6 border-l border-white/10 group/kes cursor-pointer pointer-events-auto">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={72} height={72} className="object-contain group-hover/kes:-translate-y-1 transition-transform duration-300 opacity-100" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={112} height={64} className="object-contain opacity-90 group-hover/kes:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>
@@ -222,8 +222,8 @@ const RulesNavbar = () => {
               </div>
               <div className="px-5 py-6 border-t border-white/5">
                 <div className="flex items-center justify-center gap-4 mb-4">
-                  <Image src="/KES Society Logo (1).png" alt="KES Logo" width={36} height={44} className="object-contain opacity-70" />
-                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-70" />
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={48} height={48} className="object-contain opacity-100" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-90" />
                 </div>
                 <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">K.E.S. SHROFF COLLEGE</p>
               </div>

@@ -110,7 +110,7 @@ const FAQNavbar = () => {
   return (
     <>
       <nav className="fixed top-0 left-0 w-full z-50 border-b border-white/5 bg-transparent backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-24 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 md:gap-3 group">
             <motion.div
               whileHover={{ rotate: 180, scale: 1.1 }}
@@ -132,9 +132,9 @@ const FAQNavbar = () => {
 
           {/* Mobile: KES logos + hamburger */}
           <div className="flex items-center gap-3 md:hidden">
-            <div className="flex items-center gap-2">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={24} height={30} className="object-contain opacity-80" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={40} height={24} className="object-contain opacity-80" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={44} height={44} className="object-contain sm:w-[52px] sm:h-[52px]" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={64} height={40} className="object-contain opacity-90 sm:w-[80px] sm:h-[48px]" />
             </div>
             <button onClick={() => setSidebarOpen(true)} className="w-10 h-10 flex items-center justify-center border border-white/10 rounded-sm bg-white/5 active:bg-white/10 transition-colors" aria-label="Open menu">
               <Menu size={20} className="text-white" />
@@ -159,9 +159,9 @@ const FAQNavbar = () => {
                 REGISTER <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </span>
             </Link>
-            <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={32} height={40} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={56} height={32} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-5 ml-2 pl-6 border-l border-white/10 group/kes cursor-pointer pointer-events-auto">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={72} height={72} className="object-contain group-hover/kes:-translate-y-1 transition-transform duration-300 opacity-100" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={112} height={64} className="object-contain opacity-90 group-hover/kes:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>
@@ -199,8 +199,8 @@ const FAQNavbar = () => {
               </div>
               <div className="px-5 py-6 border-t border-white/5">
                 <div className="flex items-center justify-center gap-4 mb-4">
-                  <Image src="/KES Society Logo (1).png" alt="KES Logo" width={36} height={44} className="object-contain opacity-70" />
-                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-70" />
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={48} height={48} className="object-contain opacity-100" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-90" />
                 </div>
                 <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">K.E.S. SHROFF COLLEGE</p>
               </div>
@@ -584,44 +584,86 @@ const FAQContent = () => {
 // Footer CTA
 // ─────────────────────────────────────────────────────────────
 const FooterCTA = () => (
-  <footer className="py-32 border-t border-white/5 bg-black relative z-10">
-    <div className="max-w-4xl mx-auto px-6 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-      >
-        <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic mb-6">
-          Ready to <span className="text-orange-500">Deploy</span>?
-        </h2>
-        <p className="text-gray-500 text-lg font-bold tracking-tight mb-12 max-w-xl mx-auto">
-          Got your answers? Now join the mission.
-        </p>
+  <footer className="py-32 border-t border-white/10 bg-black relative z-10">
+    <div className="max-w-7xl mx-auto px-6">
+      {/* CTA Section */}
+      <div className="max-w-4xl mx-auto text-center mb-32">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic mb-6">
+            Ready to <span className="text-orange-500">Deploy</span>?
+          </h2>
+          <p className="text-gray-500 text-lg font-bold tracking-tight mb-12 max-w-xl mx-auto">
+            Got your answers? Now join the mission.
+          </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-          <Link
-            href="/register"
-            className="group relative px-10 py-4 overflow-hidden rounded-sm bg-orange-500 text-black font-black hover:text-white transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)]"
-          >
-            <div className="absolute inset-0 w-full h-full bg-[#020202] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-            <span className="relative z-10 flex items-center gap-3 text-sm tracking-widest uppercase italic">
-              REGISTER NOW <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link
+              href="/register"
+              className="group relative px-10 py-4 overflow-hidden rounded-sm bg-orange-500 text-black font-black hover:text-white transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)]"
+            >
+              <div className="absolute inset-0 w-full h-full bg-[#020202] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10 flex items-center gap-3 text-sm tracking-widest uppercase italic">
+                REGISTER NOW <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
 
-          <Link
-            href="/rules"
-            className="px-10 py-4 border border-white/10 rounded-sm text-gray-400 font-black text-sm tracking-widest uppercase italic hover:text-white hover:border-white/20 transition-all"
-          >
-            ← VIEW RULES
-          </Link>
-        </div>
-      </motion.div>
+            <Link
+              href="/rules"
+              className="px-10 py-4 border border-white/10 rounded-sm text-gray-400 font-black text-sm tracking-widest uppercase italic hover:text-white hover:border-white/20 transition-all"
+            >
+              ← VIEW RULES
+            </Link>
+          </div>
+        </motion.div>
+      </div>
 
-      <div className="mt-24 pt-12 border-t border-white/5">
-        <p className="text-gray-800 text-[8px] font-mono tracking-[0.8em] font-black uppercase">
-          &copy; 2026 INDIANEXT // ALL_RIGHTS_RESERVED // POWERED_BY_KESSC
-        </p>
+      {/* Main Footer Info */}
+      <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left border-t border-white/5 pt-24">
+          <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center gap-10 mb-12">
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={110} height={110} className="object-contain" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={180} height={100} className="object-contain" />
+              </div>
+              <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
+              <p className="text-gray-500 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
+                  Autonomous | NAAC &apos;A&apos; Grade (3.58 CGPA)<br/>
+                  QS I-Gauge Gold | Best College Award (University of Mumbai)<br/>
+                  Mumbai, MH 400067, IN
+              </p>
+          </div>
+          <div>
+             <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
+             <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
+                  <Link href="/" className="text-gray-500 hover:text-orange-500 transition-colors italic">./MISSION_HUB</Link>
+                  <Link href="/rules" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
+                  <Link href="/rules#conduct" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
+             </div>
+          </div>
+          <div>
+             <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
+             <div className="flex flex-col gap-5 text-xs font-black">
+                  <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
+                  <p className="text-white tracking-widest italic">+91 75068 54879</p>
+                  <p className="text-gray-600 mt-4 text-[10px] border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
+             </div>
+          </div>
+      </div>
+
+      <div className="pt-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="flex items-center gap-6">
+              <div className="w-12 h-12 relative rounded-sm border border-white/20 overflow-hidden grayscale group hover:grayscale-0 transition-all">
+                  <Image src="/Logo.jpg" alt="Logo" width={48} height={48} className="object-cover" />
+              </div>
+              <div className="flex flex-col">
+                  <span className="font-black text-2xl tracking-tighter uppercase leading-none">IndiaNext</span>
+                  <span className="text-[10px] font-mono text-gray-700 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
+              </div>
+          </div>
+          <p className="text-gray-800 text-[8px] font-mono tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
       </div>
     </div>
   </footer>

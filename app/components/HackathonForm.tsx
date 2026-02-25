@@ -380,7 +380,7 @@ const QUESTIONS: Question[] = [
 // Subcomponents
 
 const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
-  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#0f0c29] text-white relative overflow-hidden font-mono">
+  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono">
      {/* Grid Background */}
      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
@@ -392,7 +392,7 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
         <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
           India<span className="text-orange-500">Next</span>
         </h1>
-        <div className="flex items-center justify-center gap-2 text-slate-200 text-sm mb-12 tracking-widest uppercase">
+        <div className="flex items-center justify-center gap-2 text-slate-500 text-sm mb-12 tracking-widest uppercase">
            <span>IdeaSprint</span>
            <div className="w-1 h-1 bg-slate-500 rounded-full" />
            <span>BuildStorm</span>
@@ -409,7 +409,7 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
 );
 
 const ThankYouScreen = ({ track }: { track: string }) => (
-   <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#0f0c29] font-mono text-white p-4">
+   <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 font-mono text-white p-4">
       <div className="w-full max-w-2xl border-2 border-green-500/50 bg-green-500/5 p-8 relative">
          <div className="absolute top-0 right-0 p-2 text-xs text-green-500 border-l border-b border-green-500/50">STATUS: APPROVED</div>
          <div className="text-green-400 text-6xl mb-6">
@@ -517,7 +517,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
       {isOpen && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-[#151232] border border-slate-700 rounded shadow-2xl"
+          className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-slate-900 border border-slate-700 rounded shadow-2xl"
         >
           {filtered.map((item, idx) => (
             <li
@@ -542,7 +542,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
 
       {/* Hint text */}
       {value && value.length >= 2 && filtered.length === 0 && isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1 px-4 py-3 bg-[#151232] border border-slate-700 rounded text-slate-200 text-xs font-mono">
+        <div className="absolute z-50 left-0 right-0 mt-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded text-slate-500 text-xs font-mono">
           No matches — your custom entry will be used
         </div>
       )}
@@ -586,7 +586,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
              className={`text-left px-4 py-3 border text-sm md:text-base font-mono transition-all flex items-start gap-4 w-full
                 ${selected.includes(opt) 
                     ? 'bg-orange-500/10 border-orange-500 text-white' 
-                    : 'bg-transparent border-slate-700 text-slate-100 hover:border-slate-500'}
+                    : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500'}
              `}
            >
              <div className={`mt-0.5 w-5 h-5 flex items-center justify-center shrink-0 border
@@ -616,12 +616,12 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
                 }
             }}
             placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
-            className="flex-1 bg-[#151232]/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed"
+            className="flex-1 bg-slate-900/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed"
          />
          
          {/* Guidance Panel */}
          {question.guidance && (
-             <div className="md:w-64 shrink-0 bg-[#151232] border border-slate-800 p-4 rounded text-sm text-slate-100 font-mono hidden md:block">
+             <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
                  <div className="text-orange-500 font-bold mb-2 uppercase tracking-wider text-xs border-b border-orange-500/20 pb-1">
                      RESPONSE PATTERN
                  </div>
@@ -644,7 +644,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
       <div className="flex items-center gap-4 border-b-2 border-slate-700 py-2 focus-within:border-orange-500 transition-all">
          <div className="flex items-center gap-2 select-none opacity-80">
             <span className="text-xl">🇮🇳</span>
-            <span className="text-xl md:text-2xl text-slate-100 font-mono">+91</span>
+            <span className="text-xl md:text-2xl text-slate-400 font-mono">+91</span>
          </div>
          <input
             ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
@@ -664,7 +664,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
 
   if (question.type === 'info') {
       return (
-          <div className="w-full max-w-2xl bg-[#151232] border border-slate-700 p-6 rounded relative overflow-hidden">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
               <div className="flex items-center gap-2 text-orange-400 font-bold mb-4 uppercase tracking-widest text-xs">
                   <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
@@ -703,7 +703,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
               {isSameAsLeader && <Check className="w-3 h-3 text-white" />}
             </span>
             <span
-              className="text-sm font-mono text-slate-100 group-hover:text-slate-300 transition-colors"
+              className="text-sm font-mono text-slate-400 group-hover:text-slate-300 transition-colors"
               onClick={() => {
                 if (isSameAsLeader) {
                   onChange('');
@@ -753,7 +753,7 @@ const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: bool
         className={`text-left px-4 py-3 border flex items-center gap-4 w-full transition-all
            ${selected 
              ? 'bg-orange-500 border-orange-500 text-black' 
-             : 'bg-transparent border-slate-700 text-slate-100 hover:border-slate-500 hover:text-white'}
+             : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'}
         `}
       >
         <div className={`w-4 h-4 border flex items-center justify-center shrink-0
@@ -1134,7 +1134,7 @@ export default function HackathonForm() {
                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                  Registration Protocol
               </div>
-              <div className="bg-[#151232]/50 text-slate-300 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-r border-slate-800 tracking-widest uppercase ml-[-1px] z-[-1]">
+              <div className="bg-slate-900/50 text-slate-600 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-r border-slate-800 tracking-widest uppercase ml-[-1px] z-[-1]">
                  Classified // V.2.0
               </div>
           </div>
@@ -1142,13 +1142,13 @@ export default function HackathonForm() {
           {/* Folder Body */}
           <div className="bg-slate-800 border-2 border-slate-700 rounded-b-lg rounded-tr-lg p-1 shadow-2xl relative min-h-[500px] md:min-h-[600px] flex flex-col">
               {/* Inner 'Paper' or Interface */}
-              <div className="bg-[#151232] flex-1 rounded border border-slate-700/50 p-6 md:p-12 relative overflow-hidden flex flex-col">
+              <div className="bg-slate-900 flex-1 rounded border border-slate-700/50 p-6 md:p-12 relative overflow-hidden flex flex-col">
                  
                  {/* Decor elements */}
-                 <div className="absolute top-4 right-4 text-[10px] text-slate-300 font-mono tracking-widest">
+                 <div className="absolute top-4 right-4 text-[10px] text-slate-600 font-mono tracking-widest">
                      DOC_ID: {Math.floor(Date.now() / 1000)}
                  </div>
-                 <div className="absolute bottom-4 left-4 text-[10px] text-slate-300 font-mono tracking-widest">
+                 <div className="absolute bottom-4 left-4 text-[10px] text-slate-600 font-mono tracking-widest">
                       SECURE CONNECTION ESTABLISHED
                  </div>
 
@@ -1175,7 +1175,7 @@ export default function HackathonForm() {
                            </h2>
                            
                            {currentQuestion.subtext && (
-                               <p className="text-slate-100 text-sm md:text-base mb-8 border-l-2 border-slate-700 pl-4 py-1 italic">
+                               <p className="text-slate-400 text-sm md:text-base mb-8 border-l-2 border-slate-700 pl-4 py-1 italic">
                                    {currentQuestion.subtext}
                                </p>
                            )}
@@ -1205,7 +1205,7 @@ export default function HackathonForm() {
                                   {loading ? "PROCESSING..." : "CONFIRM DATA >>"}
                                </button>
                                {currentStep > 0 && (
-                                   <button onClick={handlePrev} className="text-slate-200 hover:text-slate-300 text-sm uppercase tracking-wider">
+                                   <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">
                                        [ BACK ]
                                    </button>
                                )}
@@ -1221,14 +1221,14 @@ export default function HackathonForm() {
                                <div className="w-2 h-2 bg-orange-500 rounded-full" />
                            </div>
                            <h2 className="text-2xl font-bold uppercase tracking-widest mb-2">Identity Verification</h2>
-                           <p className="text-slate-100 text-sm mb-8">TRANSMITTED KEY TO: {answers.leaderEmail}</p>
+                           <p className="text-slate-400 text-sm mb-8">TRANSMITTED KEY TO: {answers.leaderEmail}</p>
 
                            <input
                             type="text"
                             maxLength={6}
                             value={otpValue}
                             onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g,''); if(v.length<=6) setOtpValue(v); }}
-                            className="bg-[#0f0c29] border-b-2 border-orange-500 w-48 text-center text-3xl tracking-[0.5em] font-mono text-white p-2 focus:outline-none mb-6"
+                            className="bg-slate-950 border-b-2 border-orange-500 w-48 text-center text-3xl tracking-[0.5em] font-mono text-white p-2 focus:outline-none mb-6"
                             placeholder="______"
                            />
                            

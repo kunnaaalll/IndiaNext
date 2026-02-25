@@ -282,8 +282,8 @@ const Navbar = () => {
           {/* Right side: KES logos (mobile) + hamburger */}
           <div className="flex items-center gap-3 md:hidden">
             <div className="flex items-center gap-2">
-              <Image src="/public/public/KES Society Logo (1) (1).png" alt="KES Logo" width={24} height={30} className="object-contain opacity-80" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={40} height={24} className="object-contain opacity-80" />
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={42} height={42} className="object-contain" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={56} height={32} className="object-contain opacity-90" />
             </div>
             <button
               onClick={() => setSidebarOpen(true)}
@@ -314,9 +314,9 @@ const Navbar = () => {
             </Link>
 
             {/* KES Logos (desktop) */}
-            <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10">
-              <Image src="/KES Society Logo (1).png" alt="KES Logo" width={32} height={40} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
-              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={56} height={32} className="object-contain opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-3 ml-2 pl-4 border-l border-white/10 group/kes cursor-pointer pointer-events-auto">
+              <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={56} height={56} className="object-contain group-hover/kes:-translate-y-0.5 transition-transform duration-300 opacity-80 hover:opacity-100" />
+              <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-80 group-hover/kes:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>
@@ -401,8 +401,8 @@ const Navbar = () => {
               {/* Sidebar Footer with KES Logos */}
               <div className="px-5 py-6 border-t border-white/5">
                 <div className="flex items-center justify-center gap-4 mb-4">
-                  <Image src="/KES Society Logo (1).png" alt="KES Logo" width={36} height={44} className="object-contain opacity-70" />
-                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-70" />
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={64} height={64} className="object-contain opacity-80" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={96} height={52} className="object-contain opacity-70" />
                 </div>
                 <p className="text-center font-mono text-[8px] text-gray-100 tracking-[0.3em] uppercase font-bold">
                   K.E.S. SHROFF COLLEGE
@@ -931,7 +931,7 @@ const SponsorsSection = () => (
             <p className="text-gray-100 font-mono text-[9px] tracking-[1em] mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                    { name: "Your Brand Here", status: "PENDING_ACQUISITION" },
+                    { name: "Devfolio", image: "/Devfolio /Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
                     { name: "Sponsor Alpha", status: "LINK_ACTIVE" },
                     { name: "Partner Bravo", status: "LINK_ACTIVE" },
                     { name: "Node Delta", status: "LINK_ACTIVE" }
@@ -944,9 +944,15 @@ const SponsorsSection = () => (
                          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/20 group-hover:border-orange-500 transition-colors" />
                          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/20 group-hover:border-orange-500 transition-colors" />
                          
-                         <span className="text-gray-200 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
-                            {brand.name}
-                         </span>
+                         {brand.image ? (
+                            <div className="mb-2 flex items-center justify-center flex-1">
+                                <Image src={brand.image} alt={brand.name} width={160} height={48} className="object-contain" />
+                            </div>
+                         ) : (
+                             <span className="text-gray-200 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
+                                {brand.name}
+                             </span>
+                         )}
                          <span className="text-[7px] font-mono text-gray-100 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
                             {brand.status}
                          </span>
@@ -999,9 +1005,9 @@ const Footer = () => (
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left">
                 <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-4 mb-6">
-                        <Image src="/KES Society Logo (1).png" alt="KES Logo" width={48} height={60} className="object-contain" />
-                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={100} height={56} className="object-contain" />
+                    <div className="flex items-center gap-6 mb-8 mt-4">
+                        <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={84} height={84} className="object-contain" />
+                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={140} height={80} className="object-contain" />
                     </div>
                     <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
                     <p className="text-gray-200 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">

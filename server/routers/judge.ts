@@ -200,14 +200,16 @@ export const judgeRouter = router({
             // Log activity
             await ctx.prisma.activityLog.create({
                 data: {
-                    userId: ctx.session.user.id,
+                    userId: ctx.isUser ? ctx.user.id : null,
                     action: "team.judged",
                     entity: "Team",
                     entityId: input.teamId,
                     metadata: {
                         score: input.score,
                         comments: input.comments,
-                        criteria: input.criteria
+                        criteria: input.criteria,
+                        adminId: !ctx.isUser ? ctx.user.id : undefined,
+                        judgeName: ctx.user.name
                     }
                 }
             });

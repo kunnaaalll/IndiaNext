@@ -69,16 +69,22 @@ export async function checkAdminAuth() {
 export async function checkJudgeAuth() {
   const session = await getSession();
 
-  if (!session) {
-    return null;
+  if (session) {
+    const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
+    if (allowedRoles.includes(session.user.role)) {
+      return session.user;
+    }
   }
 
-  const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
-  if (!allowedRoles.includes(session.user.role)) {
-    return null;
+  const adminSession = await getAdminSession();
+  if (adminSession) {
+    const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
+    if (allowedRoles.includes(adminSession.admin.role)) {
+      return adminSession.admin;
+    }
   }
 
-  return session.user;
+  return null;
 }
 
 export async function requireAuth() {

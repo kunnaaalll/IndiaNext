@@ -1,20 +1,81 @@
 "use client";
 
-import { Bell } from "lucide-react";
-import { Button } from "@/components/judge/button";
+import { Bell, Activity, Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 
-export function JudgeHeader({ user }: { user: any }) {
+interface JudgeUser {
+    name: string;
+    email: string;
+    role: string;
+}
+
+const pageTitles: Record<string, { title: string; code: string }> = {
+    "/judge": { title: "DASHBOARD", code: "SYS://OVERVIEW" },
+    "/judge/teams": { title: "EVALUATE", code: "SYS://TEAM_EVAL" },
+};
+
+export function JudgeHeader({
+    user,
+    onMenuToggle,
+}: {
+    user: JudgeUser;
+    onMenuToggle?: () => void;
+}) {
+    const pathname = usePathname();
+
+    const pageInfo =
+        Object.entries(pageTitles).find(
+            ([path]) =>
+                pathname === path || (path !== "/judge" && pathname.startsWith(path))
+        )?.[1] || { title: "JUDGE PANEL", code: "SYS://UNKNOWN" };
+
     return (
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-            <h2 className="text-sm font-medium text-gray-500">
-                Evaluation Period: <span className="text-gray-900 font-bold">Live</span>
-            </h2>
+        <header className="bg-[#080808]/80 backdrop-blur-md border-b border-white/[0.06] px-4 md:px-6 py-3 shrink-0 relative z-20">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-4">
+                    {/* Mobile hamburger */}
+                    <button
+                        onClick={onMenuToggle}
+                        className="p-1.5 text-gray-400 hover:text-orange-400 hover:bg-white/[0.03] rounded-md md:hidden transition-colors"
+                        aria-label="Toggle menu"
+                    >
+                        <Menu className="h-5 w-5" />
+                    </button>
+                    <div>
+                        <h1 className="text-sm font-mono font-black tracking-[0.2em] text-white uppercase">
+                            {pageInfo.title}
+                        </h1>
+                        <span className="text-[9px] font-mono text-gray-600 tracking-[0.3em] hidden sm:inline">
+                            {pageInfo.code}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 md:gap-3">
+                    {/* Status Indicator — hidden on very small screens */}
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border border-white/[0.06] rounded-md">
+                        <Activity className="h-3 w-3 text-emerald-400" />
+                        <span className="text-[9px] font-mono text-gray-500 tracking-widest font-bold">LIVE</span>
+                    </div>
 
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="relative">
-                    <Bell className="w-5 h-5 text-gray-500" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                </Button>
+                    <button
+                        className="relative p-2 text-gray-500 hover:text-orange-400 rounded-md hover:bg-white/[0.03] border border-transparent hover:border-white/[0.06] transition-all"
+                        title="Notifications"
+                        aria-label="Notifications"
+                    >
+                        <Bell className="h-4 w-4" />
+                    </button>
+
+                    <div className="h-5 w-px bg-white/[0.06] hidden sm:block" />
+
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-orange-700 rounded-md flex items-center justify-center text-white text-xs font-mono font-bold shadow-[0_0_10px_rgba(255,102,0,0.2)]">
+                            {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="hidden sm:block">
+                            <div className="text-xs font-medium text-gray-300">{user.name}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
     );

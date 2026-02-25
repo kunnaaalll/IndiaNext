@@ -135,18 +135,36 @@ const isAdmin = t.middleware(({ ctx, next }) => {
 
 // Judge middleware
 const isJudge = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.session?.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
+
+  let user = null;
+  let isUser = true;
+
+  // 1. Check if participant session has judge access
+  if (ctx.session?.user && allowedRoles.includes(ctx.session.user.role)) {
+    user = ctx.session.user;
+    isUser = true;
+  }
+  // 2. If not found yet, check if admin session has judge access
+  else if (ctx.adminSession?.admin && allowedRoles.includes(ctx.adminSession.admin.role)) {
+    user = ctx.adminSession.admin as any;
+    isUser = false;
   }
 
-  const allowedRoles = ["JUDGE", "ADMIN", "SUPER_ADMIN", "ORGANIZER"];
-  if (!allowedRoles.includes(ctx.session.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Judge access required" });
+  if (!user) {
+    // If we have a session but it wasn't authorized, it's a 403.
+    // If we have no session at all, it's a 401.
+    if (ctx.session?.user || ctx.adminSession?.admin) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Judge access required" });
+    }
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
 
   return next({
     ctx: {
-      session: { ...ctx.session, user: ctx.session.user },
+      ...ctx,
+      user,
+      isUser,
     },
   });
 });

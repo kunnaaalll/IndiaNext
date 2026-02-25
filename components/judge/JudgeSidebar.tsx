@@ -1,73 +1,193 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
     LogOut,
-    Trophy,
-    Settings
+    ChevronRight,
+    Terminal,
+    X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
-export function JudgeSidebar({ user }: { user: any }) {
+interface JudgeUser {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+
+const navItems = [
+    { href: "/judge", label: "DASHBOARD", code: "01", icon: LayoutDashboard, exact: true },
+    {
+        href: "/judge/teams",
+        label: "EVALUATE",
+        code: "02",
+        icon: Users,
+        matches: ["/judge/teams", "/judge/evaluate"]
+    },
+];
+
+export function JudgeSidebar({
+    user,
+    isOpen,
+    onClose,
+}: {
+    user: JudgeUser;
+    isOpen: boolean;
+    onClose: () => void;
+}) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [loggingOut, setLoggingOut] = useState(false);
 
-    const links = [
-        { href: "/judge", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/judge/teams", label: "Evaluate Teams", icon: Users },
-    ];
+    // Close sidebar on route change (mobile)
+    useEffect(() => {
+        onClose();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname]);
+
+    const isActive = (item: any) => {
+        if (item.exact) return pathname === item.href;
+        if (item.matches) return item.matches.some((m: string) => pathname.startsWith(m));
+        return pathname.startsWith(item.href);
+    };
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+            await fetch("/api/auth/signout", { method: "POST" });
+            router.push("/admin/login");
+        } catch {
+            setLoggingOut(false);
+        }
+    };
+
+    const roleColors: Record<string, string> = {
+        SUPER_ADMIN: "bg-red-500/15 text-red-400 border-red-500/20",
+        ADMIN: "bg-orange-500/15 text-orange-400 border-orange-500/20",
+        ORGANIZER: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
+        JUDGE: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    };
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-            <div className="h-16 flex items-center px-6 border-b border-gray-100">
-                <span className="text-xl font-bold text-indigo-600">IndiaNext</span>
-                <span className="ml-2 text-xs font-medium bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full">
-                    JUDGE
-                </span>
-            </div>
+        <>
+            {/* Mobile backdrop */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+                    onClick={onClose}
+                />
+            )}
 
-            <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-                {links.map((link) => {
-                    const Icon = link.icon;
-                    const isActive = pathname === link.href;
-                    return (
-                        <Link
-                            key={link.href}
-                            href={link.href}
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                                isActive
-                                    ? "bg-indigo-50 text-indigo-700"
-                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                            )}
-                        >
-                            <Icon className={cn("w-5 h-5", isActive ? "text-indigo-600" : "text-gray-400")} />
-                            {link.label}
-                        </Link>
-                    );
-                })}
-            </div>
+            {/* Sidebar */}
+            <aside
+                className={`
+          fixed inset-y-0 left-0 z-50 w-64 bg-[#080808] border-r border-white/[0.06] text-white flex flex-col shrink-0
+          transform transition-transform duration-300 ease-in-out
+          md:relative md:translate-x-0 md:z-20
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+            >
+                {/* Brand */}
+                <div className="p-5 border-b border-white/[0.06] flex items-center justify-between">
+                    <Link href="/judge" className="flex items-center gap-3 group">
+                        <div className="relative w-9 h-9 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-cyan-400 to-green-500 rounded-lg opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
+                            <div className="relative w-full h-full border border-white/20 bg-black/60 rounded-lg flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
+                                <Image src="/logo-new.png" alt="IndiaNext Logo" width={28} height={28} className="object-contain" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="font-black text-base tracking-tighter leading-none">
+                                INDIA<span className="text-orange-500">NEXT</span>
+                            </span>
+                            <span className="text-[0.5rem] text-gray-500 tracking-[0.35em] font-mono font-bold">
+                                JUDGE_CONSOLE
+                            </span>
+                        </div>
+                    </Link>
+                    {/* Mobile close button */}
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-white/[0.05] md:hidden transition-colors"
+                        aria-label="Close sidebar"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
 
-            <div className="p-4 border-t border-gray-100">
-                <div className="flex items-center gap-3 px-3 py-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
-                        {user.name?.charAt(0) || "J"}
-                    </div>
-                    <div className="overflow-hidden">
-                        <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                {/* System Status */}
+                <div className="px-5 py-3 border-b border-white/[0.04]">
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[9px] font-mono text-gray-500 tracking-[0.3em] font-bold uppercase">
+                            SYSTEM ONLINE
+                        </span>
                     </div>
                 </div>
-                <button
-                    onClick={() => window.location.href = "/api/auth/signout"}
-                    className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                    <LogOut className="w-5 h-5" />
-                    Sign Out
-                </button>
-            </div>
-        </aside>
+
+                {/* Navigation */}
+                <nav className="flex-1 py-4 px-3 space-y-1">
+                    <div className="px-3 mb-3">
+                        <span className="text-[9px] font-mono text-gray-600 tracking-[0.4em] font-bold uppercase">
+                            NAVIGATION
+                        </span>
+                    </div>
+                    {navItems.map((item) => {
+                        const active = isActive(item);
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-mono font-bold tracking-widest transition-all relative group ${active
+                                    ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent"
+                                    }`}
+                            >
+                                {active && (
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-orange-500 rounded-r shadow-[0_0_8px_rgba(255,102,0,0.6)]" />
+                                )}
+                                <span className={`text-[10px] ${active ? "text-orange-500/60" : "text-gray-700"}`}>
+                                    {item.code}
+                                </span>
+                                <item.icon className="h-4 w-4 shrink-0" />
+                                <span>{item.label}</span>
+                                {active && <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-60" />}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* User Info & Logout */}
+                <div className="p-4 border-t border-white/[0.06]">
+                    <div className="mb-3 px-1">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Terminal className="h-3 w-3 text-gray-600" />
+                            <span className="text-[9px] font-mono text-gray-600 tracking-[0.3em] uppercase font-bold">EVALUATOR</span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-300 truncate">{user.name}</div>
+                        <div className="text-[11px] text-gray-500 font-mono truncate">{user.email}</div>
+                        <span
+                            className={`inline-block mt-1.5 text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border ${roleColors[user.role] || "bg-white/5 text-gray-400 border-white/10"
+                                }`}
+                        >
+                            {user.role.replace("_", " ")}
+                        </span>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-mono tracking-wider text-gray-500 hover:text-red-400 hover:bg-red-500/5 border border-transparent hover:border-red-500/10 rounded-md transition-all disabled:opacity-50"
+                    >
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>{loggingOut ? "DISCONNECTING..." : "LOGOUT"}</span>
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 }

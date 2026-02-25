@@ -1,13 +1,15 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Trash2, Plus, Upload } from 'lucide-react';
+import { Check } from 'lucide-react';
+import Link from 'next/link';
 import { INDIAN_COLLEGES } from '@/lib/data/colleges';
 import { INDIAN_DEGREES } from '@/lib/data/degrees';
 
 // ── Types ───────────────────────────────────────
-type Answers = Record<string, any>;
+type Answers = Record<string, string | string[] | undefined>;
 
 interface Question {
   id: string;
@@ -58,6 +60,13 @@ const QUESTIONS: Question[] = [
     placeholder: "e.g. Innovation Squad",
     required: true,
   },
+  {
+    id: 'teamSize',
+    type: 'choice',
+    question: "Team Size",
+    options: ["Solo (1)", "2 Members", "3 Members", "4 Members"],
+    required: true,
+  },
 
   // --- SECTION 4: TEAM LEADER DETAILS ---
   {
@@ -100,12 +109,115 @@ const QUESTIONS: Question[] = [
   },
 
   // --- SECTION 5: TEAM MEMBER DETAILS ---
+  // Member 2
   {
-    id: 'teamMembers',
-    type: 'member-list',
-    question: "Team Members",
-    subtext: "Add your team members (Max 3 additional members).",
-    required: false,
+    id: 'member2Name',
+    type: 'text',
+    question: "Member 2 Full Name",
+    placeholder: "Full Name",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member2Email',
+    type: 'email',
+    question: "Member 2 Email",
+    placeholder: "Email Address",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member2College',
+    type: 'combobox',
+    question: "Member 2 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member2Degree',
+    type: 'combobox',
+    question: "Member 2 Degree/Course",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+  },
+
+  // Member 3
+  {
+    id: 'member3Name',
+    type: 'text',
+    question: "Member 3 Full Name",
+    placeholder: "Full Name",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member3Email',
+    type: 'email',
+    question: "Member 3 Email",
+    placeholder: "Email Address",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member3College',
+    type: 'combobox',
+    question: "Member 3 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member3Degree',
+    type: 'combobox',
+    question: "Member 3 Degree/Course",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
+  },
+
+  // Member 4
+  {
+    id: 'member4Name',
+    type: 'text',
+    question: "Member 4 Full Name",
+    placeholder: "Full Name",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member4Email',
+    type: 'email',
+    question: "Member 4 Email",
+    placeholder: "Email Address",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member4College',
+    type: 'combobox',
+    question: "Member 4 College Name",
+    placeholder: "Search or type college...",
+    suggestions: INDIAN_COLLEGES,
+    sameAsLeaderField: 'leaderCollege',
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member4Degree',
+    type: 'combobox',
+    question: "Member 4 Degree/Course",
+    placeholder: "Search or type degree...",
+    suggestions: INDIAN_DEGREES,
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },
 
   // --- SECTION 6: SUBMISSION DETAILS (TRACK 1) ---
@@ -268,27 +380,27 @@ const QUESTIONS: Question[] = [
 // Subcomponents
 
 const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
-  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono p-4">
+  <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono">
     {/* Grid Background */}
     <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-    <div className="z-10 text-center w-full max-w-4xl">
-      <div className="inline-block border border-orange-500/50 bg-orange-500/10 px-3 py-1 mb-6 text-orange-400 text-[10px] md:text-xs tracking-[0.2em] uppercase">
+    <div className="z-10 text-center">
+      <div className="inline-block border border-orange-500/50 bg-orange-500/10 px-3 py-1 mb-6 text-orange-400 text-xs tracking-[0.2em] uppercase">
         {/* Classified Access */}
         {`// Classified Access`}
       </div>
-      <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
+      <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-2 leading-none uppercase">
         India<span className="text-orange-500">Next</span>
       </h1>
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-slate-500 text-xs sm:text-sm mb-12 tracking-widest uppercase">
+      <div className="flex items-center justify-center gap-2 text-slate-500 text-sm mb-12 tracking-widest uppercase">
         <span>IdeaSprint</span>
-        <div className="hidden sm:block w-1 h-1 bg-slate-500 rounded-full" />
+        <div className="w-1 h-1 bg-slate-500 rounded-full" />
         <span>BuildStorm</span>
       </div>
 
       <button
         onClick={onStart}
-        className="group relative inline-flex items-center justify-center px-8 py-3 sm:px-10 sm:py-4 font-bold text-white transition-all duration-200 bg-orange-600 font-mono tracking-widest border border-orange-500 hover:bg-orange-500 focus:outline-none ring-offset-2 focus:ring-2 text-sm sm:text-base w-full sm:w-auto"
+        className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-white transition-all duration-200 bg-orange-600 font-mono tracking-widest border border-orange-500 hover:bg-orange-500 focus:outline-none ring-offset-2 focus:ring-2"
       >
         [ OPEN_DOSSIER ]
       </button>
@@ -298,19 +410,19 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
 
 const ThankYouScreen = ({ track }: { track: string }) => (
   <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 font-mono text-white p-4">
-    <div className="w-full max-w-2xl border-2 border-green-500/50 bg-green-500/5 p-6 sm:p-8 relative">
-      <div className="absolute top-0 right-0 p-2 text-[10px] sm:text-xs text-green-500 border-l border-b border-green-500/50">STATUS: APPROVED</div>
-      <div className="text-green-400 text-4xl sm:text-6xl mb-6">
-        <Check size={48} strokeWidth={1.5} className="sm:w-16 sm:h-16" />
+    <div className="w-full max-w-2xl border-2 border-green-500/50 bg-green-500/5 p-8 relative">
+      <div className="absolute top-0 right-0 p-2 text-xs text-green-500 border-l border-b border-green-500/50">STATUS: APPROVED</div>
+      <div className="text-green-400 text-6xl mb-6">
+        <Check size={64} strokeWidth={1.5} />
       </div>
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 uppercase tracking-tight">Transmission Received</h1>
-      <p className="text-base sm:text-lg text-green-400/80 mb-8 leading-relaxed">
-        Subject registered for protocol: <strong className="text-white block sm:inline mt-1 sm:mt-0">{track}</strong>.<br />
+      <h1 className="text-3xl md:text-4xl font-bold mb-4 uppercase tracking-tight">Transmission Received</h1>
+      <p className="text-lg text-green-400/80 mb-8 leading-relaxed">
+        Subject registered for protocol: <strong className="text-white">{track}</strong>.<br />
         Directives have been forwarded to the designated communication channel (Email).
       </p>
-      <button onClick={() => window.location.reload()} className="inline-block w-full sm:w-auto text-center px-6 py-3 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
+      <Link href="/" className="inline-block px-6 py-2 border border-green-500 text-green-400 hover:bg-green-500 hover:text-black transition-colors uppercase text-sm tracking-wider">
         [ Return to HQ ]
-      </button>
+      </Link>
     </div>
   </div>
 );
@@ -437,116 +549,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const MemberList = ({ value, onChange, leaderCollege }: { value: any[], onChange: (val: any[]) => void, leaderCollege: string }) => {
-  // Value is array of objects: [{ name: '', email: '', collegeSame: false, college: '', degree: '' }]
-  const members = Array.isArray(value) ? value : [];
-
-  const addMember = () => {
-    if (members.length < 3) {
-      onChange([...members, { name: '', email: '', collegeSame: false, college: '', degree: '' }]);
-    }
-  };
-
-  const removeMember = (index: number) => {
-    const newMembers = [...members];
-    newMembers.splice(index, 1);
-    onChange(newMembers);
-  };
-
-  const updateMember = (index: number, field: string, val: any) => {
-    const newMembers = [...members];
-    newMembers[index] = { ...newMembers[index], [field]: val };
-    onChange(newMembers);
-  };
-
-  return (
-    <div className="w-full max-w-2xl">
-      <div className="space-y-6 mb-6">
-        {members.map((member: any, index: number) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 bg-slate-900/50 p-4 sm:p-6 rounded border border-slate-700 hover:border-orange-500/50 transition-colors group relative"
-          >
-            <button
-              onClick={() => removeMember(index)}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 text-slate-600 hover:text-red-500 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-              title="Remove Member"
-            >
-              <Trash2 size={18} />
-            </button>
-
-            <div className="space-y-4 mt-2 sm:mt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="FULL NAME"
-                  value={member.name}
-                  onChange={(e) => updateMember(index, 'name', e.target.value)}
-                  className="w-full bg-transparent border-b border-slate-700 text-sm sm:text-base pb-1 focus:outline-none focus:border-orange-500 transition-colors font-mono text-white placeholder-slate-600 uppercase"
-                />
-                <input
-                  type="email"
-                  placeholder="EMAIL ADDRESS"
-                  value={member.email}
-                  onChange={(e) => updateMember(index, 'email', e.target.value)}
-                  className="w-full bg-transparent border-b border-slate-700 text-sm sm:text-base pb-1 focus:outline-none focus:border-orange-500 transition-colors font-mono text-slate-400 focus:text-white placeholder-slate-700"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 font-mono cursor-pointer select-none">
-                  <div
-                    className={`w-4 h-4 border flex items-center justify-center transition-colors ${member.collegeSame ? 'border-orange-500 bg-orange-500' : 'border-slate-600'}`}
-                    onClick={() => updateMember(index, 'collegeSame', !member.collegeSame)}
-                  >
-                    {member.collegeSame && <Check size={12} className="text-black" strokeWidth={3} />}
-                  </div>
-                  <span onClick={() => updateMember(index, 'collegeSame', !member.collegeSame)}>COLLEGE: SAME AS LEADER ({leaderCollege})</span>
-                </label>
-
-                {!member.collegeSame && (
-                  <ComboboxInput
-                    value={member.college}
-                    onChange={(val) => updateMember(index, 'college', val)}
-                    suggestions={INDIAN_COLLEGES}
-                    placeholder="COLLEGE NAME"
-                  />
-                )}
-              </div>
-
-              <ComboboxInput
-                value={member.degree}
-                onChange={(val) => updateMember(index, 'degree', val)}
-                suggestions={INDIAN_DEGREES}
-                placeholder="DEGREE / COURSE"
-              />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {members.length < 3 ? (
-        <button
-          onClick={addMember}
-          className="flex items-center gap-3 text-orange-500 hover:text-white hover:bg-orange-500 transition-all border border-dashed border-slate-700 hover:border-orange-500 px-6 py-4 rounded w-full justify-center group font-mono tracking-widest uppercase text-xs sm:text-sm"
-        >
-          <div className="w-5 h-5 rounded-full border border-orange-500 flex items-center justify-center group-hover:border-white transition-colors">
-            <Plus size={12} />
-          </div>
-          <span>Add Operative {members.length + 2}</span>
-        </button>
-      ) : (
-        <p className="text-center text-slate-500 text-xs font-mono border border-slate-800 rounded p-3 uppercase tracking-widest">
-          Maximum Squad Capacity Reached
-        </p>
-      )}
-    </div>
-  );
-};
-
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | any[] | undefined; onChange: (val: any) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -572,7 +575,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   }
 
   if (question.type === 'checkbox') {
-    const selected = (value as string[]) || [];
+    const selected = value || [];
     return (
       <div className="flex flex-col gap-2 max-w-xl w-full">
         {question.options?.map((opt: string, idx: number) => (
@@ -602,7 +605,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
       <div className="flex flex-col md:flex-row gap-6 w-full">
         <textarea
           ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
-          value={(value as string) || ''}
+          value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           onPaste={(e) => {
             if (question.noPaste) {
@@ -645,7 +648,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
         <input
           ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
           type="tel"
-          value={(value as string) || ''}
+          value={value || ''}
           maxLength={10}
           onChange={(e) => {
             const val = e.target.value.replace(/[^0-9]/g, '');
@@ -670,16 +673,6 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
           {question.text}
         </div>
       </div>
-    );
-  }
-
-  if (question.type === 'member-list') {
-    return (
-      <MemberList
-        value={(value as any[]) || []}
-        onChange={onChange}
-        leaderCollege={answers.leaderCollege as string || ''}
-      />
     );
   }
 
@@ -742,7 +735,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
     <input
       ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
       type={question.type}
-      value={(value as string) || ''}
+      value={value || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
       className={`w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide
@@ -751,7 +744,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   );
 };
 
-const OptionButton: React.FC<{ opt: string; selected: boolean; onSelect: () => void }> = ({ opt, selected, onSelect }) => {
+const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: boolean; onSelect: () => void }) => {
   return (
     <button
       onClick={onSelect}
@@ -872,7 +865,9 @@ export default function HackathonForm() {
     // Client-side duplicate email check
     const emailFields = [
       answers.leaderEmail,
-      ...(answers.teamMembers || []).map((m: any) => m.email)
+      answers.member2Email,
+      answers.member3Email,
+      answers.member4Email,
     ].filter((e): e is string => typeof e === 'string' && e.trim() !== '');
 
     const normalizedEmails = emailFields.map(e => e.toLowerCase().trim());
@@ -887,22 +882,7 @@ export default function HackathonForm() {
     try {
       // Flatten College Logic
       const finalAnswers = { ...answers };
-
-      // Flatten team members for API compatibility
-      if (Array.isArray(finalAnswers.teamMembers)) {
-        finalAnswers.teamMembers.forEach((member: any, index: number) => {
-          const suffix = index + 2; // Member 2, 3, 4
-          finalAnswers[`member${suffix}Name`] = member.name;
-          finalAnswers[`member${suffix}Email`] = member.email;
-          finalAnswers[`member${suffix}College`] = member.collegeSame ? finalAnswers.leaderCollege : member.college;
-          finalAnswers[`member${suffix}Degree`] = member.degree;
-        });
-        // Set teamSize based on members count + 1 (leader)
-        const count = finalAnswers.teamMembers.length + 1;
-        finalAnswers.teamSize = count === 1 ? "Solo (1)" : `${count} Members`;
-      } else {
-        finalAnswers.teamSize = "Solo (1)";
-      }
+      // "Same as Leader" college values are already set inline by the combobox checkbox
 
       if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
       if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
@@ -1042,30 +1022,6 @@ export default function HackathonForm() {
       }
     }
 
-    // 10. Member List Validation
-    if (q.type === 'member-list') {
-      if (Array.isArray(ans) && ans.length > 0) {
-        for (const member of ans) {
-          if (!member.name || !member.name.trim()) {
-            setErrorMsg("All member names are required.");
-            return;
-          }
-          if (!member.email || !member.email.includes('@') || !member.email.includes('.')) {
-            setErrorMsg("All member emails must be valid.");
-            return;
-          }
-          if (!member.collegeSame && (!member.college || !member.college.trim())) {
-            setErrorMsg("College name is required for all members.");
-            return;
-          }
-          if (!member.degree || !member.degree.trim()) {
-            setErrorMsg("Degree/Course is required for all members.");
-            return;
-          }
-        }
-      }
-    }
-
     // OTP Logic
     if (currentQuestion.id === 'leaderEmail' && !emailVerified) {
       await sendOtp();
@@ -1132,7 +1088,7 @@ export default function HackathonForm() {
     const prevStep = getNextValidStep(currentStep, -1, answers);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
-  const handleAnswer = (value: any) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
+  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
   const handleCheckbox = (option: string) => {
     const currentVals = (answers[currentQuestion.id] as string[]) || [];
     let newVals: string[];
@@ -1146,7 +1102,7 @@ export default function HackathonForm() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && started && !isCompleted && !loading) {
         if (showOtpInput) { if (otpValue.length === 6) verifyOtp(); return; }
-        if (currentQuestion.type !== 'long-text' && currentQuestion.type !== 'checkbox' && currentQuestion.type !== 'member-list' && !e.metaKey && !e.ctrlKey) {
+        if (currentQuestion.type !== 'long-text' && currentQuestion.type !== 'checkbox' && !e.metaKey && !e.ctrlKey) {
           e.preventDefault();
           if (currentQuestion.required && !answers[currentQuestion.id]) return;
           handleNext();

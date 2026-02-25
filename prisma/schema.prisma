@@ -443,8 +443,55 @@ model IdempotencyKey {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ADMIN PANEL (separate from participants)
+// ═══════════════════════════════════════════════════════════
+
+model Admin {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  password    String    // bcrypt hash
+  role        AdminRole @default(ADMIN)
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  lastLoginIp String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sessions    AdminSession[]
+
+  @@index([email])
+  @@index([role])
+  @@map("admins")
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  adminId   String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+// ═══════════════════════════════════════════════════════════
 // ENUMS
 // ═══════════════════════════════════════════════════════════
+
+enum AdminRole {
+  ORGANIZER
+  JUDGE
+  ADMIN
+  SUPER_ADMIN
+}
 
 enum UserRole {
   PARTICIPANT

@@ -41,12 +41,15 @@ export async function createContext(opts: FetchCreateContextFnOptions) {
   // Read session token ONLY from HttpOnly cookie — never from Authorization header.
   // Accepting tokens via headers would bypass SameSite/HttpOnly cookie protections.
   const cookies = parseCookies(opts.req.headers.get('cookie'));
-  const token = cookies.session_token || null;
 
   let session = null;
-  if (token) {
+  let adminSession = null;
+
+  // Check participant session
+  const userToken = cookies.session_token || null;
+  if (userToken) {
     const sessionData = await prisma.session.findUnique({
-      where: { token },
+      where: { token: userToken },
       include: { user: true },
     });
 
@@ -58,8 +61,25 @@ export async function createContext(opts: FetchCreateContextFnOptions) {
     }
   }
 
+  // Check admin session (separate table)
+  const adminToken = cookies.admin_token || null;
+  if (adminToken) {
+    const adminData = await prisma.adminSession.findUnique({
+      where: { token: adminToken },
+      include: { admin: true },
+    });
+
+    if (adminData && adminData.expiresAt > new Date() && adminData.admin.isActive) {
+      adminSession = {
+        admin: adminData.admin,
+        token: adminData.token,
+      };
+    }
+  }
+
   return {
     session,
+    adminSession,
     prisma,
     req: opts.req,
     resHeaders: opts.resHeaders,
@@ -99,18 +119,18 @@ const isAuthed = t.middleware(({ ctx, next }) => {
   });
 });
 
-// Admin middleware
+// Admin middleware — checks admin_token cookie → Admin table
 const isAdmin = t.middleware(({ ctx, next }) => {
-  if (!ctx.session?.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  if (!ctx.adminSession?.admin) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin access required" });
   }
   
-  const allowedRoles = ["ADMIN", "SUPER_ADMIN", "ORGANIZER"];
-  if (!allowedRoles.includes(ctx.session.user.role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
-  
-  return next({ ctx });
+  return next({
+    ctx: {
+      ...ctx,
+      admin: ctx.adminSession.admin,
+    },
+  });
 });
 
 // Protected procedures

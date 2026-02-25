@@ -6,7 +6,6 @@ import { trpc } from "@/lib/trpc-client";
 import { TeamsTable } from "@/components/admin/teams/TeamsTable";
 import { TeamsFilters } from "@/components/admin/teams/TeamsFilters";
 import { BulkActions } from "@/components/admin/teams/BulkActions";
-import { Button } from "@/components/ui/button";
 import { Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,35 +51,42 @@ export default function TeamsManagementPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Teams Management</h1>
-          <p className="text-gray-600 mt-1">
-            {data?.totalCount || 0} total teams
+          <h1 className="text-lg md:text-xl font-mono font-bold text-white tracking-wider">TEAMS_MANAGEMENT</h1>
+          <p className="text-[11px] font-mono text-gray-500 mt-1">
+            {data?.totalCount || 0} total teams registered
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
+        <div className="flex gap-2">
+          <button
             onClick={() => refetch()}
             disabled={isLoading}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono font-bold tracking-wider text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-md hover:text-orange-400 hover:border-orange-500/20 transition-all disabled:opacity-40"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            variant="outline"
+            <RefreshCw className="h-3.5 w-3.5" />
+            REFRESH
+          </button>
+          <button
             onClick={handleExport}
             disabled={exportMutation.isPending}
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono font-bold tracking-wider text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded-md hover:text-orange-400 hover:border-orange-500/20 transition-all disabled:opacity-40"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+            <Download className="h-3.5 w-3.5" />
+            EXPORT
+          </button>
         </div>
       </div>
 
-      <TeamsFilters filters={filters} onChange={(newFilters) => setFilters({ ...filters, ...newFilters })} />
+      <TeamsFilters filters={filters} onChange={(newFilters) => {
+        const merged = { ...filters, ...newFilters };
+        setFilters({
+          ...merged,
+          sortBy: merged.sortBy as "createdAt" | "name" | "status" | "college",
+          sortOrder: merged.sortOrder as "asc" | "desc",
+        });
+      }} />
 
       {selectedTeams.length > 0 && (
         <BulkActions

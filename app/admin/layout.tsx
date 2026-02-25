@@ -1,34 +1,16 @@
-// Admin Layout
-import { redirect } from "next/navigation";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { AdminHeader } from "@/components/admin/AdminHeader";
-import { checkAdminAuth } from "@/lib/auth";
+// Admin Root Layout — passthrough wrapper
+// Auth guard is in (dashboard)/layout.tsx so /admin/login is public
 
-export default async function AdminLayout({
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "IndiaNext Admin",
+};
+
+export default function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await checkAdminAuth();
-  
-  if (!user) {
-    redirect("/login?redirect=/admin");
-  }
-
-  const allowedRoles = ["ADMIN", "SUPER_ADMIN", "ORGANIZER"];
-  if (!allowedRoles.includes(user.role)) {
-    redirect("/");
-  }
-
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <AdminSidebar _user={user} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <AdminHeader user={user} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  return <>{children}</>;
 }

@@ -65,7 +65,7 @@ export default function LandingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-orange-500/30 selection:text-orange-200 overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#111A31] via-[#2F1D51] to-[#1F1738] text-white font-sans selection:bg-orange-500/30 selection:text-orange-200 overflow-x-hidden">
       {/* Scroll Progress Bar */}
       <div className="fixed top-0 left-0 right-0 h-[3px] bg-white/5 z-[100]">
         <motion.div 
@@ -165,7 +165,7 @@ const CountdownTimer = () => {
               <span className="tabular-nums">{String(value).padStart(2, '0')}</span>
             </div>
           </div>
-          <span className="text-[7px] md:text-[9px] text-gray-500 mt-2 tracking-[0.3em] font-black uppercase">
+          <span className="text-[7px] md:text-[9px] text-gray-200 mt-2 tracking-[0.3em] font-black uppercase">
             {unit}
           </span>
         </div>
@@ -218,7 +218,7 @@ const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
         <motion.div 
             exit={{ opacity: 0, scale: 1.2, filter: "blur(20px)" }}
             transition={{ duration: 1, ease: "circIn" }}
-            className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono overflow-hidden"
+            className="fixed inset-0 z-[100] bg-black/20 flex flex-col items-center justify-center font-mono overflow-hidden"
         >
              <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -269,13 +269,13 @@ const Navbar = () => {
               className="relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-cyan-400 to-green-500 rounded-lg opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
-              <div className="relative w-full h-full border border-white/20 bg-black/60 rounded-lg flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
+              <div className="relative w-full h-full border border-white/20 bg-black/20/60 rounded-lg flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
                 <Image src="/logo-new.png" alt="IndiaNext Logo" width={32} height={32} className="object-contain" />
               </div>
             </motion.div>
             <div className="flex flex-col">
               <span className="font-black text-lg md:text-xl tracking-tighter leading-none">INDIA<span className="text-orange-500">NEXT</span></span>
-              <span className="text-[0.5rem] md:text-[0.55rem] text-gray-500 tracking-[0.3em] md:tracking-[0.4em] font-mono font-bold">DEPLOYMENT_2026</span>
+              <span className="text-[0.5rem] md:text-[0.55rem] text-gray-200 tracking-[0.3em] md:tracking-[0.4em] font-mono font-bold">DEPLOYMENT_2026</span>
             </div>
           </Link>
 
@@ -295,7 +295,7 @@ const Navbar = () => {
           </div>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-10 text-[10px] font-bold text-gray-400 font-mono tracking-widest">
+          <div className="hidden md:flex items-center gap-10 text-[10px] font-bold text-gray-100 font-mono tracking-widest">
             {NAV_LINKS.map((link) => (
               <Link key={link.label} href={link.href} className="hover:text-white transition-colors relative group">
                 {link.label}
@@ -307,7 +307,7 @@ const Navbar = () => {
               href="/register" 
               className="group relative px-6 py-2.5 overflow-hidden rounded-sm bg-orange-500 text-black font-black hover:text-white transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)]"
             >
-              <div className="absolute inset-0 w-full h-full bg-[#020202] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <div className="absolute inset-0 w-full h-full bg-black/20 translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
               <span className="relative z-10 flex items-center gap-2 text-[10px] tracking-widest uppercase italic">
                 REGISTER <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </span>
@@ -332,7 +332,7 @@ const Navbar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[60] bg-black/20/60 backdrop-blur-sm md:hidden"
               onClick={() => setSidebarOpen(false)}
             />
 
@@ -342,11 +342,11 @@ const Navbar = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed top-0 right-0 bottom-0 w-72 z-[70] bg-[#050505] border-l border-white/10 md:hidden flex flex-col"
+              className="fixed top-0 right-0 bottom-0 w-72 z-[70] bg-black/20 border-l border-white/10 md:hidden flex flex-col"
             >
               {/* Sidebar Header */}
               <div className="flex items-center justify-between px-5 h-16 border-b border-white/5">
-                <span className="font-mono text-[10px] font-black tracking-[0.5em] text-gray-500 uppercase">NAVIGATION</span>
+                <span className="font-mono text-[10px] font-black tracking-[0.5em] text-gray-200 uppercase">NAVIGATION</span>
                 <button
                   onClick={() => setSidebarOpen(false)}
                   className="w-9 h-9 flex items-center justify-center border border-white/10 rounded-sm bg-white/5 active:bg-white/10 transition-colors"
@@ -369,9 +369,9 @@ const Navbar = () => {
                       <Link
                         href={link.href}
                         onClick={() => setSidebarOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3.5 text-gray-400 hover:text-white hover:bg-white/5 transition-all rounded-sm group"
+                        className="flex items-center gap-3 px-4 py-3.5 text-gray-100 hover:text-white hover:bg-white/5 transition-all rounded-sm group"
                       >
-                        <span className="w-6 text-[10px] font-mono font-black text-gray-700 group-hover:text-orange-500 transition-colors">
+                        <span className="w-6 text-[10px] font-mono font-black text-gray-100 group-hover:text-orange-500 transition-colors">
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="font-mono text-xs font-bold tracking-[0.3em] uppercase">{link.label}</span>
@@ -404,7 +404,7 @@ const Navbar = () => {
                   <Image src="/KES Society Logo (1).png" alt="KES Logo" width={36} height={44} className="object-contain opacity-70" />
                   <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-70" />
                 </div>
-                <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">
+                <p className="text-center font-mono text-[8px] text-gray-100 tracking-[0.3em] uppercase font-bold">
                   K.E.S. SHROFF COLLEGE
                 </p>
               </div>
@@ -476,13 +476,13 @@ const HeroSection = () => {
           </motion.h2>
 
           <motion.div variants={fadeInUp} className="flex flex-col items-center gap-4 mb-12">
-              <div className="flex items-center gap-4 text-gray-400 font-mono text-xs md:text-sm tracking-[0.2em] font-bold">
+              <div className="flex items-center gap-4 text-gray-100 font-mono text-xs md:text-sm tracking-[0.2em] font-bold">
                  <Target size={16} className="text-orange-500" />
                  <span>17.03.2026</span>
                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
                  <span>MUMBAI_HQ</span>
               </div>
-              <p className="text-[10px] text-gray-600 font-mono tracking-widest uppercase">K.E.S. Shroff College of Arts & Commerce</p>
+              <p className="text-[10px] text-white font-mono tracking-widest uppercase">K.E.S. Shroff College of Arts & Commerce</p>
           </motion.div>
 
           {/* Countdown Timer */}
@@ -490,18 +490,27 @@ const HeroSection = () => {
              <CountdownTimer />
           </motion.div>
 
-          <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-center gap-6">
+          <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-6">
               <Link href="/register" className="relative group overflow-hidden active:scale-95 transition-all duration-200 block">
                  <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-green-500 rounded-sm blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
-                 <button className="relative px-14 py-7 bg-[#050505] border border-white/10 rounded-sm leading-none flex items-center justify-center gap-6 group-hover:bg-zinc-900 transition-all overflow-hidden">
+                 <button className="relative px-14 py-7 bg-black/20 border border-white/10 rounded-sm leading-none flex items-center justify-center gap-6 group-hover:bg-zinc-900 transition-all overflow-hidden">
                     <div className="absolute inset-0 bg-white/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 italic" />
                     <span className="flex flex-col items-start text-left">
-                         <span className="text-[0.6rem] text-gray-500 font-mono tracking-widest mb-1 italic uppercase font-bold">ACCESS_PROTOCOLS_V2</span>
+                         <span className="text-[0.6rem] text-gray-200 font-mono tracking-widest mb-1 italic uppercase font-bold">ACCESS_PROTOCOLS_V2</span>
                          <span className="text-3xl text-white font-black tracking-tight group-hover:text-orange-500 transition-colors uppercase">Register Now</span>
                     </span>
                     <ChevronRight size={32} className="text-orange-500 group-hover:translate-x-2 transition-transform" />
                  </button>
               </Link>
+
+              {/* Devfolio Integration */}
+              <div 
+                  className="apply-button" 
+                  data-hackathon-slug="indianext" 
+                  data-button-theme="dark-inverted"
+                  style={{ height: "44px", width: "312px" }}
+              ></div>
+              <p className="text-[8px] text-gray-400 font-mono tracking-widest uppercase">Apply with Devfolio Enabled</p>
           </motion.div>
        </motion.div>
 
@@ -517,7 +526,7 @@ const HeroSection = () => {
            <span className="animate-bounce-slow">
              <ChevronDown size={40} className="text-orange-400 drop-shadow-lg group-active:scale-90 transition-transform" />
            </span>
-           <span className="text-xs text-orange-400 font-mono mt-1 tracking-widest bg-black/70 px-2 py-0.5 rounded">Scroll Down</span>
+           <span className="text-xs text-orange-400 font-mono mt-1 tracking-widest bg-black/20/70 px-2 py-0.5 rounded">Scroll Down</span>
          </button>
        )}
        
@@ -539,7 +548,7 @@ const HeroSection = () => {
 
 const HighStakesTicker = () => {
     return (
-        <div className="relative z-20 py-16 bg-[#030303] border-y border-white/5 overflow-hidden">
+        <div className="relative z-20 py-16 bg-black/20 border-y border-white/5 overflow-hidden">
              <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
                  {[
                     { label: 'BOUNTY_POOL', value: '₹1 Lakh+', color: 'text-white' },
@@ -554,7 +563,7 @@ const HighStakesTicker = () => {
                         transition={{ delay: 0.5 + (i * 0.1) }}
                         className="relative group px-6 border-l border-white/5 first:border-l-0"
                     >
-                        <p className="text-gray-600 font-mono text-[9px] mb-3 tracking-[0.2em] font-black">{stat.label}</p>
+                        <p className="text-white font-mono text-[9px] mb-3 tracking-[0.2em] font-black">{stat.label}</p>
                         <p className={`text-4xl md:text-6xl font-black ${stat.color} tracking-tighter font-mono group-hover:scale-105 transition-transform cursor-default`}>
                             {stat.value}
                         </p>
@@ -566,7 +575,7 @@ const HighStakesTicker = () => {
 }
 
 const AboutSection = () => (
-    <section id="about" className="py-40 px-6 relative z-10 bg-black overflow-hidden">
+    <section id="about" className="py-40 px-6 relative z-10 bg-black/20 overflow-hidden">
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-orange-500/5 to-transparent -z-10" />
         <div className="max-w-7xl mx-auto">
              <div className="grid lg:grid-cols-2 gap-24 items-center">
@@ -579,14 +588,14 @@ const AboutSection = () => (
                      <h2 className="text-6xl md:text-[5.5rem] font-black mb-10 tracking-tighter uppercase leading-[0.85]">
                         The Code That <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-blue-600 shadow-glow">Survives Tomorrow</span>
                      </h2>
-                     <p className="text-gray-400 leading-relaxed text-2xl mb-10 font-bold tracking-tight">
+                     <p className="text-gray-100 leading-relaxed text-2xl mb-10 font-bold tracking-tight">
                         We aren&apos;t just hacking for a day; we are building for the decade. <span className="text-orange-500">IndiaNext</span> is a National-Level Innovation Challenge empowering 400+ developers to build solutions for Bharat 2.0.
                      </p>
                      <div className="p-8 border-l-4 border-orange-600 bg-white/5 rounded-sm backdrop-blur-sm">
                         <p className="text-white text-sm font-mono tracking-widest uppercase italic font-black">
                            MISSION HOST: K.E.S. SHROFF COLLEGE (AUTONOMOUS)
                         </p>
-                        <p className="text-gray-500 text-[10px] font-mono mt-2 tracking-widest uppercase">NAAC &apos;A&apos; GRADE | QS I-GAUGE GOLD RATING | MUMBAI, MH</p>
+                        <p className="text-gray-200 text-[10px] font-mono mt-2 tracking-widest uppercase">NAAC &apos;A&apos; GRADE | QS I-GAUGE GOLD RATING | MUMBAI, MH</p>
                      </div>
                  </motion.div>
                  
@@ -609,7 +618,7 @@ const AboutSection = () => (
 
 const TracksSection = () => {
     return (
-        <section id="tracks" className="py-40 relative z-10 bg-[#020202]">
+        <section id="tracks" className="py-40 relative z-10 bg-black/20">
             <div className="max-w-7xl mx-auto px-6">
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
@@ -649,7 +658,7 @@ const TracksSection = () => {
 }
 
 const FocusDomainsSection = () => (
-    <section className="py-40 relative z-10 bg-black border-y border-white/5">
+    <section className="py-40 relative z-10 bg-black/20 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6 text-center">
             <h2 className="text-5xl md:text-[8rem] font-black mb-20 uppercase tracking-tighter italic leading-none opacity-90">Focus Domains</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
@@ -666,14 +675,14 @@ const FocusDomainsSection = () => (
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
                         whileHover={{ y: -10, scale: 1.02 }}
-                        className="p-10 border border-white/10 bg-[#050505] rounded-sm hover:border-cyan-500 transition-all text-left relative overflow-hidden group"
+                        className="p-10 border border-white/10 bg-black/20 rounded-sm hover:border-cyan-500 transition-all text-left relative overflow-hidden group"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             {React.cloneElement(domain.icon, { size: 100 })}
                         </div>
                         <div className="mb-8 text-cyan-400 scale-125 origin-left">{domain.icon}</div>
                         <h4 className="font-black text-2xl mb-3 text-white uppercase tracking-tighter leading-tight">{domain.title}</h4>
-                        <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] font-bold">{domain.desc}</p>
+                        <p className="text-[10px] text-gray-200 font-mono uppercase tracking-[0.2em] font-bold">{domain.desc}</p>
                     </motion.div>
                 ))}
             </div>
@@ -682,7 +691,7 @@ const FocusDomainsSection = () => (
 );
 
 const BountySection = () => (
-    <section id="bounty" className="py-40 relative z-10 bg-black">
+    <section id="bounty" className="py-40 relative z-10 bg-black/20">
         <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-32 relative">
                 <motion.h2 
@@ -715,8 +724,8 @@ const BountySection = () => (
                             { label: "LIEUTENANT (2ND)", prize: "₹20,000", color: "text-white" },
                             { label: "SPECIALIST (3RD)", prize: "₹10,000", color: "text-white" }
                         ].map((p, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black group-hover:border-orange-500/30 transition-colors">
-                                <span className="font-mono text-xs text-gray-500 tracking-[0.3em] font-black">{p.label}</span>
+                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black/20 group-hover:border-orange-500/30 transition-colors">
+                                <span className="font-mono text-xs text-gray-200 tracking-[0.3em] font-black">{p.label}</span>
                                 <span className={`text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
                             </div>
                         ))}
@@ -737,8 +746,8 @@ const BountySection = () => (
                             { label: "ARCHITECT (1ST)", prize: "₹20,000", color: "text-green-500" },
                             { label: "STRATEGIST (2ND)", prize: "₹10,000", color: "text-white" }
                         ].map((p, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black group-hover:border-green-500/30 transition-colors">
-                                <span className="font-mono text-xs text-gray-500 tracking-[0.3em] font-black">{p.label}</span>
+                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black/20 group-hover:border-green-500/30 transition-colors">
+                                <span className="font-mono text-xs text-gray-200 tracking-[0.3em] font-black">{p.label}</span>
                                 <span className={`text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
                             </div>
                         ))}
@@ -751,9 +760,9 @@ const BountySection = () => (
                     <motion.div 
                         key={i} 
                         whileHover={{ y: -5 }}
-                        className="px-8 py-6 border border-white/10 bg-[#050505] rounded-sm text-center group"
+                        className="px-8 py-6 border border-white/10 bg-black/20 rounded-sm text-center group"
                     >
-                        <span className="text-xs font-mono text-gray-600 tracking-[0.4em] uppercase font-black group-hover:text-cyan-400 transition-colors italic">{perk}</span>
+                        <span className="text-xs font-mono text-white tracking-[0.4em] uppercase font-black group-hover:text-cyan-400 transition-colors italic">{perk}</span>
                     </motion.div>
                 ))}
             </div>
@@ -807,7 +816,7 @@ const TimelineSection = () => {
     const _scaleY = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
     return (
-        <section id="timeline" ref={sectionRef} className="py-60 relative z-10 bg-[#020202] overflow-hidden">
+        <section id="timeline" ref={sectionRef} className="py-60 relative z-10 bg-black/20 overflow-hidden">
             <div className="max-w-5xl mx-auto px-6 relative">
                 <div className="mb-32 flex flex-col items-center">
                     <p className="text-orange-500 font-mono text-[10px] tracking-[1em] mb-4 uppercase font-black italic">{"// MISSION_CHRONOLOGY"}</p>
@@ -865,7 +874,7 @@ const TimelineSection = () => {
                                     className={`relative flex items-center gap-12 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} ${isPast ? 'opacity-40' : 'opacity-100'}`}
                                 >
                                     {/* Center Point */}
-                                    <div className={`absolute left-10 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#020202] border-2 ${isPast ? 'border-gray-800' : 'border-orange-500'} z-30 flex items-center justify-center`}>
+                                    <div className={`absolute left-10 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-black/20 border-2 ${isPast ? 'border-gray-800' : 'border-orange-500'} z-30 flex items-center justify-center`}>
                                         <div className={`w-1.5 h-1.5 rounded-full ${isPast ? 'bg-gray-800' : 'bg-orange-500 animate-pulse'}`} />
                                     </div>
 
@@ -879,10 +888,10 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                                 <div className="space-y-0.5">
-                                                    <span className={`block font-mono text-[9px] font-black tracking-widest uppercase ${isPast ? 'text-gray-600' : 'text-orange-500'}`}>
+                                                    <span className={`block font-mono text-[9px] font-black tracking-widest uppercase ${isPast ? 'text-white' : 'text-orange-500'}`}>
                                                         {item.day} • {item.date} • {item.time}
                                                     </span>
-                                                    <h3 className={`text-3xl font-black uppercase tracking-tighter italic ${isPast ? 'text-gray-500' : 'text-white'}`}>{item.event}</h3>
+                                                    <h3 className={`text-3xl font-black uppercase tracking-tighter italic ${isPast ? 'text-gray-200' : 'text-white'}`}>{item.event}</h3>
                                                 </div>
                                                 {i % 2 === 0 && (
                                                     <div className={`w-10 h-10 rounded-sm flex items-center justify-center border ${isPast ? 'border-white/5 text-gray-800' : 'border-orange-500/50 text-orange-500'} bg-white/[0.02]`}>
@@ -890,7 +899,7 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="text-gray-600 font-mono text-[9px] uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
+                                            <p className="text-white font-mono text-[9px] uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
                                         </div>
                                     </div>
 
@@ -904,7 +913,7 @@ const TimelineSection = () => {
                                     </div>
                                     
                                     <div className="md:hidden absolute top-[-24px] left-[60px]">
-                                         <span className={`text-[11px] font-mono font-black tracking-widest ${isPast ? 'text-gray-700' : 'text-orange-500/80'}`}>{item.time}</span>
+                                         <span className={`text-[11px] font-mono font-black tracking-widest ${isPast ? 'text-gray-100' : 'text-orange-500/80'}`}>{item.time}</span>
                                     </div>
                                 </motion.div>
                             );
@@ -917,9 +926,9 @@ const TimelineSection = () => {
 };
 
 const SponsorsSection = () => (
-    <section className="py-40 relative z-10 bg-[#020202] border-y border-white/5">
+    <section className="py-40 relative z-10 bg-black/20 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-6 text-center">
-            <p className="text-gray-700 font-mono text-[9px] tracking-[1em] mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
+            <p className="text-gray-100 font-mono text-[9px] tracking-[1em] mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
                     { name: "Your Brand Here", status: "PENDING_ACQUISITION" },
@@ -935,10 +944,10 @@ const SponsorsSection = () => (
                          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/20 group-hover:border-orange-500 transition-colors" />
                          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/20 group-hover:border-orange-500 transition-colors" />
                          
-                         <span className="text-gray-500 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
+                         <span className="text-gray-200 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
                             {brand.name}
                          </span>
-                         <span className="text-[7px] font-mono text-gray-700 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
+                         <span className="text-[7px] font-mono text-gray-100 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
                             {brand.status}
                          </span>
                          
@@ -951,7 +960,7 @@ const SponsorsSection = () => (
 );
 
 const FAQSection = () => (
-    <section className="py-40 relative z-10 bg-black">
+    <section className="py-40 relative z-10 bg-black/20">
         <div className="max-w-5xl mx-auto px-6 text-left">
             <div className="mb-24">
                 <h2 className="text-7xl md:text-[8rem] font-black uppercase tracking-tighter italic leading-none mb-4">Protocols</h2>
@@ -969,13 +978,13 @@ const FAQSection = () => (
                         key={i} 
                         initial={{ opacity: 0 }}
                         whileInView={{ opacity: 1 }}
-                        className="p-10 border border-white/10 bg-[#030303] hover:border-cyan-500/50 transition-all group"
+                        className="p-10 border border-white/10 bg-black/20 hover:border-cyan-500/50 transition-all group"
                     >
                         <div className="flex items-start gap-6 mb-6">
                             <HelpCircle className="text-cyan-500 shrink-0 mt-1" size={24} />
                             <h4 className="text-2xl font-black uppercase tracking-tight italic group-hover:text-white transition-colors">{faq.q}</h4>
                         </div>
-                        <p className="text-gray-500 leading-relaxed pl-12 text-sm font-bold tracking-tight">
+                        <p className="text-gray-200 leading-relaxed pl-12 text-sm font-bold tracking-tight">
                            {faq.a}
                         </p>
                     </motion.div>
@@ -986,7 +995,7 @@ const FAQSection = () => (
 );
 
 const Footer = () => (
-    <footer className="py-32 border-t border-white/10 bg-black relative z-10">
+    <footer className="py-32 border-t border-white/10 bg-black/20 relative z-10">
         <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left">
                 <div className="col-span-1 md:col-span-2">
@@ -995,26 +1004,26 @@ const Footer = () => (
                         <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={100} height={56} className="object-contain" />
                     </div>
                     <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
-                    <p className="text-gray-500 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
+                    <p className="text-gray-200 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
                         Autonomous | NAAC &apos;A&apos; Grade (3.58 CGPA)<br/>
                         QS I-Gauge Gold | Best College Award (University of Mumbai)<br/>
                         Mumbai, MH 400067, IN
                     </p>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">DIRECTORIES</h4>
+                   <h4 className="text-gray-100 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">DIRECTORIES</h4>
                    <div className="flex flex-col gap-5 text-[10px] font-black tracking-widest uppercase">
-                        <Link href="/rules" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
-                        <Link href="/rules#conduct" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
-                        <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
+                        <Link href="/rules" className="text-gray-200 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
+                        <Link href="/rules#conduct" className="text-gray-200 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
+                        <Link href="#" className="text-gray-200 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">COMMS_LINK</h4>
+                   <h4 className="text-gray-100 font-mono text-[10px] uppercase tracking-[0.5em] mb-8 font-black">COMMS_LINK</h4>
                    <div className="flex flex-col gap-4 text-xs font-black">
                         <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
                         <p className="text-white tracking-widest italic">+91 75068 54879</p>
-                        <p className="text-gray-600 mt-4 text-[10px] border border-white/5 py-1 px-3 inline-block">@KES_SHROFF_COLLEGE</p>
+                        <p className="text-white mt-4 text-[10px] border border-white/5 py-1 px-3 inline-block">@KES_SHROFF_COLLEGE</p>
                    </div>
                 </div>
             </div>
@@ -1025,7 +1034,7 @@ const Footer = () => (
                     </div>
                     <div className="flex flex-col">
                         <span className="font-black text-2xl tracking-tighter uppercase leading-none">IndiaNext</span>
-                        <span className="text-[10px] font-mono text-gray-700 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
+                        <span className="text-[10px] font-mono text-gray-100 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
                     </div>
                 </div>
                 <p className="text-gray-800 text-[8px] font-mono tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
@@ -1053,7 +1062,7 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             whileHover={{ y: -10 }}
-            className="group relative min-h-[500px] bg-[#050505] border border-white/5 p-12 overflow-hidden backdrop-blur-sm text-left transition-colors hover:border-white/10"
+            className="group relative min-h-[500px] bg-black/20 border border-white/5 p-12 overflow-hidden backdrop-blur-sm text-left transition-colors hover:border-white/10"
         >
             <motion.div 
                 className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-500"
@@ -1091,12 +1100,12 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
                 <div className="mb-4 font-mono text-[10px] font-black tracking-[0.5em]" style={{ color: accent }}>{subtitle}</div>
                 <h3 className="text-5xl md:text-6xl font-black mb-10 text-white uppercase tracking-tighter leading-[0.8] italic">{title}</h3>
                 
-                <p className="text-gray-500 text-xl mb-12 leading-tight flex-grow font-bold tracking-tight">{desc}</p>
+                <p className="text-gray-200 text-xl mb-12 leading-tight flex-grow font-bold tracking-tight">{desc}</p>
                 
                 <div className="flex flex-col gap-6 mt-auto">
                     <div className="flex flex-wrap gap-3">
                         {tags.map((t: string) => (
-                            <span key={t} className="px-4 py-1.5 border border-white/5 text-[9px] font-mono text-gray-600 uppercase tracking-widest bg-black font-black italic">
+                            <span key={t} className="px-4 py-1.5 border border-white/5 text-[9px] font-mono text-white uppercase tracking-widest bg-black/20 font-black italic">
                                 {t}
                             </span>
                         ))}
@@ -1117,15 +1126,15 @@ const TechDetail = ({ icon, title, desc, accent = CYAN }: TechDetailProps) => (
         <div className="transition-all group-hover:translate-x-1 group-hover:scale-110" style={{ color: accent }}>{icon}</div>
         <div>
             <h4 className="font-black text-3xl mb-1 uppercase tracking-tighter text-white italic">{title}</h4>
-            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.3em] font-black">{desc}</p>
+            <p className="text-[10px] text-gray-200 font-mono uppercase tracking-[0.3em] font-black">{desc}</p>
         </div>
     </motion.div>
 );
 
 const CyberBackground = () => (
-    <div className="fixed inset-0 z-0 bg-[#050505] perspective-1000 overflow-hidden">
-        {/* Deep Space Base */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0d0d1a_0%,#000000_100%)]" />
+    <div className="fixed inset-0 z-0 perspective-1000 overflow-hidden border-none mix-blend-screen pointer-events-none">
+        {/* Removed black radial gradient to reveal main page gradient */}
+
         
         {/* Dynamic Nebulas */}
         <motion.div 

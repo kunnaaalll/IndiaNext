@@ -31,6 +31,7 @@ const RegisterSchema = z.object({
   
   // Leader Info
   leaderName: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  leaderGender: z.string().optional(),
   leaderEmail: z.string().email('Invalid email format'),
   leaderMobile: z.string().regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
   leaderCollege: z.string().min(2).max(200),
@@ -38,16 +39,19 @@ const RegisterSchema = z.object({
   
   // Members (optional)
   member2Name: z.string().optional(),
+  member2Gender: z.string().optional(),
   member2Email: z.string().email().optional().or(z.literal('')),
   member2College: z.string().optional(),
   member2Degree: z.string().optional(),
   
   member3Name: z.string().optional(),
+  member3Gender: z.string().optional(),
   member3Email: z.string().email().optional().or(z.literal('')),
   member3College: z.string().optional(),
   member3Degree: z.string().optional(),
   
   member4Name: z.string().optional(),
+  member4Gender: z.string().optional(),
   member4Email: z.string().email().optional().or(z.literal('')),
   member4College: z.string().optional(),
   member4Degree: z.string().optional(),
@@ -271,6 +275,7 @@ export async function POST(req: Request) {
     const members: Array<{
       email: string;
       name: string;
+      gender: string;
       college: string;
       degree: string;
       phone: string;
@@ -279,6 +284,7 @@ export async function POST(req: Request) {
       {
         email: data.leaderEmail,
         name: data.leaderName,
+        gender: data.leaderGender || '',
         college: data.leaderCollege,
         degree: data.leaderDegree,
         phone: data.leaderMobile,
@@ -290,6 +296,7 @@ export async function POST(req: Request) {
       members.push({
         email: data.member2Email,
         name: data.member2Name,
+        gender: data.member2Gender || '',
         college: data.member2College || data.leaderCollege,
         degree: data.member2Degree || '',
         phone: '',
@@ -300,6 +307,7 @@ export async function POST(req: Request) {
       members.push({
         email: data.member3Email,
         name: data.member3Name,
+        gender: data.member3Gender || '',
         college: data.member3College || data.leaderCollege,
         degree: data.member3Degree || '',
         phone: '',
@@ -310,6 +318,7 @@ export async function POST(req: Request) {
       members.push({
         email: data.member4Email,
         name: data.member4Name,
+        gender: data.member4Gender || '',
         college: data.member4College || data.leaderCollege,
         degree: data.member4Degree || '',
         phone: '',
@@ -366,6 +375,7 @@ export async function POST(req: Request) {
             where: { email: member.email },
             data: {
               name: member.name || existingUser.name,
+              gender: member.gender || existingUser.gender,
               college: member.college || existingUser.college,
               degree: member.degree || existingUser.degree,
               phone: member.phone || existingUser.phone,
@@ -377,6 +387,7 @@ export async function POST(req: Request) {
             data: {
               email: member.email,
               name: member.name || '',
+              gender: member.gender,
               college: member.college,
               degree: member.degree,
               phone: member.phone,

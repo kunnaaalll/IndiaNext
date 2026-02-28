@@ -29,6 +29,7 @@ model User {
   email         String    @unique
   name          String
   phone         String?
+  gender        String?
   
   // Academic Info
   college       String?

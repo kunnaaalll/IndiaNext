@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import DevfolioButton from "@/components/DevfolioButton";
 import {
   motion,
   useScroll,
@@ -207,9 +208,9 @@ const RulesNavbar = () => {
                   {RULES_NAV_LINKS.map((link, i) => (
                     <motion.div key={link.label} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
                       <Link href={link.href} onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-gray-400 hover:text-white hover:bg-white/5 transition-all rounded-sm group">
-                        <span className="w-6 text-[10px] font-mono font-black text-gray-700 group-hover:text-orange-500 transition-colors">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="w-6 text-[10px] font-mono font-black text-gray-500 group-hover:text-orange-500 transition-colors">{String(i + 1).padStart(2, "0")}</span>
                         <span className="font-mono text-xs font-bold tracking-[0.3em] uppercase">{link.label}</span>
-                        <ChevronRight size={14} className="ml-auto text-gray-800 group-hover:text-orange-500 transition-colors" />
+                        <ChevronRight size={14} className="ml-auto text-gray-600 group-hover:text-orange-500 transition-colors" />
                       </Link>
                     </motion.div>
                   ))}
@@ -225,7 +226,7 @@ const RulesNavbar = () => {
                   <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={48} height={48} className="object-contain opacity-100" />
                   <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={80} height={44} className="object-contain opacity-90" />
                 </div>
-                <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">K.E.S. SHROFF COLLEGE</p>
+                <p className="text-center font-mono text-[8px] text-gray-500 tracking-[0.3em] uppercase font-bold">K.E.S. SHROFF COLLEGE</p>
               </div>
             </motion.div>
           </>
@@ -239,7 +240,7 @@ const RulesNavbar = () => {
 // Hero
 // ─────────────────────────────────────────────────────────────
 const RulesHero = () => (
-  <section className="relative z-10 min-h-[70vh] flex flex-col items-center justify-center pt-28 pb-16 px-4">
+  <section className="relative z-10 min-h-[70vh] flex flex-col items-center justify-center pt-24 md:pt-28 pb-16 px-3 md:px-4 overflow-hidden">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,102,0,0.06),transparent_60%)]" />
 
     <motion.div
@@ -257,18 +258,18 @@ const RulesHero = () => (
       </motion.div>
 
       {/* Title */}
-      <motion.h1 variants={fadeInUp} className="text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter uppercase italic mb-6">
+      <motion.h1 variants={fadeInUp} className="text-4xl sm:text-6xl md:text-[10rem] font-black leading-[0.8] tracking-tighter uppercase italic mb-6">
         <span className="block text-transparent bg-clip-text bg-gradient-to-br from-orange-500 via-white to-cyan-400 drop-shadow-[0_0_40px_rgba(255,100,0,0.4)]">
           RULES
         </span>
       </motion.h1>
 
-      <motion.p variants={fadeInUp} className="text-gray-500 text-lg md:text-xl font-bold tracking-tight max-w-2xl mx-auto mb-8">
+      <motion.p variants={fadeInUp} className="text-gray-400 text-base sm:text-lg md:text-xl font-bold tracking-tight max-w-2xl mx-auto mb-8">
         INDIANEXT: FutureProof India Hackathon — the complete mission parameters, engagement rules, and operational protocol.
       </motion.p>
 
       {/* Quick Nav Cards */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-12">
+      <motion.div variants={fadeInUp} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-3xl mx-auto mt-8 md:mt-12">
         {[
           { icon: <Lightbulb size={20} />, label: "IdeaSprint", href: "#ideasprint", color: GREEN },
           { icon: <Zap size={20} />, label: "BuildStorm", href: "#buildstorm", color: ORANGE },
@@ -278,12 +279,12 @@ const RulesHero = () => (
           <Link key={i} href={item.href}>
             <motion.div
               whileHover={{ y: -4, scale: 1.03 }}
-              className="p-5 border border-white/10 bg-white/[0.02] rounded-sm hover:border-white/20 transition-all text-center group cursor-pointer"
+              className="p-3 sm:p-5 border border-white/10 bg-white/[0.02] rounded-sm hover:border-white/20 transition-all text-center group cursor-pointer"
             >
               <div className="mx-auto mb-3 transition-colors" style={{ color: item.color }}>
                 {item.icon}
               </div>
-              <p className="text-[10px] font-mono font-black tracking-[0.3em] uppercase text-gray-500 group-hover:text-white transition-colors">
+              <p className="text-[10px] font-mono font-black tracking-[0.3em] uppercase text-gray-400 group-hover:text-white transition-colors">
                 {item.label}
               </p>
             </motion.div>
@@ -310,7 +311,7 @@ const SectionHeader = ({ number, title, subtitle, accent, icon }: SectionHeaderP
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
-    className="mb-16 text-center"
+    className="mb-10 md:mb-16 text-center"
   >
     <div className="inline-flex items-center gap-3 mb-6">
       <div className="text-2xl" style={{ color: accent }}>{icon}</div>
@@ -318,10 +319,10 @@ const SectionHeader = ({ number, title, subtitle, accent, icon }: SectionHeaderP
         SECTION_{number}
       </span>
     </div>
-    <h2 className="text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
+    <h2 className="text-3xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
       {title}
     </h2>
-    <div className="flex items-center justify-center gap-4 font-mono text-[10px] tracking-[0.5em] font-black uppercase" style={{ color: accent }}>
+    <div className="flex items-center justify-center gap-2 sm:gap-4 font-mono text-[8px] sm:text-[10px] tracking-[0.3em] sm:tracking-[0.5em] font-black uppercase" style={{ color: accent }}>
       <div className="w-12 h-px" style={{ backgroundColor: `${accent}50` }} />
       {subtitle}
       <div className="w-12 h-px" style={{ backgroundColor: `${accent}50` }} />
@@ -410,8 +411,8 @@ const IdeaSprintSection = () => {
   ];
 
   return (
-    <section id="ideasprint" className="py-32 relative z-10 bg-[#020202] border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="ideasprint" className="py-16 md:py-32 relative z-10 bg-[#020202] border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <SectionHeader
           number="01"
           title="IdeaSprint"
@@ -439,7 +440,7 @@ const IdeaSprintSection = () => {
 
         {/* Rules */}
         <div className="mb-16">
-          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
              ENGAGEMENT_RULES
           </h3>
           <div className="flex flex-col gap-3">
@@ -451,7 +452,7 @@ const IdeaSprintSection = () => {
 
         {/* Submission Requirements */}
         <div className="mb-16">
-          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
              SUBMISSION_REQUIREMENTS
           </h3>
           <div className="grid md:grid-cols-3 gap-4">
@@ -469,7 +470,7 @@ const IdeaSprintSection = () => {
                   {item.icon}
                 </div>
                 <p className="text-white font-black text-lg mb-1">{item.label}</p>
-                <p className="text-[10px] font-mono text-gray-500 tracking-widest uppercase">{item.detail}</p>
+                <p className="text-[10px] font-mono text-gray-400 tracking-widest uppercase">{item.detail}</p>
               </motion.div>
             ))}
           </div>
@@ -477,7 +478,7 @@ const IdeaSprintSection = () => {
 
         {/* Evaluation */}
         <div>
-          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
             🏆 EVALUATION_MATRIX
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -517,8 +518,8 @@ const BuildStormSection = () => {
   ];
 
   return (
-    <section id="buildstorm" className="py-32 relative z-10 bg-black border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="buildstorm" className="py-16 md:py-32 relative z-10 bg-black border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <SectionHeader
           number="02"
           title="BuildStorm"
@@ -555,14 +556,14 @@ const BuildStormSection = () => {
             <Clock size={24} className="text-orange-500" />
             <span className="text-3xl font-black text-orange-500 tracking-tighter">24 HOURS</span>
           </div>
-          <p className="text-[10px] font-mono text-gray-500 tracking-[0.3em] uppercase">
+          <p className="text-[10px] font-mono text-gray-400 tracking-[0.3em] uppercase">
             Problem Solving &amp; MVP Build Challenge
           </p>
         </motion.div>
 
         {/* Rules */}
         <div className="mb-16">
-          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
              ENGAGEMENT_RULES
           </h3>
           <div className="flex flex-col gap-3">
@@ -574,7 +575,7 @@ const BuildStormSection = () => {
 
         {/* Evaluation */}
         <div>
-          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+          <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
             🏆 EVALUATION_MATRIX
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -610,8 +611,8 @@ const AIUsagePolicySection = () => {
   ];
 
   return (
-    <section id="ai-policy" className="py-32 relative z-10 bg-[#020202] border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="ai-policy" className="py-16 md:py-32 relative z-10 bg-[#020202] border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <SectionHeader
           number="03"
           title="AI Policy"
@@ -722,8 +723,8 @@ const CodeOfConductSection = () => {
   ];
 
   return (
-    <section id="conduct" className="py-32 relative z-10 bg-black border-t border-white/5">
-      <div className="max-w-5xl mx-auto px-6">
+    <section id="conduct" className="py-16 md:py-32 relative z-10 bg-black border-t border-white/5">
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
         <SectionHeader
           number="04"
           title="Code of Conduct"
@@ -803,7 +804,7 @@ const CodeOfConductSection = () => {
         </div>
 
         {/* Penalties */}
-        <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-500">
+        <h3 className="font-mono text-[10px] font-black tracking-[0.5em] uppercase mb-6 text-gray-400">
           ⚡ VIOLATION_CONSEQUENCES
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
@@ -838,14 +839,14 @@ const FinalAuthoritySection = () => (
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="p-10 border-2 border-amber-500/30 bg-amber-500/[0.03] rounded-sm relative overflow-hidden"
+        className="p-6 sm:p-10 border-2 border-amber-500/30 bg-amber-500/[0.03] rounded-sm relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500" />
         <Scale size={40} className="mx-auto mb-6 text-amber-500" />
-        <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter italic mb-4">
+        <h3 className="text-2xl sm:text-3xl md:text-5xl font-black uppercase tracking-tighter italic mb-4">
           Final Authority Clause
         </h3>
-        <div className="flex items-center justify-center gap-4 font-mono text-[10px] tracking-[0.5em] font-black uppercase text-amber-500 mb-6">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 font-mono text-[8px] sm:text-[10px] tracking-[0.3em] sm:tracking-[0.5em] font-black uppercase text-amber-500 mb-6">
           <div className="w-8 h-px bg-amber-500/30" />
           SECTION_05
           <div className="w-8 h-px bg-amber-500/30" />
@@ -867,42 +868,47 @@ const FinalAuthoritySection = () => (
 // Footer CTA
 // ─────────────────────────────────────────────────────────────
 const FooterCTA = () => (
-  <footer className="py-32 border-t border-white/5 bg-black relative z-10">
-    <div className="max-w-4xl mx-auto px-6 text-center">
+  <footer className="py-16 md:py-32 border-t border-white/5 bg-black relative z-10">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 text-center">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
       >
-        <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter italic mb-6">
+        <h2 className="text-3xl sm:text-4xl md:text-7xl font-black uppercase tracking-tighter italic mb-6">
           Ready to <span className="text-orange-500">Deploy</span>?
         </h2>
-        <p className="text-gray-500 text-lg font-bold tracking-tight mb-12 max-w-xl mx-auto">
+        <p className="text-gray-400 text-lg font-bold tracking-tight mb-12 max-w-xl mx-auto">
           You&apos;ve read the rules. Now join the mission.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-          <Link
-            href="/register"
-            className="group relative px-10 py-4 overflow-hidden rounded-sm bg-orange-500 text-black font-black hover:text-white transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)]"
-          >
-            <div className="absolute inset-0 w-full h-full bg-[#020202] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-            <span className="relative z-10 flex items-center gap-3 text-sm tracking-widest uppercase italic">
-              REGISTER NOW <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
+        <div className="flex flex-col items-center justify-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+            <Link
+              href="/register"
+              className="group relative px-10 py-4 overflow-hidden rounded-sm bg-orange-500 text-black font-black hover:text-white transition-all active:scale-95 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.6)]"
+            >
+              <div className="absolute inset-0 w-full h-full bg-[#020202] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10 flex items-center gap-3 text-sm tracking-widest uppercase italic">
+                REGISTER NOW <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Link>
 
-          <Link
-            href="/"
-            className="px-10 py-4 border border-white/10 rounded-sm text-gray-400 font-black text-sm tracking-widest uppercase italic hover:text-white hover:border-white/20 transition-all"
-          >
-            ← BACK TO HOME
-          </Link>
+            <Link
+              href="/"
+              className="px-10 py-4 border border-white/10 rounded-sm text-gray-400 font-black text-sm tracking-widest uppercase italic hover:text-white hover:border-white/20 transition-all"
+            >
+              ← BACK TO HOME
+            </Link>
+          </div>
+
+          {/* Apply with Devfolio */}
+          <DevfolioButton />
         </div>
       </motion.div>
 
       <div className="mt-24 pt-12 border-t border-white/5">
-        <p className="text-gray-800 text-[8px] font-mono tracking-[0.8em] font-black uppercase">
+        <p className="text-gray-500 text-[7px] sm:text-[8px] font-mono tracking-[0.3em] sm:tracking-[0.8em] font-black uppercase">
           &copy; 2026 INDIANEXT // ALL_RIGHTS_RESERVED // POWERED_BY_KESSC
         </p>
       </div>

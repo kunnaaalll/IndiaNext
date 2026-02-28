@@ -1,9 +1,10 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import DevfolioButton from "@/components/DevfolioButton";
 import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence, Variants } from "framer-motion";
 import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Lock, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
 import "./styles/bounce-slow.css";
@@ -86,18 +87,17 @@ export default function LandingPage() {
           <Navbar />
           <HeroSection />
           <HighStakesTicker />
+          <BountySection />
           <AboutSection />
           <TracksSection />
           <FocusDomainsSection />
-          <BountySection />
           <TimelineSection />
           <SponsorsSection />
           <FAQSection />
           <Footer />
           
           {/* Global UI Effects */}
-          <div className="fixed inset-0 pointer-events-none z-[60] opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%] pointer-events-none" />
-          <div className="fixed inset-0 pointer-events-none z-[60] opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+          <div className="fixed inset-0 pointer-events-none z-[60] opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%]" />
         </motion.div>
       )}
     </div>
@@ -123,7 +123,7 @@ interface TechDetailProps {
 }
 
 // --- Countdown Timer ---
-const CountdownTimer = () => {
+const CountdownTimer = memo(() => {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -156,12 +156,12 @@ const CountdownTimer = () => {
   }, []);
 
   return (
-    <div className="flex gap-4 md:gap-6 font-mono justify-center mb-12">
+    <div className="flex gap-3 md:gap-6 font-mono justify-center mb-12">
       {Object.entries(timeLeft).map(([unit, value]) => (
         <div key={unit} className="flex flex-col items-center">
           <div className="relative group">
             <div className="absolute -inset-1 bg-orange-500/40 blur-sm opacity-100 group-hover:bg-orange-500/60 transition-all duration-300" />
-            <div className="relative text-xl md:text-5xl font-black text-white bg-white/5 border border-white/20 px-2 md:px-5 py-2 w-14 md:w-28 flex items-center justify-center rounded-sm backdrop-blur-md">
+            <div className="relative text-xl sm:text-3xl md:text-5xl font-black text-white bg-white/5 border border-white/20 px-2 md:px-5 py-2 w-14 sm:w-20 md:w-28 flex items-center justify-center rounded-sm backdrop-blur-md">
               <span className="tabular-nums">{String(value).padStart(2, '0')}</span>
             </div>
           </div>
@@ -172,7 +172,7 @@ const CountdownTimer = () => {
       ))}
     </div>
   );
-};
+});
 
 // --- Opening Sequence ---
 const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
@@ -206,7 +206,7 @@ const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
             }
         }, 700);
 
-        setTimeout(onComplete, 4000);
+        setTimeout(onComplete, 2500);
 
         return () => {
             clearInterval(interval);
@@ -270,7 +270,7 @@ const Navbar = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 via-cyan-400 to-green-500 rounded-lg opacity-30 blur-md group-hover:opacity-60 transition-opacity" />
               <div className="relative w-full h-full border border-white/20 bg-black/60 rounded-lg flex items-center justify-center backdrop-blur-sm overflow-hidden p-1">
-                <Image src="/logo-new.png" alt="IndiaNext Logo" width={32} height={32} className="object-contain" />
+                <Image src="/logo-new.png" alt="IndiaNext Logo" width={32} height={32} className="object-contain" priority />
               </div>
             </motion.div>
             <div className="flex flex-col">
@@ -370,11 +370,11 @@ const Navbar = () => {
                         onClick={() => setSidebarOpen(false)}
                         className="flex items-center gap-3 px-4 py-3.5 text-gray-400 hover:text-white hover:bg-white/5 transition-all rounded-sm group"
                       >
-                        <span className="w-6 text-[10px] font-mono font-black text-gray-700 group-hover:text-orange-500 transition-colors">
+                        <span className="w-6 text-[10px] font-mono font-black text-gray-500 group-hover:text-orange-500 transition-colors">
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="font-mono text-xs font-bold tracking-[0.3em] uppercase">{link.label}</span>
-                        <ChevronRight size={14} className="ml-auto text-gray-800 group-hover:text-orange-500 transition-colors" />
+                        <ChevronRight size={14} className="ml-auto text-gray-600 group-hover:text-orange-500 transition-colors" />
                       </Link>
                     </motion.div>
                   ))}
@@ -403,7 +403,7 @@ const Navbar = () => {
                   <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={130} height={130} className="object-contain opacity-95" />
                   <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={200} height={110} className="object-contain opacity-90" />
                 </div>
-                <p className="text-center font-mono text-[8px] text-gray-700 tracking-[0.3em] uppercase font-bold">
+                <p className="text-center font-mono text-[8px] text-gray-500 tracking-[0.3em] uppercase font-bold">
                   K.E.S. SHROFF COLLEGE
                 </p>
               </div>
@@ -428,7 +428,7 @@ const HeroSection = () => {
 
   // Scroll to next section
   const handleArrowClick = () => {
-    const nextSection = document.getElementById('about');
+    const nextSection = document.getElementById('bounty');
     if (nextSection) {
       nextSection.scrollIntoView({ behavior: 'smooth' });
     } else {
@@ -437,7 +437,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-32 px-4 group overflow-hidden select-none">
+    <section className="relative z-10 min-h-screen flex flex-col items-center justify-center pt-24 md:pt-32 px-3 md:px-4 group overflow-hidden select-none">
        {/* Background Light Effects */}
        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(0,204,255,0.05),transparent_60%)]" />
        
@@ -458,7 +458,7 @@ const HeroSection = () => {
               <motion.h1 
                 variants={glitchVariants}
                 animate="animate"
-                className="text-8xl md:text-[16rem] font-black leading-[0.75] tracking-tighter relative z-10 uppercase scale-y-110 italic"
+                className="text-6xl sm:text-8xl md:text-[16rem] font-black leading-[0.75] tracking-tighter relative z-10 uppercase scale-y-110 italic"
               >
                  <span className="block text-transparent bg-clip-text bg-gradient-to-br from-orange-500 via-white to-green-500 drop-shadow-[0_0_40px_rgba(255,100,0,0.4)]">
                     India<br/>Next
@@ -469,7 +469,7 @@ const HeroSection = () => {
           
           <motion.h2 
             variants={fadeInUp}
-            className="text-2xl md:text-6xl font-black text-cyan-400 tracking-tighter mb-8 uppercase opacity-90 leading-none"
+            className="text-xl sm:text-2xl md:text-6xl font-black text-cyan-400 tracking-tighter mb-8 uppercase opacity-90 leading-none"
           >
               <span className="text-white">OUTTHINK</span> THE ALGORITHM
           </motion.h2>
@@ -481,7 +481,7 @@ const HeroSection = () => {
                  <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
                  <span>MUMBAI_HQ</span>
               </div>
-              <p className="text-[10px] text-gray-600 font-mono tracking-widest uppercase">K.E.S. Shroff College of Arts & Commerce</p>
+              <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">K.E.S. Shroff College of Arts & Commerce</p>
           </motion.div>
 
           {/* Countdown Timer */}
@@ -502,12 +502,7 @@ const HeroSection = () => {
                  </button>
               </Link>
               
-              <div 
-                  className="apply-button" 
-                  data-hackathon-slug="indianext" 
-                  data-button-theme="dark-inverted"
-                  style={{ height: "44px", width: "312px", minHeight: "44px" }}
-              ></div>
+               <DevfolioButton />
           </motion.div>
        </motion.div>
 
@@ -546,7 +541,7 @@ const HeroSection = () => {
 const HighStakesTicker = () => {
     return (
         <div className="relative z-20 py-16 bg-[#030303] border-y border-white/5 overflow-hidden">
-             <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+             <div className="max-w-7xl mx-auto px-4 md:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 text-center">
                  {[
                     { label: 'BOUNTY_POOL', value: '₹1 Lakh+', color: 'text-orange-500' },
                     { label: 'RUN_TIME', value: '24H', color: 'text-orange-500' },
@@ -558,10 +553,10 @@ const HighStakesTicker = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 + (i * 0.1) }}
-                        className="relative group px-6 border-l border-white/5 first:border-l-0"
+                        className="relative group px-2 sm:px-6 border-l border-white/5 first:border-l-0"
                     >
-                        <p className="text-gray-600 font-mono text-[9px] mb-3 tracking-[0.2em] font-black">{stat.label}</p>
-                        <p className={`text-4xl md:text-6xl font-black ${stat.color} tracking-tighter font-mono group-hover:scale-105 transition-transform cursor-default`}>
+                        <p className="text-gray-400 font-mono text-[7px] sm:text-[9px] mb-2 sm:mb-3 tracking-[0.15em] sm:tracking-[0.2em] font-black">{stat.label}</p>
+                        <p className={`text-2xl sm:text-4xl md:text-6xl font-black ${stat.color} tracking-tighter font-mono group-hover:scale-105 transition-transform cursor-default`}>
                             {stat.value}
                         </p>
                     </motion.div>
@@ -572,27 +567,27 @@ const HighStakesTicker = () => {
 }
 
 const AboutSection = () => (
-    <section id="about" className="py-40 px-6 relative z-10 bg-black overflow-hidden">
+    <section id="about" className="py-20 md:py-40 px-4 md:px-6 relative z-10 bg-black overflow-hidden">
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-orange-500/5 to-transparent -z-10" />
         <div className="max-w-7xl mx-auto">
-             <div className="grid lg:grid-cols-2 gap-24 items-center">
+             <div className="grid lg:grid-cols-2 gap-12 md:gap-24 items-center">
                   <motion.div
                     initial="hidden"
                     animate="visible"
                     variants={fadeInUp}
                  >
                      <div className="inline-block px-4 py-1.5 border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 font-mono text-[10px] tracking-[0.4em] font-black mb-8 uppercase italic">./MISSION_BRIEFING</div>
-                     <h2 className="text-6xl md:text-[5.5rem] font-black mb-10 tracking-tighter uppercase leading-[0.85]">
+                     <h2 className="text-4xl sm:text-6xl md:text-[5.5rem] font-black mb-10 tracking-tighter uppercase leading-[0.85]">
                         The Code That <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-blue-600 shadow-glow">Survives Tomorrow</span>
                      </h2>
-                     <p className="text-gray-400 leading-relaxed text-2xl mb-10 font-bold tracking-tight">
+                     <p className="text-gray-400 leading-relaxed text-lg sm:text-2xl mb-10 font-bold tracking-tight">
                         We aren&apos;t just hacking for a day; we are building for the decade. <span className="text-orange-500">IndiaNext</span> is a National-Level Innovation Challenge empowering 400+ developers to build solutions for Bharat 2.0.
                      </p>
                      <div className="p-8 border-l-4 border-orange-600 bg-white/5 rounded-sm backdrop-blur-sm">
                         <p className="text-white text-sm font-mono tracking-widest uppercase italic font-black">
                            MISSION HOST: K.E.S. SHROFF COLLEGE (AUTONOMOUS)
                         </p>
-                        <p className="text-gray-500 text-[10px] font-mono mt-2 tracking-widest uppercase">NAAC &apos;A&apos; GRADE | QS I-GAUGE GOLD RATING | MUMBAI, MH</p>
+                        <p className="text-gray-400 text-[10px] font-mono mt-2 tracking-widest uppercase">NAAC &apos;A&apos; GRADE | QS I-GAUGE GOLD RATING | MUMBAI, MH</p>
                      </div>
                  </motion.div>
                  
@@ -615,15 +610,15 @@ const AboutSection = () => (
 
 const TracksSection = () => {
     return (
-        <section id="tracks" className="py-40 relative z-10 bg-[#020202]">
-            <div className="max-w-7xl mx-auto px-6">
+        <section id="tracks" className="py-20 md:py-40 relative z-10 bg-[#020202]">
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     className="mb-24 text-center"
                 >
-                    <h2 className="text-6xl md:text-9xl font-black mb-6 uppercase tracking-tighter italic">Choose Your Battlefield</h2>
+                    <h2 className="text-4xl sm:text-6xl md:text-9xl font-black mb-6 uppercase tracking-tighter italic">Choose Your Battlefield</h2>
                     <div className="flex items-center justify-center gap-4 text-orange-500 font-mono text-[10px] tracking-[0.5em] font-black uppercase">
                         <div className="w-12 h-px bg-orange-500/30" />
                         SELECT_MISSION_TYPE
@@ -631,7 +626,7 @@ const TracksSection = () => {
                     </div>
                 </motion.div>
 
-                <div className="grid lg:grid-cols-2 gap-16">
+                <div className="grid lg:grid-cols-2 gap-8 md:gap-16">
                     <HoloCard 
                         title="TRACK A: THE SOLVERS"
                         subtitle="SURPRISE_CHALLENGE (70 SLOTS)"
@@ -655,9 +650,9 @@ const TracksSection = () => {
 }
 
 const FocusDomainsSection = () => (
-    <section className="py-40 relative z-10 bg-black border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-            <h2 className="text-5xl md:text-[8rem] font-black mb-20 uppercase tracking-tighter italic leading-none opacity-90">Focus Domains</h2>
+    <section className="py-20 md:py-40 relative z-10 bg-black border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
+            <h2 className="text-4xl sm:text-5xl md:text-[8rem] font-black mb-10 md:mb-20 uppercase tracking-tighter italic leading-none opacity-90">Focus Domains</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
                 {[
                     { title: "TrustTech", desc: "Digital Sovereignty", icon: <Shield /> },
@@ -670,16 +665,17 @@ const FocusDomainsSection = () => (
                         key={i}
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
                         transition={{ delay: i * 0.1 }}
                         whileHover={{ y: -10, scale: 1.02 }}
-                        className="p-10 border border-white/10 bg-[#050505] rounded-sm hover:border-cyan-500 transition-all text-left relative overflow-hidden group"
+                        className="p-6 md:p-10 border border-white/10 bg-[#050505] rounded-sm hover:border-cyan-500 transition-all text-left relative overflow-hidden group"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                             {React.cloneElement(domain.icon, { size: 100 })}
                         </div>
                         <div className="mb-8 text-cyan-400 scale-125 origin-left">{domain.icon}</div>
                         <h4 className="font-black text-2xl mb-3 text-white uppercase tracking-tighter leading-tight">{domain.title}</h4>
-                        <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] font-bold">{domain.desc}</p>
+                        <p className="text-[10px] text-gray-400 font-mono uppercase tracking-[0.2em] font-bold">{domain.desc}</p>
                     </motion.div>
                 ))}
             </div>
@@ -688,30 +684,31 @@ const FocusDomainsSection = () => (
 );
 
 const BountySection = () => (
-    <section id="bounty" className="py-40 relative z-10 bg-black">
-        <div className="max-w-7xl mx-auto px-6">
+    <section id="bounty" className="py-20 md:py-40 relative z-10 bg-black overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
             <div className="text-center mb-32 relative">
                 <motion.h2 
                     initial={{ opacity: 0, scale: 1.5 }}
                     whileInView={{ opacity: 0.05, scale: 1 }}
+                    viewport={{ once: true }}
                     transition={{ duration: 1 }}
-                    className="text-[15rem] font-black leading-none tracking-tighter uppercase absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-full select-none pointer-events-none italic"
+                    className="text-[6rem] sm:text-[10rem] md:text-[15rem] font-black leading-none tracking-tighter uppercase absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-full select-none pointer-events-none italic"
                 >
                     BOUNTY
                 </motion.h2>
-                <h2 className="text-7xl md:text-[10rem] font-black uppercase tracking-tighter relative z-10 leading-none">The Bounty</h2>
-                <div className="inline-block px-12 py-6 bg-orange-600 text-white font-mono text-3xl md:text-6xl tracking-tighter mt-12 uppercase font-black italic shadow-[0_0_60px_rgba(234,88,12,0.6)] animate-pulse">
+                <h2 className="text-5xl sm:text-7xl md:text-[10rem] font-black uppercase tracking-tighter relative z-10 leading-none">The Bounty</h2>
+                <div className="inline-block px-6 sm:px-12 py-4 sm:py-6 bg-orange-600 text-white font-mono text-xl sm:text-3xl md:text-6xl tracking-tighter mt-8 md:mt-12 uppercase font-black italic shadow-[0_0_60px_rgba(234,88,12,0.6)] animate-pulse">
                    TOTAL POOL: ₹1,00,000+
                 </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-16 mb-20">
+            <div className="grid lg:grid-cols-2 gap-8 md:gap-16 mb-12 md:mb-20">
                 <motion.div 
                     whileHover={{ scale: 1.01 }}
-                    className="p-12 border-2 border-orange-500/20 bg-orange-500/5 rounded-sm relative group overflow-hidden"
+                    className="p-6 sm:p-8 md:p-12 border-2 border-orange-500/20 bg-orange-500/5 rounded-sm relative group overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 font-mono text-[8rem] font-black select-none group-hover:opacity-20 transition-opacity italic">01</div>
-                    <h3 className="text-4xl font-black mb-12 flex items-center gap-5 italic">
+                    <h3 className="text-2xl sm:text-4xl font-black mb-8 md:mb-12 flex items-center gap-3 sm:gap-5 italic">
                         <Terminal size={40} className="text-orange-500" />
                         THE SOLVERS
                     </h3>
@@ -721,9 +718,9 @@ const BountySection = () => (
                             { label: "LIEUTENANT (2ND)", prize: "₹20,000", color: "text-white" },
                             { label: "SPECIALIST (3RD)", prize: "₹10,000", color: "text-white" }
                         ].map((p, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black group-hover:border-orange-500/30 transition-colors">
-                                <span className="font-mono text-xs text-gray-500 tracking-[0.3em] font-black">{p.label}</span>
-                                <span className={`text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
+                            <div key={idx} className="flex justify-between items-center p-4 sm:p-6 border border-white/10 bg-black group-hover:border-orange-500/30 transition-colors">
+                                <span className="font-mono text-[10px] sm:text-xs text-gray-400 tracking-[0.15em] sm:tracking-[0.3em] font-black">{p.label}</span>
+                                <span className={`text-2xl sm:text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
                             </div>
                         ))}
                     </div>
@@ -731,10 +728,10 @@ const BountySection = () => (
 
                 <motion.div 
                     whileHover={{ scale: 1.01 }}
-                    className="p-12 border-2 border-green-500/20 bg-green-500/5 rounded-sm relative group overflow-hidden"
+                    className="p-6 sm:p-8 md:p-12 border-2 border-green-500/20 bg-green-500/5 rounded-sm relative group overflow-hidden"
                 >
                     <div className="absolute top-0 right-0 p-4 opacity-10 font-mono text-[8rem] font-black select-none group-hover:opacity-20 transition-opacity italic">02</div>
-                    <h3 className="text-4xl font-black mb-12 flex items-center gap-5 italic">
+                    <h3 className="text-2xl sm:text-4xl font-black mb-8 md:mb-12 flex items-center gap-3 sm:gap-5 italic">
                         <Rocket size={40} className="text-green-500" />
                         THE VISIONARIES
                     </h3>
@@ -743,9 +740,9 @@ const BountySection = () => (
                             { label: "ARCHITECT (1ST)", prize: "₹20,000", color: "text-green-500" },
                             { label: "STRATEGIST (2ND)", prize: "₹10,000", color: "text-white" }
                         ].map((p, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-6 border border-white/10 bg-black group-hover:border-green-500/30 transition-colors">
-                                <span className="font-mono text-xs text-gray-500 tracking-[0.3em] font-black">{p.label}</span>
-                                <span className={`text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
+                            <div key={idx} className="flex justify-between items-center p-4 sm:p-6 border border-white/10 bg-black group-hover:border-green-500/30 transition-colors">
+                                <span className="font-mono text-[10px] sm:text-xs text-gray-400 tracking-[0.15em] sm:tracking-[0.3em] font-black">{p.label}</span>
+                                <span className={`text-2xl sm:text-3xl md:text-4xl font-black ${p.color} font-mono tracking-tighter`}>{p.prize}</span>
                             </div>
                         ))}
                     </div>
@@ -757,9 +754,9 @@ const BountySection = () => (
                     <motion.div 
                         key={i} 
                         whileHover={{ y: -5 }}
-                        className="px-8 py-6 border border-white/10 bg-[#050505] rounded-sm text-center group"
+                        className="px-4 sm:px-8 py-4 sm:py-6 border border-white/10 bg-[#050505] rounded-sm text-center group"
                     >
-                        <span className="text-xs font-mono text-gray-600 tracking-[0.4em] uppercase font-black group-hover:text-cyan-400 transition-colors italic">{perk}</span>
+                        <span className="text-xs font-mono text-gray-400 tracking-[0.4em] uppercase font-black group-hover:text-cyan-400 transition-colors italic">{perk}</span>
                     </motion.div>
                 ))}
             </div>
@@ -813,11 +810,11 @@ const TimelineSection = () => {
     const _scaleY = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
     return (
-        <section id="timeline" ref={sectionRef} className="py-60 relative z-10 bg-[#020202] overflow-hidden">
-            <div className="max-w-5xl mx-auto px-6 relative">
-                <div className="mb-32 flex flex-col items-center">
-                    <p className="text-orange-500 font-mono text-[10px] tracking-[1em] mb-4 uppercase font-black italic">{"// MISSION_CHRONOLOGY"}</p>
-                    <h2 className="text-6xl md:text-9xl font-black text-center uppercase tracking-tighter italic leading-none">The Roadmap</h2>
+        <section id="timeline" ref={sectionRef} className="py-24 md:py-60 relative z-10 bg-[#020202] overflow-hidden">
+            <div className="max-w-5xl mx-auto px-4 md:px-6 relative">
+                <div className="mb-16 md:mb-32 flex flex-col items-center">
+                    <p className="text-orange-500 font-mono text-[10px] tracking-[0.5em] sm:tracking-[1em] mb-4 uppercase font-black italic">{"// MISSION_CHRONOLOGY"}</p>
+                    <h2 className="text-4xl sm:text-6xl md:text-9xl font-black text-center uppercase tracking-tighter italic leading-none">The Roadmap</h2>
                 </div>
 
                 <div className="relative">
@@ -868,7 +865,7 @@ const TimelineSection = () => {
                                         }
                                     }}
                                     transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                                    className={`relative flex items-center gap-12 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} ${isPast ? 'opacity-40' : 'opacity-100'}`}
+                                    className={`relative flex items-center gap-4 sm:gap-12 ${i % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} ${isPast ? 'opacity-40' : 'opacity-100'}`}
                                 >
                                     {/* Center Point */}
                                     <div className={`absolute left-10 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#020202] border-2 ${isPast ? 'border-gray-800' : 'border-orange-500'} z-30 flex items-center justify-center`}>
@@ -885,10 +882,10 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                                 <div className="space-y-0.5">
-                                                    <span className={`block font-mono text-[9px] font-black tracking-widest uppercase ${isPast ? 'text-gray-600' : 'text-orange-500'}`}>
+                                                    <span className={`block font-mono text-[7px] sm:text-[9px] font-black tracking-wider sm:tracking-widest uppercase ${isPast ? 'text-gray-600' : 'text-orange-500'}`}>
                                                         {item.day} • {item.date} • {item.time}
                                                     </span>
-                                                    <h3 className={`text-3xl font-black uppercase tracking-tighter italic ${isPast ? 'text-gray-500' : 'text-white'}`}>{item.event}</h3>
+                                                    <h3 className={`text-xl sm:text-3xl font-black uppercase tracking-tighter italic ${isPast ? 'text-gray-500' : 'text-white'}`}>{item.event}</h3>
                                                 </div>
                                                 {i % 2 === 0 && (
                                                     <div className={`w-10 h-10 rounded-sm flex items-center justify-center border ${isPast ? 'border-white/5 text-gray-800' : 'border-orange-500/50 text-orange-500'} bg-white/[0.02]`}>
@@ -896,7 +893,7 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="text-gray-600 font-mono text-[9px] uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
+                                            <p className="text-gray-400 font-mono text-[9px] uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
                                         </div>
                                     </div>
 
@@ -910,7 +907,7 @@ const TimelineSection = () => {
                                     </div>
                                     
                                     <div className="md:hidden absolute top-[-24px] left-[60px]">
-                                         <span className={`text-[11px] font-mono font-black tracking-widest ${isPast ? 'text-gray-700' : 'text-orange-500/80'}`}>{item.time}</span>
+                                         <span className={`text-[11px] font-mono font-black tracking-widest ${isPast ? 'text-gray-500' : 'text-orange-500/80'}`}>{item.time}</span>
                                     </div>
                                 </motion.div>
                             );
@@ -923,9 +920,9 @@ const TimelineSection = () => {
 };
 
 const SponsorsSection = () => (
-    <section className="py-40 relative z-10 bg-[#020202] border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-            <p className="text-gray-700 font-mono text-[9px] tracking-[1em] mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
+    <section className="py-20 md:py-40 relative z-10 bg-[#020202] border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
+            <p className="text-gray-500 font-mono text-[9px] tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
                     { name: "Devfolio", image: "/Devfolio /Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
@@ -950,7 +947,7 @@ const SponsorsSection = () => (
                                 {brand.name}
                              </span>
                          )}
-                         <span className="text-[7px] font-mono text-gray-700 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
+                         <span className="text-[7px] font-mono text-gray-500 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
                             {brand.status}
                          </span>
                          
@@ -963,10 +960,10 @@ const SponsorsSection = () => (
 );
 
 const FAQSection = () => (
-    <section className="py-40 relative z-10 bg-black">
-        <div className="max-w-5xl mx-auto px-6 text-left">
-            <div className="mb-24">
-                <h2 className="text-7xl md:text-[8rem] font-black uppercase tracking-tighter italic leading-none mb-4">Protocols</h2>
+    <section className="py-20 md:py-40 relative z-10 bg-black">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 text-left">
+            <div className="mb-12 md:mb-24">
+                <h2 className="text-5xl sm:text-7xl md:text-[8rem] font-black uppercase tracking-tighter italic leading-none mb-4">Protocols</h2>
                 <p className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black">SYSTEM_QUERY_HANDLING</p>
             </div>
             
@@ -981,13 +978,14 @@ const FAQSection = () => (
                         key={i} 
                         initial={{ opacity: 0 }}
                         whileInView={{ opacity: 1 }}
-                        className="p-10 border border-white/10 bg-[#030303] hover:border-cyan-500/50 transition-all group"
+                        viewport={{ once: true }}
+                        className="p-6 sm:p-10 border border-white/10 bg-[#030303] hover:border-cyan-500/50 transition-all group"
                     >
                         <div className="flex items-start gap-6 mb-6">
                             <HelpCircle className="text-cyan-500 shrink-0 mt-1" size={24} />
-                            <h4 className="text-2xl font-black uppercase tracking-tight italic group-hover:text-white transition-colors">{faq.q}</h4>
+                            <h4 className="text-xl sm:text-2xl font-black uppercase tracking-tight italic group-hover:text-white transition-colors">{faq.q}</h4>
                         </div>
-                        <p className="text-gray-500 leading-relaxed pl-12 text-sm font-bold tracking-tight">
+                        <p className="text-gray-400 leading-relaxed pl-8 sm:pl-12 text-sm font-bold tracking-tight">
                            {faq.a}
                         </p>
                     </motion.div>
@@ -998,49 +996,49 @@ const FAQSection = () => (
 );
 
 const Footer = () => (
-    <footer className="py-32 border-t border-white/10 bg-black relative z-10">
-        <div className="max-w-7xl mx-auto px-6">
-            <div className="grid md:grid-cols-4 gap-16 items-start mb-24 text-left">
-                <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-10 mb-12">
-                        <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={110} height={110} className="object-contain" />
-                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={180} height={100} className="object-contain" />
+    <footer className="py-16 md:py-32 border-t border-white/10 bg-black relative z-10">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-16 items-start mb-16 md:mb-24 text-left">
+                <div className="col-span-1 sm:col-span-2">
+                    <div className="flex items-center gap-6 sm:gap-10 mb-8 md:mb-12">
+                        <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={80} height={80} className="object-contain md:w-[110px] md:h-[110px]" />
+                        <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={130} height={70} className="object-contain md:w-[180px] md:h-[100px]" />
                     </div>
-                    <h4 className="font-black text-4xl mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
-                    <p className="text-gray-500 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
+                    <h4 className="font-black text-2xl sm:text-4xl mb-6 md:mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
+                    <p className="text-gray-400 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
                         Autonomous | NAAC &apos;A&apos; Grade (3.58 CGPA)<br/>
                         QS I-Gauge Gold | Best College Award (University of Mumbai)<br/>
                         Mumbai, MH 400067, IN
                     </p>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
+                   <h4 className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
                    <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
-                        <Link href="/rules" className="text-gray-500 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
-                        <Link href="/rules#conduct" className="text-gray-500 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
-                        <Link href="#" className="text-gray-500 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
+                        <Link href="/rules" className="text-gray-400 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
+                        <Link href="/rules#conduct" className="text-gray-400 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
+                        <Link href="#" className="text-gray-400 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>
                 <div>
-                   <h4 className="text-gray-700 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
+                   <h4 className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
                    <div className="flex flex-col gap-5 text-xs font-black">
                         <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
                         <p className="text-white tracking-widest italic">+91 75068 54879</p>
-                        <p className="text-gray-600 mt-4 text-[10px] border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
+                        <p className="text-gray-400 mt-4 text-[10px] border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
                    </div>
                 </div>
             </div>
-            <div className="pt-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-10">
+            <div className="pt-10 md:pt-16 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 md:gap-10">
                 <div className="flex items-center gap-6">
                     <div className="w-12 h-12 relative rounded-sm border border-white/20 overflow-hidden grayscale group hover:grayscale-0 transition-all">
-                        <Image src="/Logo.jpg" alt="Logo" width={48} height={48} className="object-cover" />
+                        <Image src="/logo-new.png" alt="Logo" width={48} height={48} className="object-cover" />
                     </div>
                     <div className="flex flex-col">
                         <span className="font-black text-2xl tracking-tighter uppercase leading-none">IndiaNext</span>
-                        <span className="text-[10px] font-mono text-gray-700 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
+                        <span className="text-[10px] font-mono text-gray-500 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
                     </div>
                 </div>
-                <p className="text-gray-800 text-[8px] font-mono tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
+                <p className="text-gray-500 text-[7px] sm:text-[8px] font-mono tracking-[0.3em] sm:tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
             </div>
         </div>
     </footer>
@@ -1065,7 +1063,7 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             whileHover={{ y: -10 }}
-            className="group relative min-h-[500px] bg-[#050505] border border-white/5 p-12 overflow-hidden backdrop-blur-sm text-left transition-colors hover:border-white/10"
+            className="group relative min-h-[400px] sm:min-h-[500px] bg-[#050505] border border-white/5 p-6 sm:p-8 md:p-12 overflow-hidden backdrop-blur-sm text-left transition-colors hover:border-white/10"
         >
             <motion.div 
                 className="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-500"
@@ -1101,14 +1099,14 @@ const HoloCard = ({ title, subtitle, accent, icon, desc, tags }: HoloCardProps) 
                 </div>
 
                 <div className="mb-4 font-mono text-[10px] font-black tracking-[0.5em]" style={{ color: accent }}>{subtitle}</div>
-                <h3 className="text-5xl md:text-6xl font-black mb-10 text-white uppercase tracking-tighter leading-[0.8] italic">{title}</h3>
+                <h3 className="text-3xl sm:text-5xl md:text-6xl font-black mb-6 sm:mb-10 text-white uppercase tracking-tighter leading-[0.8] italic">{title}</h3>
                 
-                <p className="text-gray-500 text-xl mb-12 leading-tight flex-grow font-bold tracking-tight">{desc}</p>
+                <p className="text-gray-400 text-base sm:text-xl mb-8 sm:mb-12 leading-tight flex-grow font-bold tracking-tight">{desc}</p>
                 
                 <div className="flex flex-col gap-6 mt-auto">
                     <div className="flex flex-wrap gap-3">
                         {tags.map((t: string) => (
-                            <span key={t} className="px-4 py-1.5 border border-white/5 text-[9px] font-mono text-gray-600 uppercase tracking-widest bg-black font-black italic">
+                            <span key={t} className="px-4 py-1.5 border border-white/5 text-[9px] font-mono text-gray-400 uppercase tracking-widest bg-black font-black italic">
                                 {t}
                             </span>
                         ))}
@@ -1123,46 +1121,32 @@ const TechDetail = ({ icon, title, desc, accent = CYAN }: TechDetailProps) => (
     <motion.div 
         variants={fadeInUp}
         whileHover={{ x: 10 }}
-        className="flex items-start gap-6 p-8 border border-white/5 bg-white/5 transition-all group rounded-sm text-left relative overflow-hidden"
+        className="flex items-start gap-4 sm:gap-6 p-5 sm:p-8 border border-white/5 bg-white/5 transition-all group rounded-sm text-left relative overflow-hidden"
     >
         <div className="absolute top-0 left-0 w-1 h-0 bg-orange-500 group-hover:h-full transition-all duration-300" style={{ backgroundColor: accent }} />
         <div className="transition-all group-hover:translate-x-1 group-hover:scale-110" style={{ color: accent }}>{icon}</div>
         <div>
-            <h4 className="font-black text-3xl mb-1 uppercase tracking-tighter text-white italic">{title}</h4>
-            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.3em] font-black">{desc}</p>
+            <h4 className="font-black text-2xl sm:text-3xl mb-1 uppercase tracking-tighter text-white italic">{title}</h4>
+            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-[0.3em] font-black">{desc}</p>
         </div>
     </motion.div>
 );
 
-const CyberBackground = () => (
-    <div className="fixed inset-0 z-0 bg-[#000000] perspective-1000 overflow-hidden">
+const CyberBackground = memo(() => (
+    <div className="fixed inset-0 z-0 bg-[#000000] overflow-hidden will-change-auto">
         {/* Deep Space Base */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0d0d1a_0%,#000000_100%)]" />
         
-        {/* Dynamic Nebulas */}
-        <motion.div 
-            animate={{ 
-                scale: [1, 1.2, 1],
-                opacity: [0.05, 0.1, 0.05]
-            }}
-            transition={{ duration: 10, repeat: Infinity }}
-            className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-orange-600 rounded-full blur-[200px] mix-blend-screen" 
-        />
-        <motion.div 
-            animate={{ 
-                scale: [1, 1.3, 1],
-                opacity: [0.05, 0.08, 0.05]
-            }}
-            transition={{ duration: 15, repeat: Infinity, delay: 2 }}
-            className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-green-600 rounded-full blur-[200px] mix-blend-screen" 
-        />
+        {/* Dynamic Nebulas — Pure CSS animations (no JS overhead) */}
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-orange-600 rounded-full blur-[200px] mix-blend-screen animate-[nebula-pulse_10s_ease-in-out_infinite]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-green-600 rounded-full blur-[200px] mix-blend-screen animate-[nebula-pulse_15s_ease-in-out_2s_infinite]" />
 
         {/* Moving Grid Floor */}
         <div 
-            className="absolute bottom-[-10%] left-[-50%] right-[-50%] h-[80vh] bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [transform:rotateX(75deg)] origin-bottom animate-grid-flow opacity-30"
+            className="absolute bottom-[-10%] left-[-50%] right-[-50%] h-[80vh] bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_100px] [transform:rotateX(75deg)] origin-bottom opacity-30"
         />
         
         {/* Subtle Horizontal Scanline */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] pointer-events-none opacity-20" />
     </div>
-);
+));

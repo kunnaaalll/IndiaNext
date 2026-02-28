@@ -64,7 +64,7 @@ const QUESTIONS: Question[] = [
     id: 'teamSize',
     type: 'choice',
     question: "Team Size",
-    options: ["Solo (1)", "2 Members", "3 Members", "4 Members"],
+    options: ["2 Members", "3 Members", "4 Members"],
     required: true,
   },
 
@@ -74,6 +74,13 @@ const QUESTIONS: Question[] = [
     type: 'text',
     question: "Team Leader Full Name",
     placeholder: "Your Full Name",
+    required: true,
+  },
+  {
+    id: 'leaderGender',
+    type: 'choice',
+    question: "Team Leader Gender",
+    options: ["Male", "Female", "Other"],
     required: true,
   },
   {
@@ -119,6 +126,14 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
+    id: 'member2Gender',
+    type: 'choice',
+    question: "Member 2 Gender",
+    options: ["Male", "Female", "Other"],
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["2 Members", "3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
     id: 'member2Email',
     type: 'email',
     question: "Member 2 Email",
@@ -156,6 +171,14 @@ const QUESTIONS: Question[] = [
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
   },
   {
+    id: 'member3Gender',
+    type: 'choice',
+    question: "Member 3 Gender",
+    options: ["Male", "Female", "Other"],
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["3 Members", "4 Members"].includes(answers.teamSize),
+  },
+  {
     id: 'member3Email',
     type: 'email',
     question: "Member 3 Email",
@@ -189,6 +212,14 @@ const QUESTIONS: Question[] = [
     type: 'text',
     question: "Member 4 Full Name",
     placeholder: "Full Name",
+    required: true,
+    condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
+  },
+  {
+    id: 'member4Gender',
+    type: 'choice',
+    question: "Member 4 Gender",
+    options: ["Male", "Female", "Other"],
     required: true,
     condition: (answers: Answers) => typeof answers.teamSize === 'string' && ["4 Members"].includes(answers.teamSize),
   },

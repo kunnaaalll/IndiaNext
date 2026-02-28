@@ -135,6 +135,7 @@ export const INDIAN_COLLEGES: string[] = [
   "DAV Institute of Engineering and Technology",
 
   // ── Mumbai Engineering & Degree Colleges ───────
+  "K.E.S. Shroff College of Arts and Commerce Mumbai",
   "VJTI Mumbai (Veermata Jijabai Technological Institute)",
   "SPCE Mumbai (Sardar Patel College of Engineering)",
   "DJ Sanghvi College of Engineering Mumbai",

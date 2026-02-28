@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // React strict mode for catching bugs early
+  reactStrictMode: true,
+
   // Image optimization
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -10,6 +14,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Enable gzip/brotli compression
+  compress: true,
+
+  // Production optimizations
+  poweredByHeader: false,
 };
 
 export default nextConfig;

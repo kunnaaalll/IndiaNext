@@ -3,7 +3,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import Link from "next/link";
 import Image from "next/image";
-import DevfolioButton from "@/components/DevfolioButton";
+// import DevfolioButton from "@/components/DevfolioButton";
 import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence, Variants } from "framer-motion";
 import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
 import "./styles/bounce-slow.css";
@@ -489,7 +489,7 @@ const HeroSection = () => {
              <CountdownTimer />
           </motion.div>
 
-          <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-6 mt-4">
+          <motion.div variants={fadeInUp} className="flex flex-col items-center justify-center gap-6 mt-4 mb-16 md:mb-24">
               <Link href="/register" className="relative group overflow-hidden active:scale-95 transition-all duration-200 w-auto">
                  <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-green-500 rounded-sm blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
                  <button className="relative px-8 md:px-12 py-4 md:py-6 bg-[#0a0a0a] border border-white/20 rounded-sm leading-none flex items-center justify-center gap-4 md:gap-6 group-hover:bg-zinc-900 transition-all overflow-hidden shadow-[0_0_40px_rgba(249,115,22,0.1)]">
@@ -502,7 +502,7 @@ const HeroSection = () => {
                  </button>
               </Link>
               
-               <DevfolioButton />
+               {/* <DevfolioButton /> */}
           </motion.div>
        </motion.div>
 
@@ -885,7 +885,7 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                                 <div className="space-y-0.5">
-                                                    <span className={`block font-mono text-[7px] sm:text-[9px] font-black tracking-wider sm:tracking-widest uppercase ${isPast ? 'text-gray-600' : 'text-orange-500'}`}>
+                                                    <span className={`block font-mono text-xs sm:text-sm font-black tracking-wider sm:tracking-widest uppercase ${isPast ? 'text-gray-600' : 'text-orange-500'}`}>
                                                         {item.day} • {item.date} • {item.time}
                                                     </span>
                                                     <h3 className={`text-xl sm:text-3xl font-black uppercase tracking-tighter italic ${isPast ? 'text-gray-500' : 'text-white'}`}>{item.event}</h3>
@@ -896,7 +896,7 @@ const TimelineSection = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="text-gray-400 font-mono text-[9px] uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
+                                            <p className="text-gray-400 font-mono text-xs uppercase tracking-[0.3em] font-bold max-w-xs">{item.desc}</p>
                                         </div>
                                     </div>
 
@@ -910,7 +910,7 @@ const TimelineSection = () => {
                                     </div>
                                     
                                     <div className="md:hidden absolute top-[-24px] left-[60px]">
-                                         <span className={`text-[11px] font-mono font-black tracking-widest ${isPast ? 'text-gray-500' : 'text-orange-500/80'}`}>{item.time}</span>
+                                         <span className={`text-sm font-mono font-black tracking-widest ${isPast ? 'text-gray-500' : 'text-orange-500/80'}`}>{item.time}</span>
                                     </div>
                                 </motion.div>
                             );
@@ -928,7 +928,7 @@ const SponsorsSection = () => (
             <p className="text-gray-300 font-mono text-xs sm:text-sm tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                    { name: "Devfolio", image: "/Devfolio /Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
+                    { name: "Devfolio", image: "/Devfolio/Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
                     { name: "Sponsor Alpha", status: "LINK_ACTIVE" },
                     { name: "Partner Bravo", status: "LINK_ACTIVE" },
                     { name: "Node Delta", status: "LINK_ACTIVE" }

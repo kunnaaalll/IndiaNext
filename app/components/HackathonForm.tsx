@@ -11,6 +11,15 @@ import { INDIAN_DEGREES } from '@/lib/data/degrees';
 // ── Types ───────────────────────────────────────
 type Answers = Record<string, string | string[] | undefined>;
 
+interface ProblemStatementData {
+  id: string;
+  title: string;
+  objective: string;
+  description: string | null;
+  slotsRemaining: number;
+  totalSlots: number;
+}
+
 interface Question {
   id: string;
   type: string;
@@ -42,13 +51,13 @@ const QUESTIONS: Question[] = [
     required: true,
   },
   
-  // --- MISSION BRIEFING --
+  // --- MISSION BRIEFING (dynamic — content is set at runtime) --
   {
       id: 'buildBrief',
       type: 'info',
       question: "MISSION BRIEFING",
       subtext: "Review your objective before proceeding.",
-      text: "PROBLEM STATEMENT:\n\nDisaster Response Coordination\n\nObjective: Build a real-time, offline-first system to connect flood victims with local rescue teams.",
+      text: "Loading problem statement...",
       condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
@@ -350,7 +359,7 @@ const QUESTIONS: Question[] = [
     required: true,
     condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
     noPaste: true,
-    guidance: "PROBLEM STATEMENT:\nDisaster Response Coordination - Build a real-time, offline-first system to connect flood victims with local rescue teams.\n\nSuggested Response Pattern:\n\n1. Analysis: Breakdown of the specific problem statement.\n2. Technical Approach: Architecture & Stack choice.\n3. Innovation: What makes your fix unique?\n4. Execution Plan: 24-hour timeline strategy.",
+    guidance: "Suggested Response Pattern:\n\n1. Analysis: Breakdown of the specific problem statement.\n2. Technical Approach: Architecture & Stack choice.\n3. Innovation: What makes your fix unique?\n4. Execution Plan: 24-hour timeline strategy.",
   },
   {
     id: 'githubLink',
@@ -581,7 +590,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers, problemStatement, problemLoading, allProblemsFilled }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers; problemStatement: ProblemStatementData | null; problemLoading: boolean; allProblemsFilled: boolean }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -653,6 +662,16 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
          {/* Guidance Panel */}
          {question.guidance && (
              <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
+                 {/* Show problem context for problemDesc */}
+                 {question.id === 'problemDesc' && problemStatement && (
+                   <div className="mb-3 pb-3 border-b border-slate-700">
+                     <div className="text-cyan-400 font-bold mb-1 uppercase tracking-wider text-xs">
+                       YOUR PROBLEM
+                     </div>
+                     <div className="text-white text-xs font-bold mb-1">{problemStatement.title}</div>
+                     <div className="text-slate-400 text-xs leading-relaxed">{problemStatement.objective}</div>
+                   </div>
+                 )}
                  <div className="text-orange-500 font-bold mb-2 uppercase tracking-wider text-xs border-b border-orange-500/20 pb-1">
                      RESPONSE PATTERN
                  </div>
@@ -694,6 +713,74 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
   }
 
   if (question.type === 'info') {
+      // Special handling for buildBrief with dynamic problem statement
+      if (question.id === 'buildBrief') {
+        if (problemLoading) {
+          return (
+            <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50 animate-pulse" />
+              <div className="flex items-center gap-2 text-orange-400 font-bold mb-4 uppercase tracking-widest text-xs">
+                <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
+                Establishing Secure Channel...
+              </div>
+              <div className="text-xl font-mono text-slate-500 animate-pulse">
+                Decrypting problem statement...
+              </div>
+            </div>
+          );
+        }
+
+        if (allProblemsFilled) {
+          return (
+            <div className="w-full max-w-2xl bg-slate-900 border border-red-500/50 p-6 rounded relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
+              <div className="flex items-center gap-2 text-red-400 font-bold mb-4 uppercase tracking-widest text-xs">
+                <span className="w-2 h-2 bg-red-500 rounded-full" />
+                Mission Queue Exhausted
+              </div>
+              <div className="text-lg font-mono text-red-400/80 leading-relaxed">
+                All problem statements have reached maximum capacity. BuildStorm registration is currently closed.
+              </div>
+            </div>
+          );
+        }
+
+        if (problemStatement) {
+          return (
+            <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-orange-400 font-bold uppercase tracking-widest text-xs">
+                  <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
+                  Classified Intelligence
+                </div>
+                <div className="flex items-center gap-2 text-xs font-mono">
+                  <span className="text-slate-500">SLOTS:</span>
+                  <span className={`font-bold ${
+                    problemStatement.slotsRemaining <= 5 
+                      ? 'text-red-400' 
+                      : problemStatement.slotsRemaining <= 10 
+                        ? 'text-yellow-400' 
+                        : 'text-green-400'
+                  }`}>
+                    {problemStatement.slotsRemaining}/{problemStatement.totalSlots}
+                  </span>
+                </div>
+              </div>
+              <div className="text-xl md:text-2xl font-mono text-white leading-relaxed whitespace-pre-wrap">
+                {`PROBLEM STATEMENT:\n\n${problemStatement.title}\n\nObjective: ${problemStatement.objective}`}
+              </div>
+              {problemStatement.slotsRemaining <= 5 && (
+                <div className="mt-4 text-xs text-yellow-500 border border-yellow-500/30 bg-yellow-500/5 p-2 text-center uppercase tracking-widest font-bold animate-pulse">
+                  ⚠ Limited Slots Remaining — Submit Soon
+                </div>
+              )}
+            </div>
+          );
+        }
+      }
+
+      // Default info rendering for other info questions
       return (
           <div className="w-full max-w-2xl bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
@@ -811,6 +898,11 @@ export default function HackathonForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Problem Statement State (for BuildStorm rotation)
+  const [problemStatement, setProblemStatement] = useState<ProblemStatementData | null>(null);
+  const [problemLoading, setProblemLoading] = useState(false);
+  const [allProblemsFilled, setAllProblemsFilled] = useState(false);
+
   // ✅ NEW: Generate idempotency key once per form session
   const [idempotencyKey] = useState(() => {
     // Use crypto.randomUUID() if available
@@ -839,6 +931,42 @@ export default function HackathonForm() {
   }, [currentStep, answers]);
 
   const currentQuestion = QUESTIONS[currentStep];
+
+  // Reserve the problem statement slot when BuildStorm is selected
+  const fetchProblemStatement = React.useCallback(async () => {
+    setProblemLoading(true);
+    try {
+      const res = await fetch('/api/reserve-problem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: idempotencyKey }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setProblemStatement({
+          ...data.data,
+          // Since we are reserving, we just hide slots indicator or mock it for now
+          slotsRemaining: 1, 
+          totalSlots: 30
+        });
+        setAllProblemsFilled(false);
+      } else if (data.allFilled) {
+        setAllProblemsFilled(true);
+        setProblemStatement(null);
+      }
+    } catch (err) {
+      console.error('Failed to reserve problem statement:', err);
+    } finally {
+      setProblemLoading(false);
+    }
+  }, [idempotencyKey]);
+
+  // Trigger fetch when track is selected as BuildStorm
+  useEffect(() => {
+    if (answers.track === "BuildStorm: Solve Problem Statement in 24 Hours") {
+      fetchProblemStatement();
+    }
+  }, [answers.track, fetchProblemStatement]);
 
   const handleStart = () => setStarted(true);
 
@@ -920,6 +1048,11 @@ export default function HackathonForm() {
           if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
           if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
 
+          // Include problem statement ID for BuildStorm track
+          if (problemStatement && finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") {
+            finalAnswers.assignedProblemStatementId = problemStatement.id;
+          }
+
           const res = await fetch('/api/register', {
               method: 'POST',
               headers: {
@@ -934,7 +1067,12 @@ export default function HackathonForm() {
           const response = await res.json();
           
           if (!response.success) {
-            setErrorMsg(response.message);
+            if (response.error === 'BUILDSTORM_FULL') {
+              setErrorMsg("BuildStorm slots just filled up completely! Please choose the IdeaSprint track instead, or refresh to see if spots opened.");
+              setAllProblemsFilled(true);
+            } else {
+              setErrorMsg(response.message);
+            }
             setLoading(false);
             return;
           }
@@ -946,12 +1084,24 @@ export default function HackathonForm() {
       } finally {
           setLoading(false);
       }
-  }, [answers, idempotencyKey, setIsCompleted]);
+  }, [answers, idempotencyKey, setIsCompleted, problemStatement]);
 
   const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
     const q = currentQuestion;
     let ans = answers[q.id];
+
+    // Block proceeding if BuildStorm problem statements are all filled
+    if (q.id === 'buildBrief') {
+      if (allProblemsFilled) {
+        setErrorMsg("All problem statements are full. BuildStorm registration is closed.");
+        return;
+      }
+      if (problemLoading || !problemStatement) {
+        setErrorMsg("Please wait — loading problem statement...");
+        return;
+      }
+    }
 
     // Trim string values before validation
     if (typeof ans === 'string') {
@@ -1070,7 +1220,7 @@ export default function HackathonForm() {
     } else {
       await submitForm();
     }
-  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep]);
+  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep, allProblemsFilled, problemLoading, problemStatement]);
 
   const verifyOtp = React.useCallback(async () => {
       setLoading(true);
@@ -1218,6 +1368,9 @@ export default function HackathonForm() {
                                     onChange={handleAnswer} 
                                     onCheckbox={handleCheckbox}
                                     answers={answers}
+                                    problemStatement={problemStatement}
+                                    problemLoading={problemLoading}
+                                    allProblemsFilled={allProblemsFilled}
                                />
                            </div>
                            

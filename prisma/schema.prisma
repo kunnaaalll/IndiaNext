@@ -200,6 +200,10 @@ model Submission {
   challenges       String?  @db.Text
   futureScope      String?  @db.Text
   
+  // Assigned problem statement (for BuildStorm rotation)
+  assignedProblemStatementId String?
+  assignedProblemStatement   ProblemStatement? @relation(fields: [assignedProblemStatementId], references: [id])
+  
   // Judging
   judgeScore       Float?
   judgeComments    String?  @db.Text
@@ -425,6 +429,56 @@ enum EmailStatus {
   OPENED
   BOUNCED
   FAILED
+}
+
+// ═══════════════════════════════════════════════════════════
+// ROTATING PROBLEM STATEMENTS (BuildStorm)
+// ═══════════════════════════════════════════════════════════
+
+model ProblemStatement {
+  id               String   @id @default(cuid())
+  order            Int      @unique  // Display/rotation order (1, 2, 3...)
+  title            String             // e.g. "Disaster Response Coordination"
+  objective        String   @db.Text  // Full objective text
+  description      String?  @db.Text  // Optional extended description
+  
+  // Rotation control
+  submissionCount  Int      @default(0)  // Current number of submissions
+  maxSubmissions   Int      @default(30) // Rotate after this many
+  isActive         Boolean  @default(true) // Can be deactivated by admin
+  isCurrent        Boolean  @default(false) // Currently being shown
+  
+  // Metadata
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  submissions      Submission[]
+  reservations     ProblemReservation[]
+  
+  @@index([isCurrent])
+  @@index([order])
+  @@index([isActive, isCurrent])
+  @@map("problem_statements")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROBLEM RESERVATION SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+model ProblemReservation {
+  id                 String   @id @default(cuid())
+  sessionId          String   @unique // The idempotencyKey or a unique session token
+  problemStatementId String
+  expiresAt          DateTime
+
+  problemStatement ProblemStatement @relation(fields: [problemStatementId], references: [id])
+
+  createdAt DateTime @default(now())
+  
+  @@index([problemStatementId])
+  @@index([expiresAt])
+  @@map("problem_reservations")
 }
 
 // ═══════════════════════════════════════════════════════════

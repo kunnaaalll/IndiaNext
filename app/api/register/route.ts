@@ -68,7 +68,7 @@ const RegisterSchema = z.object({
   // BuildStorm Fields
   problemDesc: z.string().optional(),
   githubLink: z.string().url().optional().or(z.literal('')),
-  
+  assignedProblemStatementId: z.string().optional(),
   // Meta
   hearAbout: z.string().optional(),
   additionalNotes: z.string().optional(),
@@ -426,6 +426,138 @@ export async function POST(req: Request) {
       }
 
       // 4. Create submission
+      // For BuildStorm: atomically assign problem statement and increment counter
+      let assignedProblemTitle: string | null = null;
+      let assignedProblemStatementId: string | null = null;
+
+      if (trackEnum === 'BUILD_STORM') {
+        const sessionId = data.idempotencyKey;
+
+        // Try to get the one they were assigned, or fallback to the current active one
+        let problemStatement = null;
+        
+        if (data.assignedProblemStatementId) {
+          problemStatement = await tx.problemStatement.findUnique({
+            where: { id: data.assignedProblemStatementId },
+          });
+        }
+
+        // If no assignment passed or inactive, get the CURRENT active one
+        if (!problemStatement || !problemStatement.isActive) {
+          problemStatement = await tx.problemStatement.findFirst({
+            where: { isCurrent: true, isActive: true },
+          });
+        }
+
+        // If still no problem statement => get the very first available one
+        if (!problemStatement || problemStatement.submissionCount >= problemStatement.maxSubmissions) {
+          problemStatement = await tx.problemStatement.findFirst({
+            where: {
+              isActive: true,
+              submissionCount: { lt: prisma.problemStatement.fields.maxSubmissions as any } // Not directly possible to query `lt: maxSubmissions` in early Prisma versions easily without RAW, so let's do a findMany loop
+            },
+            orderBy: { order: 'asc' },
+          });
+
+          // Accurate manual check since dynamic findFirst with field ref is tricky 
+          if (!problemStatement || problemStatement.submissionCount >= problemStatement.maxSubmissions) {
+            const allProblems = await tx.problemStatement.findMany({
+              where: { isActive: true },
+              orderBy: { order: 'asc' },
+            });
+            problemStatement = allProblems.find(p => p.submissionCount < p.maxSubmissions) || null;
+          }
+        }
+
+        // If ABSOLUTELY NO problem statements have capacity, check if we can EXPAND to 50
+        if (!problemStatement) {
+          const allActive = await tx.problemStatement.findMany({
+            where: { isActive: true },
+            orderBy: { order: 'asc' },
+          });
+          const canExpand = allActive.some(p => p.maxSubmissions < 50);
+
+          if (canExpand) {
+            await tx.problemStatement.updateMany({
+              where: { isActive: true },
+              data: { maxSubmissions: 50 },
+            });
+
+            const firstProblem = allActive[0];
+            if (firstProblem) {
+              await tx.problemStatement.updateMany({
+                where: { isActive: true },
+                data: { isCurrent: false },
+              });
+              problemStatement = await tx.problemStatement.update({
+                where: { id: firstProblem.id },
+                data: { isCurrent: true },
+              });
+            }
+          }
+        }
+
+        // If still no problem statements have capacity, ABORT registration
+
+        if (!problemStatement) {
+          throw new Error('BUILDSTORM_FULL:Registration for the BuildStorm track is full.');
+        }
+
+        // Atomically increment submission count
+        const updated = await tx.problemStatement.update({
+          where: { id: problemStatement.id },
+          data: { submissionCount: { increment: 1 } },
+        });
+
+        // DELETE the reservation since it's now a permanent submission
+        await tx.problemReservation.deleteMany({
+          where: { sessionId },
+        });
+
+        assignedProblemStatementId = problemStatement.id;
+        assignedProblemTitle = problemStatement.title;
+
+        // Check if this problem is now full (actual submissions + remaining active reservations)
+        // Since we just deleted ours, we check if total remaining is >= max
+        const activeReservationsCount = await tx.problemReservation.count({
+          where: { problemStatementId: problemStatement.id },
+        });
+
+        if ((updated.submissionCount + activeReservationsCount) >= updated.maxSubmissions) {
+          // Unmark as current
+          await tx.problemStatement.update({
+            where: { id: problemStatement.id },
+            data: { isCurrent: false },
+          });
+
+          // Find next available problem
+          const allNext = await tx.problemStatement.findMany({
+            where: {
+              isActive: true,
+              order: { gt: problemStatement.order },
+            },
+            orderBy: { order: 'asc' },
+          });
+
+          let nextProblem = null;
+          for (const p of allNext) {
+            const resCount = await tx.problemReservation.count({ where: { problemStatementId: p.id } });
+            if (p.submissionCount + resCount < p.maxSubmissions) {
+              nextProblem = p;
+              break;
+            }
+          }
+
+          if (nextProblem) {
+            await tx.problemStatement.update({
+              where: { id: nextProblem.id },
+              data: { isCurrent: true },
+            });
+          }
+          // If no next problem, all are filled — isCurrent stays false everywhere
+        }
+      }
+
       const submission = await tx.submission.create({
         data: {
           teamId: team.id,
@@ -439,6 +571,8 @@ export async function POST(req: Request) {
           // BuildStorm fields
           problemDesc: trackEnum === 'BUILD_STORM' ? data.problemDesc : null,
           githubLink: trackEnum === 'BUILD_STORM' ? data.githubLink : null,
+          // Assigned problem statement
+          assignedProblemStatementId: assignedProblemStatementId,
         },
       });
 
@@ -471,7 +605,7 @@ export async function POST(req: Request) {
         // Ignore if already deleted
       });
 
-      return { team, submission };
+      return { team, submission, assignedProblemTitle };
     }, {
       timeout: 15000, // 15 seconds timeout for complex registration
     });
@@ -484,6 +618,7 @@ export async function POST(req: Request) {
         submissionId: result.submission.id,
         teamName: result.team.name,
         track: result.team.track,
+        assignedProblemTitle: result.assignedProblemTitle,
       },
     };
 
@@ -551,6 +686,18 @@ export async function POST(req: Request) {
           {
             success: false,
             error: 'DUPLICATE_REGISTRATION',
+            message,
+          },
+          { status: 409 }
+        );
+      }
+
+      if (error.message.startsWith('BUILDSTORM_FULL:')) {
+        const message = error.message.split(':')[1];
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'BUILDSTORM_FULL',
             message,
           },
           { status: 409 }

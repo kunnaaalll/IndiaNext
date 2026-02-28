@@ -398,10 +398,10 @@ const Navbar = () => {
               </div>
 
               {/* Sidebar Footer with KES Logos */}
-              <div className="px-5 py-6 border-t border-white/5">
-                <div className="flex items-center justify-center gap-8 mb-8">
-                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={130} height={130} className="object-contain opacity-95" />
-                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={200} height={110} className="object-contain opacity-90" />
+              <div className="px-5 py-5 border-t border-white/5">
+                <div className="flex items-center justify-center gap-4 mb-3">
+                  <Image src="/kessc-logo-Photoroom.png" alt="KES Logo" width={48} height={48} className="object-contain opacity-95" />
+                  <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={72} height={40} className="object-contain opacity-90" />
                 </div>
                 <p className="text-center font-mono text-[8px] text-gray-500 tracking-[0.3em] uppercase font-bold">
                   K.E.S. SHROFF COLLEGE
@@ -1016,7 +1016,7 @@ const Footer = () => (
                    <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
                         <Link href="/rules" className="text-gray-400 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
                         <Link href="/rules#conduct" className="text-gray-400 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
-                        <Link href="#" className="text-gray-400 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
+                        <Link href="/sponsors" className="text-gray-400 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>
                 <div>

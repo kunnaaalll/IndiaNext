@@ -925,7 +925,7 @@ const TimelineSection = () => {
 const SponsorsSection = () => (
     <section className="py-20 md:py-40 relative z-10 bg-[#020202] border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
-            <p className="text-gray-500 font-mono text-[9px] tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
+            <p className="text-gray-400 font-mono text-[9px] tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
                     { name: "Devfolio", image: "/Devfolio /Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
@@ -946,11 +946,11 @@ const SponsorsSection = () => (
                                 <Image src={brand.image} alt={brand.name} width={160} height={48} className="object-contain" />
                             </div>
                          ) : (
-                             <span className="text-gray-500 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
+                             <span className="text-gray-300 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
                                 {brand.name}
                              </span>
                          )}
-                         <span className="text-[7px] font-mono text-gray-500 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-50 group-hover:opacity-100 transition-all">
+                         <span className="text-[7px] font-mono text-gray-400 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-70 group-hover:opacity-100 transition-all">
                             {brand.status}
                          </span>
                          
@@ -1015,7 +1015,7 @@ const Footer = () => (
                     </p>
                 </div>
                 <div>
-                   <h4 className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
+                   <h4 className="text-gray-400 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
                    <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
                         <Link href="/rules" className="text-gray-400 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
                         <Link href="/rules#conduct" className="text-gray-400 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
@@ -1023,7 +1023,7 @@ const Footer = () => (
                    </div>
                 </div>
                 <div>
-                   <h4 className="text-gray-500 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
+                   <h4 className="text-gray-400 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
                    <div className="flex flex-col gap-5 text-xs font-black">
                         <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
                         <p className="text-white tracking-widest italic">+91 75068 54879</p>
@@ -1038,10 +1038,10 @@ const Footer = () => (
                     </div>
                     <div className="flex flex-col">
                         <span className="font-black text-2xl tracking-tighter uppercase leading-none">IndiaNext</span>
-                        <span className="text-[10px] font-mono text-gray-500 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
+                        <span className="text-[10px] font-mono text-gray-400 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
                     </div>
                 </div>
-                <p className="text-gray-500 text-[7px] sm:text-[8px] font-mono tracking-[0.3em] sm:tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
+                <p className="text-gray-400 text-[7px] sm:text-[8px] font-mono tracking-[0.3em] sm:tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
             </div>
         </div>
     </footer>

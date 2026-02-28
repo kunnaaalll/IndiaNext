@@ -10,7 +10,7 @@
 import React, { ReactNode, Children } from 'react';
 import { motion } from 'framer-motion';
 import { useAnimationContext } from '@/lib/animations/context/AnimationProvider';
-import { staggerContainer, staggerItem } from '@/lib/animations/variants';
+import { staggerItem } from '@/lib/animations/variants';
 
 type StaggerVariant = 'fadeIn' | 'slideIn';
 

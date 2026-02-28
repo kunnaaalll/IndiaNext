@@ -43,9 +43,9 @@ export const usePerformance = (): UsePerformanceReturn => {
   const monitoringRef = useRef(false);
   const frameTimesRef = useRef<number[]>([]);
   const lastFrameTimeRef = useRef<number>(0);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
-  const measureFrame = useCallback((timestamp: number) => {
+  const measureFrame = useCallback(function measureFrameCallback(timestamp: number): void {
     if (!monitoringRef.current) return;
 
     if (lastFrameTimeRef.current !== 0) {
@@ -85,7 +85,7 @@ export const usePerformance = (): UsePerformanceReturn => {
     }
 
     lastFrameTimeRef.current = timestamp;
-    animationFrameRef.current = requestAnimationFrame(measureFrame);
+    animationFrameRef.current = requestAnimationFrame(measureFrameCallback);
   }, []);
 
   const startMonitoring = useCallback(() => {

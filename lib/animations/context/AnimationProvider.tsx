@@ -44,7 +44,7 @@ export const AnimationProvider: React.FC<AnimationProviderProps> = ({
   const [config, setConfig] = useState<AnimationConfig>(() =>
     customConfig ? mergeConfig(customConfig) : defaultConfig
   );
-  const [performance, setPerformance] = useState<PerformanceMetrics>({
+  const [performance] = useState<PerformanceMetrics>({
     fps: 60,
     averageFrameTime: 16.67,
     minFrameTime: 16.67,
@@ -70,27 +70,28 @@ export const AnimationProvider: React.FC<AnimationProviderProps> = ({
           verySlow: 0,
         },
       }));
-    } else if (customConfig) {
-      setConfig(mergeConfig(customConfig));
     } else {
-      setConfig(defaultConfig);
+      const newConfig = customConfig ? mergeConfig(customConfig) : defaultConfig;
+      setConfig(newConfig);
     }
   }, [reducedMotion, customConfig]);
 
   // Adjust config for test mode
   useEffect(() => {
-    if (testMode) {
-      setConfig((prev) => ({
-        ...prev,
-        duration: {
-          instant: 0,
-          fast: 0,
-          normal: 0,
-          slow: 0,
-          verySlow: 0,
-        },
-      }));
-    }
+    if (!testMode) return;
+    
+    const testConfig = {
+      ...config,
+      duration: {
+        instant: 0,
+        fast: 0,
+        normal: 0,
+        slow: 0,
+        verySlow: 0,
+      },
+    };
+    setConfig(testConfig);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testMode]);
 
   const value: AnimationContextValue = {

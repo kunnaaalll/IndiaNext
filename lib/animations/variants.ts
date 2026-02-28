@@ -144,6 +144,7 @@ export const staggerItem: Variants = {
 /**
  * Configuration for creating custom variants
  */
+import type { Easing } from 'framer-motion';
 export interface VariantConfig {
   from?: {
     opacity?: number;
@@ -160,13 +161,29 @@ export interface VariantConfig {
     rotate?: number;
   };
   duration?: number;
-  ease?: number[] | string;
+  ease?: Easing | Easing[];
   delay?: number;
 }
 
 /**
  * Factory function to create custom animation variants
  */
+// Helper to map string easings to Framer Motion allowed values
+const mapEase = (ease: any): Easing | Easing[] => {
+  if (Array.isArray(ease)) return ease;
+  if (ease === 'linear' || ease === 'easeIn' || ease === 'easeOut' || ease === 'easeInOut') return ease;
+  // fallback to cubic-bezier array if string is a bezier
+  if (typeof ease === 'string' && ease.startsWith('cubic-bezier')) {
+    // Example: 'cubic-bezier(0.4, 0, 0.2, 1)' => [0.4, 0, 0.2, 1]
+    const match = ease.match(/cubic-bezier\(([^)]+)\)/);
+    if (match) {
+      return match[1].split(',').map(Number) as unknown as Easing;
+    }
+  }
+  // fallback default
+  return [0.16, 1, 0.3, 1];
+};
+
 export const createVariant = (config: VariantConfig): Variants => {
   const {
     from = { opacity: 0 },
@@ -182,7 +199,7 @@ export const createVariant = (config: VariantConfig): Variants => {
       ...to,
       transition: {
         duration: duration / 1000,
-        ease,
+        ease: mapEase(ease),
         delay,
       },
     },

@@ -8,7 +8,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useInView, useAnimation, AnimationControls } from 'framer-motion';
+import { useInView, useAnimation } from 'framer-motion';
 import { useAnimationContext } from '../context/AnimationProvider';
 
 export interface ScrollAnimationOptions {
@@ -20,9 +20,9 @@ export interface ScrollAnimationOptions {
 }
 
 export interface ScrollAnimationReturn {
-  ref: React.RefObject<HTMLElement>;
+  ref: React.RefObject<HTMLElement | null>;
   isInView: boolean;
-  controls: AnimationControls;
+  controls: ReturnType<typeof useAnimation>;
 }
 
 /**
@@ -48,16 +48,22 @@ export const useScrollAnimation = (
   const isInView = useInView(ref, {
     once: false, // We'll handle 'once' logic manually
     amount: threshold,
-    margin: rootMargin,
+    margin: rootMargin as any, // Cast to correct type (MarginType)
   });
 
   useEffect(() => {
-    if (isInView && (!once || !hasAnimated)) {
+    const shouldAnimate = isInView && (!once || !hasAnimated);
+    const shouldHide = !isInView && !once && hasAnimated;
+    
+    if (shouldAnimate) {
       // Element entered viewport
       controls.start('visible');
-      setHasAnimated(true);
       onEnter?.();
-    } else if (!isInView && !once && hasAnimated) {
+      // Use queueMicrotask to defer state update
+      if (!hasAnimated) {
+        queueMicrotask(() => setHasAnimated(true));
+      }
+    } else if (shouldHide) {
       // Element exited viewport (only if once is false)
       controls.start('hidden');
       onExit?.();

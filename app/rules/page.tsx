@@ -9,7 +9,6 @@ import {
   useScroll,
   useSpring,
   AnimatePresence,
-  Variants,
 } from "framer-motion";
 import {
   ArrowRight,
@@ -37,7 +36,6 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { ScrollReveal, AnimatedButton } from "@/components/animations";
 import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 
 // --- Theme Colors ---

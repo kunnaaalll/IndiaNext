@@ -26,8 +26,8 @@ const shimmerAnimation = {
   },
   transition: {
     duration: 1.5,
-    repeat: Infinity,
-    ease: 'linear',
+    repeat: Infinity as number,
+    ease: 'linear' as const,
   },
 };
 

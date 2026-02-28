@@ -40,9 +40,34 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Kiro IDE and development files
+.kiro/
+.cursor/
+.agents/
+
+# Git hooks
+.husky/
+
+# Python scripts (development only)
+*.py
+
+# Generated Prisma files
 /app/generated/prisma
 
+# Scripts directory
 /scripts
 
-/.cursor
-/.agents
+# Documentation (optional - remove if you want to commit these)
+/Documents/
+IMPLEMENTATION_CHECKLIST.md
+IMPLEMENTATION_COMPLETE.md
+QUICK_REFERENCE.md
+SECURITY_STATUS.md
+SETUP.md
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

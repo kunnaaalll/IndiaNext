@@ -7,7 +7,6 @@ import {
   motion,
   useScroll,
   useSpring,
-  Variants,
 } from "framer-motion";
 import {
   Download,
@@ -23,7 +22,6 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { ScrollReveal, AnimatedButton } from "@/components/animations";
 import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 
 // --- Shared Navbar (same as main site) ---

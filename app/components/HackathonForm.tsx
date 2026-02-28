@@ -7,8 +7,7 @@ import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { INDIAN_COLLEGES } from '@/lib/data/colleges';
 import { INDIAN_DEGREES } from '@/lib/data/degrees';
-import { AnimatedButton, AnimatedField, FormValidation } from '@/components/animations';
-import { fadeInUp } from '@/lib/animations/variants';
+
 
 // ── Types ───────────────────────────────────────
 type Answers = Record<string, string | string[] | undefined>;

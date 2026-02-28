@@ -7,17 +7,22 @@
 
 'use client';
 
-import React, { ButtonHTMLAttributes } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { useAnimationContext } from '@/lib/animations/context/AnimationProvider';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface AnimatedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface AnimatedButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  children?: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -39,7 +44,8 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   loading = false,
   className = '',
   disabled,
-  ...props
+  onClick,
+  type = 'button',
 }) => {
   const { config, reducedMotion } = useAnimationContext();
 
@@ -58,6 +64,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 
   return (
     <motion.button
+      type={type}
       className={buttonClasses}
       whileHover={{ scale: hoverScale }}
       whileTap={{ scale: tapScale }}
@@ -67,7 +74,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
         damping: config.easing.spring.damping,
       }}
       disabled={disabled || loading}
-      {...props}
+      onClick={onClick}
     >
       {loading ? (
         <span className="flex items-center gap-2">

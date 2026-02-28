@@ -8,7 +8,7 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAnimationContext } from '@/lib/animations/context/AnimationProvider';
 
 type TransitionVariant = 'fade' | 'slide' | 'scale';

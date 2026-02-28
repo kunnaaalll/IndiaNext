@@ -27,6 +27,7 @@ export function sanitizeText(input: string): string {
   
   return input
     .trim()
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
     .replace(/\s+/g, ' '); // Normalize whitespace
 }
@@ -175,7 +176,7 @@ export function containsSqlInjection(input: string): boolean {
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b)/i,
     /(\bUNION\b.*\bSELECT\b)/i,
-    /(;|\-\-|\/\*|\*\/)/,
+    /(;|--|\/\*|\*\/)/,
     /(\bOR\b.*=.*)/i,
     /('|")\s*(OR|AND)\s*('|")/i,
   ];

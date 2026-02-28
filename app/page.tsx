@@ -3,10 +3,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import Link from "next/link";
 import Image from "next/image";
-import DevfolioButton from "@/components/DevfolioButton";
-import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence, Variants } from "framer-motion";
+import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence } from "framer-motion";
 import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
-import { ScrollReveal, AnimatedButton, AnimatedCard } from "@/components/animations";
 import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 import "./styles/bounce-slow.css";
 
@@ -479,8 +477,6 @@ const HeroSection = () => {
                     <ChevronRight className="w-6 h-6 md:w-10 md:h-10 text-orange-500 group-hover:translate-x-2 transition-transform" />
                  </button>
               </Link>
-              
-               <DevfolioButton />
           </motion.div>
        </motion.div>
 

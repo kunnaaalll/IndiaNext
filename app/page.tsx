@@ -925,7 +925,7 @@ const TimelineSection = () => {
 const SponsorsSection = () => (
     <section className="py-20 md:py-40 relative z-10 bg-[#020202] border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
-            <p className="text-gray-400 font-mono text-[9px] tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none animate-pulse">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
+            <p className="text-gray-300 font-mono text-xs sm:text-sm tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
                     { name: "Devfolio", image: "/Devfolio /Devfolio_Logo-White.svg", status: "PARTNERSHIP_ACTIVE" },
@@ -936,7 +936,7 @@ const SponsorsSection = () => (
                     <motion.div 
                         key={i}
                         whileHover={{ y: -5, borderColor: "rgba(255,102,0,0.5)", backgroundColor: "rgba(255,102,0,0.05)" }}
-                        className="h-40 border border-white/5 bg-white/[0.01] flex flex-col items-center justify-center p-8 grayscale hover:grayscale-0 transition-all cursor-crosshair group relative overflow-hidden rounded-sm"
+                        className="h-44 sm:h-48 border border-white/5 bg-white/[0.01] flex flex-col items-center justify-center p-8 grayscale hover:grayscale-0 transition-all cursor-crosshair group relative overflow-hidden rounded-sm"
                     >
                          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/20 group-hover:border-orange-500 transition-colors" />
                          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/20 group-hover:border-orange-500 transition-colors" />
@@ -946,11 +946,11 @@ const SponsorsSection = () => (
                                 <Image src={brand.image} alt={brand.name} width={160} height={48} className="object-contain" />
                             </div>
                          ) : (
-                             <span className="text-gray-300 font-mono text-[11px] tracking-widest font-black uppercase group-hover:text-white transition-colors mb-2">
+                             <span className="text-gray-200 font-mono text-sm sm:text-base tracking-widest font-black uppercase group-hover:text-white transition-colors mb-3">
                                 {brand.name}
                              </span>
                          )}
-                         <span className="text-[7px] font-mono text-gray-400 tracking-[0.4em] font-bold uppercase group-hover:text-orange-500 opacity-70 group-hover:opacity-100 transition-all">
+                         <span className="text-xs font-mono text-gray-400 tracking-[0.3em] font-bold uppercase group-hover:text-orange-500 transition-all">
                             {brand.status}
                          </span>
                          
@@ -1008,26 +1008,26 @@ const Footer = () => (
                         <Image src="/KES 90 years logo in PNG format-01.png" alt="KES 90 Years" width={130} height={70} className="object-contain md:w-[180px] md:h-[100px]" />
                     </div>
                     <h4 className="font-black text-2xl sm:text-4xl mb-6 md:mb-8 uppercase tracking-tighter italic">K.E.S. Shroff College</h4>
-                    <p className="text-gray-400 font-mono text-[10px] leading-relaxed uppercase tracking-[0.2em] font-black">
+                    <p className="text-gray-400 font-mono text-xs leading-relaxed uppercase tracking-[0.2em] font-black">
                         Autonomous | NAAC &apos;A&apos; Grade (3.58 CGPA)<br/>
                         QS I-Gauge Gold | Best College Award (University of Mumbai)<br/>
                         Mumbai, MH 400067, IN
                     </p>
                 </div>
                 <div>
-                   <h4 className="text-gray-400 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
-                   <div className="flex flex-col gap-6 text-[10px] font-black tracking-widest uppercase">
+                   <h4 className="text-gray-400 font-mono text-xs uppercase tracking-[0.5em] mb-12 font-black">DIRECTORIES</h4>
+                   <div className="flex flex-col gap-6 text-xs font-black tracking-widest uppercase">
                         <Link href="/rules" className="text-gray-400 hover:text-orange-500 transition-colors italic">./RULEBOOK_v1.0</Link>
                         <Link href="/rules#conduct" className="text-gray-400 hover:text-orange-500 transition-colors italic">./CONDUCT_PROTOCOL</Link>
                         <Link href="/sponsors" className="text-gray-400 hover:text-orange-500 transition-colors italic">./SPONSOR_DECK</Link>
                    </div>
                 </div>
                 <div>
-                   <h4 className="text-gray-400 font-mono text-[10px] uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
+                   <h4 className="text-gray-400 font-mono text-xs uppercase tracking-[0.5em] mb-12 font-black">COMMS_LINK</h4>
                    <div className="flex flex-col gap-5 text-xs font-black">
                         <a href="mailto:hackathon@kessc.edu.in" className="text-cyan-400 hover:text-white transition-colors underline decoration-cyan-400/30">HACKATHON@KESSC.EDU.IN</a>
                         <p className="text-white tracking-widest italic">+91 75068 54879</p>
-                        <p className="text-gray-400 mt-4 text-[10px] border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
+                        <p className="text-gray-400 mt-4 text-xs border border-white/5 py-2 px-4 inline-block">@KES_SHROFF_COLLEGE</p>
                    </div>
                 </div>
             </div>
@@ -1038,10 +1038,10 @@ const Footer = () => (
                     </div>
                     <div className="flex flex-col">
                         <span className="font-black text-2xl tracking-tighter uppercase leading-none">IndiaNext</span>
-                        <span className="text-[10px] font-mono text-gray-400 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
+                        <span className="text-xs font-mono text-gray-400 font-bold uppercase tracking-widest">Global_Protocol_v2.0.26</span>
                     </div>
                 </div>
-                <p className="text-gray-400 text-[7px] sm:text-[8px] font-mono tracking-[0.3em] sm:tracking-[0.8em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
+                <p className="text-gray-400 text-[10px] sm:text-xs font-mono tracking-[0.3em] sm:tracking-[0.5em] font-black uppercase text-center">&copy; 2026 INDIANEXT // DECRYPTED_MISSION_DATA_SECURE</p>
             </div>
         </div>
     </footer>

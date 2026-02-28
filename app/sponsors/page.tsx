@@ -10,18 +10,15 @@ import {
   Variants,
 } from "framer-motion";
 import {
-  ArrowLeft,
   Download,
   Mail,
   Phone,
-  ExternalLink,
   Handshake,
   Eye,
   Users,
   Trophy,
   Globe,
   Rocket,
-  ChevronDown,
   Menu,
   X,
 } from "lucide-react";
@@ -257,7 +254,7 @@ export default function SponsorsPage() {
       <section className="relative z-10 py-20 md:py-32">
         <div className="max-w-6xl mx-auto px-4 md:px-6">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center mb-16 md:mb-24">
-            <motion.p variants={fadeInUp} className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">// VALUE_PROPOSITION</motion.p>
+            <motion.p variants={fadeInUp} className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">{"// VALUE_PROPOSITION"}</motion.p>
             <motion.h2 variants={fadeInUp} className="text-4xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">Why Partner?</motion.h2>
           </motion.div>
 
@@ -290,7 +287,7 @@ export default function SponsorsPage() {
       <section className="relative z-10 py-20 md:py-32 bg-[#020202] border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center mb-16 md:mb-24">
-            <motion.p variants={fadeInUp} className="text-orange-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">// TIER_PACKAGES</motion.p>
+            <motion.p variants={fadeInUp} className="text-orange-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">{"// TIER_PACKAGES"}</motion.p>
             <motion.h2 variants={fadeInUp} className="text-4xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-none">The Tiers</motion.h2>
           </motion.div>
 
@@ -344,9 +341,9 @@ export default function SponsorsPage() {
       <section className="relative z-10 py-20 md:py-32">
         <div className="max-w-5xl mx-auto px-4 md:px-6">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="text-center mb-12">
-            <motion.p variants={fadeInUp} className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">// FULL_BROCHURE</motion.p>
+            <motion.p variants={fadeInUp} className="text-cyan-500 font-mono text-[10px] tracking-[0.5em] uppercase font-black mb-4">{"// FULL_BROCHURE"}</motion.p>
             <motion.h2 variants={fadeInUp} className="text-4xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-none mb-6">The Deck</motion.h2>
-            <motion.p variants={fadeInUp} className="text-gray-500 text-sm font-mono tracking-widest">SCROLL_TO_VIEW // OR_DOWNLOAD_PDF</motion.p>
+            <motion.p variants={fadeInUp} className="text-gray-500 text-sm font-mono tracking-widest">{"SCROLL_TO_VIEW // OR_DOWNLOAD_PDF"}</motion.p>
           </motion.div>
 
           <motion.div

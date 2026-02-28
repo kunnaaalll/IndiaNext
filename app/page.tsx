@@ -1,12 +1,11 @@
-
 "use client";
 
-import React, { useState, useEffect, memo, useCallback, useMemo } from "react";
+import React, { useState, useEffect, memo } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import DevfolioButton from "@/components/DevfolioButton";
 import { motion, useScroll, useSpring, useMotionValue, useMotionTemplate, AnimatePresence, Variants } from "framer-motion";
-import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Lock, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
+import { ArrowRight, Code, Globe, Rocket, Terminal, Zap, Shield, Activity, Clock, Users, ChevronRight, HelpCircle, Trophy, FastForward, Target, Menu, X, ChevronDown } from "lucide-react";
 import "./styles/bounce-slow.css";
 
 // --- Theme Colors ---
@@ -173,6 +172,7 @@ const CountdownTimer = memo(() => {
     </div>
   );
 });
+CountdownTimer.displayName = 'CountdownTimer';
 
 // --- Opening Sequence ---
 const OpeningSequence = ({ onComplete }: { onComplete: () => void }) => {
@@ -774,16 +774,19 @@ const TimelineSection = () => {
     const [realTimePercent, setRealTimePercent] = useState(0);
 
     const timelineEvents = [
-        { id: 1, event: "Registrations Live", timestamp: new Date("2026-02-20T09:00:00"), date: "FEB 20, 2026", day: "FRIDAY", time: "09:00 AM", desc: "ENLISTMENT PROTOCOL INITIATED", icon: <FastForward /> },
-        { id: 2, event: "Registration End", timestamp: new Date("2026-03-05T23:59:00"), date: "MAR 05, 2026", day: "THURSDAY", time: "11:59 PM", desc: "SYSTEM LOCKDOWN", icon: <Lock /> },
-        { id: 3, event: "Selected Teams Announcement", timestamp: new Date("2026-03-08T18:00:00"), date: "MAR 08, 2026", day: "SUNDAY", time: "06:00 PM", desc: "SQUAD DISCOVERY PHASE", icon: <Users /> },
-        { id: 4, event: "Hackathon Check-in", timestamp: new Date("2026-03-16T08:00:00"), date: "MAR 16, 2026", day: "MONDAY", time: "08:00 AM", desc: "BASE CAMP ARRIVAL", icon: <Globe /> },
-        { id: 5, event: "Mission H-Hour", timestamp: new Date("2026-03-16T11:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "11:30 AM", desc: "BUILD SEQUENCE START", icon: <Rocket /> },
-        { id: 6, event: "Supply Drop I", timestamp: new Date("2026-03-16T13:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "01:30 PM", desc: "LUNCH RATIONS", icon: <Activity /> },
-        { id: 7, event: "Tactical Sync I", timestamp: new Date("2026-03-16T15:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "03:30 PM", desc: "MENTOR STRATEGY ROUND", icon: <Target /> },
-        { id: 8, event: "Supply Drop II", timestamp: new Date("2026-03-16T20:30:00"), date: "MAR 16, 2026", day: "MONDAY", time: "08:30 PM", desc: "DINNER RATIONS", icon: <Activity /> },
-        { id: 9, event: "Mission End", timestamp: new Date("2026-03-17T11:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "11:30 AM", desc: "PROTOCOL SUBMISSION", icon: <Shield /> },
-        { id: 10, event: "Victory Protocol", timestamp: new Date("2026-03-17T16:30:00"), date: "MAR 17, 2026", day: "TUESDAY", time: "04:30 PM", desc: "AWARD ENFORCEMENT", icon: <Trophy /> }
+        // Day 1
+        { id: 1, event: "Check-in & Breakfast", timestamp: new Date("2026-03-16T08:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "08:00 – 09:00 AM", desc: "ARRIVAL & FUEL UP", icon: <Globe /> },
+        { id: 2, event: "Opening Ceremony", timestamp: new Date("2026-03-16T09:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "09:00 – 09:30 AM", desc: "MISSION BRIEFING", icon: <Rocket /> },
+        { id: 3, event: "Idea Discussion", timestamp: new Date("2026-03-16T09:30:00"), date: "MAR 16, 2026", day: "DAY 1", time: "09:30 – 10:30 AM", desc: "STRATEGY SESSION", icon: <Target /> },
+        { id: 4, event: "Development Start", timestamp: new Date("2026-03-16T11:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "11:00 AM – 02:00 PM", desc: "BUILD SEQUENCE INITIATED", icon: <FastForward /> },
+        { id: 5, event: "Lunch Break", timestamp: new Date("2026-03-16T14:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "02:00 – 05:00 PM", desc: "SUPPLY DROP I", icon: <Activity /> },
+        { id: 6, event: "Mentorship Round 1", timestamp: new Date("2026-03-16T19:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "07:00 – 09:00 PM", desc: "TACTICAL SYNC", icon: <Users /> },
+        { id: 7, event: "Night Dinner", timestamp: new Date("2026-03-16T21:00:00"), date: "MAR 16, 2026", day: "DAY 1", time: "09:00 PM – 12:00 AM", desc: "SUPPLY DROP II", icon: <Activity /> },
+        // Day 2
+        { id: 8, event: "Breakfast", timestamp: new Date("2026-03-17T07:00:00"), date: "MAR 17, 2026", day: "DAY 2", time: "07:00 – 08:00 AM", desc: "MORNING FUEL", icon: <Activity /> },
+        { id: 9, event: "Mentorship Round 2", timestamp: new Date("2026-03-17T08:00:00"), date: "MAR 17, 2026", day: "DAY 2", time: "08:00 – 10:00 AM", desc: "FINAL STRATEGY SYNC", icon: <Users /> },
+        { id: 10, event: "Development End", timestamp: new Date("2026-03-17T11:00:00"), date: "MAR 17, 2026", day: "DAY 2", time: "11:00 AM", desc: "CODE FREEZE", icon: <Shield /> },
+        { id: 11, event: "Prize Distribution", timestamp: new Date("2026-03-17T13:00:00"), date: "MAR 17, 2026", day: "DAY 2", time: "01:00 PM onwards", desc: "VICTORY PROTOCOL", icon: <Trophy /> }
     ];
 
     useEffect(() => {
@@ -1150,3 +1153,4 @@ const CyberBackground = memo(() => (
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] pointer-events-none opacity-20" />
     </div>
 ));
+CyberBackground.displayName = 'CyberBackground';

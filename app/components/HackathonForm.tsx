@@ -593,7 +593,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
   showChangeEmailWarning?: boolean;
   onChangeEmailClick?: () => void;
   onCancelChangeEmail?: () => void;
-  assignedProblem?: { id: string; title: string; objective: string; extensionsRemaining: number } | null;
+  assignedProblem?: { id: string; title: string; objective: string; description?: string | null; extensionsRemaining: number } | null;
   problemLoading?: boolean;
   problemError?: string;
   fetchAssignedProblem?: () => void;
@@ -843,22 +843,19 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
               <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
               Your Assigned Problem Statement
             </div>
-            <div className="mb-4">
+            <div>
               <h3 className="text-2xl md:text-3xl font-mono text-white font-bold mb-3">
                 {assignedProblem.title}
               </h3>
-              <div className="text-lg md:text-xl font-mono text-slate-300 leading-relaxed">
+              <div className="text-lg md:text-xl font-mono text-slate-300 leading-relaxed mb-3">
                 <span className="text-orange-400 font-bold">Objective: </span>
                 {assignedProblem.objective}
               </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between">
-              <span className="text-slate-500 font-mono text-xs uppercase tracking-wider">
-                Round-robin assigned
-              </span>
-              <span className="text-slate-500 font-mono text-xs">
-                Reservation: {assignedProblem.extensionsRemaining} extensions remaining
-              </span>
+              {assignedProblem.description && (
+                <p className="text-sm font-mono text-slate-400 leading-relaxed border-l-2 border-slate-700 pl-4">
+                  {assignedProblem.description}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -976,6 +973,7 @@ export default function HackathonForm() {
     id: string;
     title: string;
     objective: string;
+    description?: string | null;
     extensionsRemaining: number;
   } | null>(null);
   const [problemLoading, setProblemLoading] = useState(false);
@@ -1039,6 +1037,7 @@ export default function HackathonForm() {
           id: response.data.id,
           title: response.data.title,
           objective: response.data.objective,
+          description: response.data.description || null,
           extensionsRemaining: response.data.extensionsRemaining ?? 0,
         });
       }

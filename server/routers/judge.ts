@@ -133,6 +133,15 @@ export const judgeRouter = router({
     getTeamForEvaluation: judgeProcedure
         .input(z.object({ teamId: z.string() }))
         .query(async ({ ctx, input }) => {
+            // Resolve judge ID (Admin -> User)
+            let judgeUserId = ctx.user.id;
+            if (!ctx.isUser) {
+                const user = await ctx.prisma.user.findUnique({
+                    where: { email: ctx.user.email }
+                });
+                judgeUserId = user ? user.id : "non-existent-id";
+            }
+
             const team = await ctx.prisma.team.findUnique({
                 where: { id: input.teamId },
                 include: {
@@ -153,6 +162,14 @@ export const judgeRouter = router({
                                 }
                             }
                         }
+                    },
+                    judgeScores: {
+                        where: {
+                            judgeId: judgeUserId
+                        },
+                        include: {
+                            criteria: true
+                        }
                     }
                 }
             });
@@ -165,20 +182,55 @@ export const judgeRouter = router({
                 throw new TRPCError({ code: "BAD_REQUEST", message: "Team is not approved for judging" });
             }
 
-            return team;
+            // Fetch active criteria for this track
+            const criteria = await ctx.prisma.judgingCriteria.findMany({
+                where: {
+                    track: team.track,
+                    isActive: true
+                },
+                orderBy: {
+                    createdAt: 'asc'
+                }
+            });
+
+            return {
+                team,
+                criteria
+            };
         }),
 
     submitEvaluation: judgeProcedure
         .input(
             z.object({
                 teamId: z.string(),
-                score: z.number().min(0).max(100),
+                criteriaScores: z.record(z.number()), // criteriaId -> score
                 comments: z.string().optional(),
-                // Breakdown (optional, can be stored in metadata or comments)
-                criteria: z.record(z.number()).optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
+            // Resolve judge ID (Admin -> User)
+            let judgeUserId = ctx.user.id;
+            if (!ctx.isUser) {
+                const user = await ctx.prisma.user.findUnique({
+                    where: { email: ctx.user.email }
+                });
+
+                if (user) {
+                    judgeUserId = user.id;
+                } else {
+                    // Create shadow user for this admin to allow judging
+                    const newUser = await ctx.prisma.user.create({
+                        data: {
+                            email: ctx.user.email,
+                            name: ctx.user.name,
+                            role: "JUDGE",
+                            emailVerified: true,
+                        }
+                    });
+                    judgeUserId = newUser.id;
+                }
+            }
+
             const team = await ctx.prisma.team.findUnique({
                 where: { id: input.teamId },
                 include: { submission: true }
@@ -188,27 +240,97 @@ export const judgeRouter = router({
                 throw new TRPCError({ code: "NOT_FOUND", message: "Submission not found" });
             }
 
-            // Update submission with score
-            await ctx.prisma.submission.update({
-                where: { id: team.submission.id },
-                data: {
-                    judgeScore: input.score,
-                    judgeComments: input.comments,
+            // Verify all criteria belong to the correct track
+            const criteriaIds = Object.keys(input.criteriaScores);
+            const criteria = await ctx.prisma.judgingCriteria.findMany({
+                where: {
+                    id: { in: criteriaIds },
+                    track: team.track
                 }
+            });
+
+            if (criteria.length !== criteriaIds.length) {
+                throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid criteria for this track" });
+            }
+
+            // Calculate total weighted score
+            let totalWeightedScore = 0;
+            let totalMaxScore = 0;
+
+            for (const c of criteria) {
+                const score = input.criteriaScores[c.id];
+                if (score < 0 || score > c.maxScore) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: `Score for ${c.name} must be between 0 and ${c.maxScore}`
+                    });
+                }
+                totalWeightedScore += score * c.weight;
+                totalMaxScore += c.maxScore * c.weight;
+            }
+
+            // Normalize to 0-100 scale
+            const finalScore = totalMaxScore > 0
+                ? (totalWeightedScore / totalMaxScore) * 100
+                : 0;
+
+            await ctx.prisma.$transaction(async (tx) => {
+                // 1. Upsert JudgeScores for each criteria
+                for (const criteriaId of criteriaIds) {
+                    await tx.judgeScore.upsert({
+                        where: {
+                            teamId_judgeId_criteriaId: {
+                                teamId: input.teamId,
+                                judgeId: judgeUserId,
+                                criteriaId: criteriaId
+                            }
+                        },
+                        create: {
+                            teamId: input.teamId,
+                            judgeId: judgeUserId,
+                            criteriaId: criteriaId,
+                            score: input.criteriaScores[criteriaId],
+                        },
+                        update: {
+                            score: input.criteriaScores[criteriaId],
+                        }
+                    });
+                }
+
+                // 2. Update Submission with the calculated final score (0-100)
+                // Note: This overrides previous score. In a real multi-judge system, 
+                // we might want to average across all judges.
+                // For now, let's assume one judge or last-write-wins for the main display.
+
+                // OPTIONAL: Calculate average across ALL judges
+                /*
+                const allJudgeScores = await tx.judgeScore.findMany({
+                    where: { teamId: input.teamId },
+                    include: { criteria: true }
+                });
+                // ... complex averaging logic ...
+                */
+
+                await tx.submission.update({
+                    where: { id: team.submission!.id },
+                    data: {
+                        judgeScore: finalScore,
+                        judgeComments: input.comments,
+                    }
+                });
             });
 
             // Log activity
             await ctx.prisma.activityLog.create({
                 data: {
-                    userId: ctx.isUser ? ctx.user.id : null,
+                    userId: judgeUserId, // Use the resolved User ID
                     action: "team.judged",
                     entity: "Team",
                     entityId: input.teamId,
                     metadata: {
-                        score: input.score,
+                        finalScore,
+                        criteriaScores: input.criteriaScores,
                         comments: input.comments,
-                        criteria: input.criteria,
-                        adminId: !ctx.isUser ? ctx.user.id : undefined,
                         judgeName: ctx.user.name
                     }
                 }

@@ -25,34 +25,34 @@ datasource db {
 // ═══════════════════════════════════════════════════════════
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  phone         String?
-  
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String
+  phone String?
+
   // Academic Info
-  college       String?
-  degree        String?
-  year          String?
-  branch        String?
-  
+  college String?
+  degree  String?
+  year    String?
+  branch  String?
+
   // Profile
-  avatar        String?   // Cloudinary URL
-  bio           String?   @db.Text
-  linkedIn      String?
-  github        String?
-  portfolio     String?
-  
+  avatar    String? // Cloudinary URL
+  bio       String? @db.Text
+  linkedIn  String?
+  github    String?
+  portfolio String?
+
   // Auth & Security
   emailVerified Boolean   @default(false)
   role          UserRole  @default(PARTICIPANT)
   lastLoginAt   DateTime?
   lastLoginIp   String?
-  
+
   // Metadata
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime? // Soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
 
   // Relations
   teamMemberships TeamMember[]
@@ -60,7 +60,8 @@ model User {
   sessions        Session[]
   activityLogs    ActivityLog[]
   notifications   Notification[]
-  createdTeams    Team[]        @relation("TeamCreator")
+  createdTeams    Team[]         @relation("TeamCreator")
+  givenScores     JudgeScore[]   @relation("JudgeGivenScores")
 
   @@index([email])
   @@index([college])
@@ -69,16 +70,16 @@ model User {
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  token        String   @unique
-  expiresAt    DateTime
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
@@ -86,16 +87,16 @@ model Session {
 }
 
 model Otp {
-  id        String     @id @default(cuid())
-  email     String
-  otp       String
-  purpose   OtpPurpose @default(REGISTRATION)
-  expiresAt DateTime
-  verified  Boolean    @default(false)
-  attempts  Int        @default(0)
-  userId    String?
-  user      User?      @relation(fields: [userId], references: [id])
-  createdAt DateTime   @default(now())
+  id         String     @id @default(cuid())
+  email      String
+  otp        String
+  purpose    OtpPurpose @default(REGISTRATION)
+  expiresAt  DateTime
+  verified   Boolean    @default(false)
+  attempts   Int        @default(0)
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id])
+  createdAt  DateTime   @default(now())
   verifiedAt DateTime?
 
   @@unique([email, purpose])
@@ -109,62 +110,63 @@ model Otp {
 // ═══════════════════════════════════════════════════════════
 
 model Team {
-  id        String   @id @default(cuid())
-  name      String
-  track     Track
-  status    RegistrationStatus @default(PENDING)
-  
+  id     String             @id @default(cuid())
+  name   String
+  track  Track
+  status RegistrationStatus @default(PENDING)
+
   // Team metadata
-  size      Int      @default(1)
-  college   String?  // Primary college (from leader)
-  
+  size    Int     @default(1)
+  college String? // Primary college (from leader)
+
   // Registration details
   hearAbout       String?
-  additionalNotes String?  @db.Text
+  additionalNotes String? @db.Text
   referralCode    String?
-  
-  // Admin fields
-  createdBy       String?  // User ID who created the team
-  creator         User?    @relation("TeamCreator", fields: [createdBy], references: [id])
-  reviewedBy      String?  // Admin user ID
-  reviewedAt      DateTime?
-  reviewNotes     String?  @db.Text
-  rejectionReason String?  @db.Text
-  
-  // Scoring (for judging phase)
-  score           Float?
-  rank            Int?
-  
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime? // Soft delete
-  
-  // Relations
-  members    TeamMember[]
-  submission Submission?
-  comments   Comment[]
-  tags       TeamTag[]
 
+  // Admin fields
+  createdBy       String? // User ID who created the team
+  creator         User?     @relation("TeamCreator", fields: [createdBy], references: [id])
+  reviewedBy      String? // Admin user ID
+  reviewedAt      DateTime?
+  reviewNotes     String?   @db.Text
+  rejectionReason String?   @db.Text
+
+  // Scoring (for judging phase)
+  score Float?
+  rank  Int?
+
+  // Metadata
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete
+
+  // Relations
+  members     TeamMember[]
+  submission  Submission?
+  comments    Comment[]
+  tags        TeamTag[]
+  judgeScores JudgeScore[]
+
+  @@unique([createdBy, track]) // One team per leader per track (belt-and-suspenders with transaction check)
   @@index([track, status])
   @@index([college])
   @@index([status, createdAt])
   @@index([rank])
   @@index([createdBy])
-  @@unique([createdBy, track]) // One team per leader per track (belt-and-suspenders with transaction check)
   @@map("teams")
 }
 
 model TeamMember {
-  id        String     @id @default(cuid())
-  role      MemberRole @default(MEMBER)
-  userId    String     @unique // Each user can only be in ONE team (global uniqueness)
-  teamId    String
-  
+  id     String     @id @default(cuid())
+  role   MemberRole @default(MEMBER)
+  userId String     @unique // Each user can only be in ONE team (global uniqueness)
+  teamId String
+
   // Member-specific data
-  joinedAt  DateTime   @default(now())
-  leftAt    DateTime?  // If member leaves
-  
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime? // If member leaves
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
@@ -183,32 +185,32 @@ model Submission {
 
   // IdeaSprint fields
   ideaTitle        String?
-  problemStatement String?  @db.Text
-  proposedSolution String?  @db.Text
-  targetUsers      String?  @db.Text
-  expectedImpact   String?  @db.Text
-  techStack        String?  @db.Text
+  problemStatement String? @db.Text
+  proposedSolution String? @db.Text
+  targetUsers      String? @db.Text
+  expectedImpact   String? @db.Text
+  techStack        String? @db.Text
   marketSize       String?
-  competitors      String?  @db.Text
-  
+  competitors      String? @db.Text
+
   // BuildStorm fields
-  problemDesc      String?  @db.Text
-  githubLink       String?
-  demoLink         String?
-  techStackUsed    String?  @db.Text
-  challenges       String?  @db.Text
-  futureScope      String?  @db.Text
-  
+  problemDesc   String? @db.Text
+  githubLink    String?
+  demoLink      String?
+  techStackUsed String? @db.Text
+  challenges    String? @db.Text
+  futureScope   String? @db.Text
+
   // Judging
-  judgeScore       Float?
-  judgeComments    String?  @db.Text
-  
+  judgeScore    Float?
+  judgeComments String? @db.Text
+
   // Metadata
-  submittedAt DateTime?
+  submittedAt  DateTime?
   lastEditedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
   // Relations
   files File[]
 
@@ -217,30 +219,30 @@ model Submission {
 }
 
 model File {
-  id           String  @id @default(cuid())
+  id           String     @id @default(cuid())
   submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
-  fileName    String
-  fileUrl     String   // Cloudinary URL
-  fileKey     String   @unique // Cloudinary public_id
-  fileSize    Int      // bytes
-  mimeType    String
-  category    FileCategory
-  
+  fileName String
+  fileUrl  String // Cloudinary URL
+  fileKey  String       @unique // Cloudinary public_id
+  fileSize Int // bytes
+  mimeType String
+  category FileCategory
+
   // File metadata
-  checksum    String?  // SHA-256 for deduplication
-  thumbnail   String?  // Cloudinary thumbnail URL
-  width       Int?     // For images
-  height      Int?     // For images
-  duration    Int?     // For videos (seconds)
-  
+  checksum  String? // SHA-256 for deduplication
+  thumbnail String? // Cloudinary thumbnail URL
+  width     Int? // For images
+  height    Int? // For images
+  duration  Int? // For videos (seconds)
+
   // Virus scanning
-  scanStatus  ScanStatus @default(PENDING)
-  scanResult  String?
-  
+  scanStatus ScanStatus @default(PENDING)
+  scanResult String?
+
   uploadedAt DateTime @default(now())
-  uploadedBy String?  // User ID
+  uploadedBy String? // User ID
 
   @@index([submissionId])
   @@index([fileKey])
@@ -254,17 +256,17 @@ model File {
 // ═══════════════════════════════════════════════════════════
 
 model Comment {
-  id        String   @id @default(cuid())
-  teamId    String
-  authorId  String   // Admin/Organizer user ID
-  content   String   @db.Text
+  id         String  @id @default(cuid())
+  teamId     String
+  authorId   String // Admin/Organizer user ID
+  content    String  @db.Text
   isInternal Boolean @default(true) // Internal notes vs public feedback
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
+
   @@index([teamId])
   @@index([authorId])
   @@index([createdAt])
@@ -276,15 +278,58 @@ model TeamTag {
   teamId String
   tag    String // e.g., "high-potential", "needs-review", "finalist"
   color  String @default("#6366f1") // Hex color for UI
-  
-  addedBy   String   // Admin user ID
-  addedAt   DateTime @default(now())
-  
+
+  addedBy String // Admin user ID
+  addedAt DateTime @default(now())
+
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  
+
   @@unique([teamId, tag])
   @@index([tag])
   @@map("team_tags")
+}
+
+model JudgingCriteria {
+  id          String  @id @default(cuid())
+  name        String // "Innovation", "Execution", etc.
+  description String? @db.Text
+  weight      Float   @default(1.0)
+  track       Track // IDEA_SPRINT or BUILD_STORM
+  maxScore    Float   @default(10)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scores JudgeScore[]
+
+  @@unique([track, name], name: "track_name_unique")
+  @@index([track])
+  @@map("judging_criteria")
+}
+
+model JudgeScore {
+  id String @id @default(cuid())
+
+  teamId     String
+  judgeId    String
+  criteriaId String
+
+  score   Float
+  comment String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team     Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  judge    User            @relation("JudgeGivenScores", fields: [judgeId], references: [id], onDelete: Cascade)
+  criteria JudgingCriteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, judgeId, criteriaId])
+  @@index([teamId])
+  @@index([judgeId])
+  @@index([criteriaId])
+  @@map("judge_scores")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -292,19 +337,19 @@ model TeamTag {
 // ═══════════════════════════════════════════════════════════
 
 model ActivityLog {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   userId    String?
-  action    String   // e.g., "team.created", "submission.updated"
-  entity    String   // e.g., "Team", "Submission"
+  action    String // e.g., "team.created", "submission.updated"
+  entity    String // e.g., "Team", "Submission"
   entityId  String
-  metadata  Json?    // Additional context
+  metadata  Json? // Additional context
   ipAddress String?
   userAgent String?
-  
+
   createdAt DateTime @default(now())
-  
+
   user User? @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
   @@index([action])
   @@index([entityId])
@@ -317,19 +362,19 @@ model ActivityLog {
 // ═══════════════════════════════════════════════════════════
 
 model Notification {
-  id      String   @id @default(cuid())
+  id      String           @id @default(cuid())
   userId  String
   type    NotificationType
   title   String
-  message String   @db.Text
+  message String           @db.Text
   link    String?
-  read    Boolean  @default(false)
-  
-  createdAt DateTime @default(now())
+  read    Boolean          @default(false)
+
+  createdAt DateTime  @default(now())
   readAt    DateTime?
-  
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId, read])
   @@index([createdAt])
   @@map("notifications")
@@ -341,11 +386,11 @@ model Notification {
 
 model Metric {
   id        String   @id @default(cuid())
-  name      String   // e.g., "registrations_count", "avg_team_size"
+  name      String // e.g., "registrations_count", "avg_team_size"
   value     Float
   metadata  Json?
   timestamp DateTime @default(now())
-  
+
   @@index([name, timestamp])
   @@map("metrics")
 }
@@ -355,24 +400,24 @@ model Metric {
 // ═══════════════════════════════════════════════════════════
 
 model EmailCampaign {
-  id          String   @id @default(cuid())
-  name        String
-  subject     String
-  body        String   @db.Text
-  status      CampaignStatus @default(DRAFT)
-  
+  id      String         @id @default(cuid())
+  name    String
+  subject String
+  body    String         @db.Text
+  status  CampaignStatus @default(DRAFT)
+
   // Filters for recipients
-  filters     Json?    // { track: "IDEA_SPRINT", status: "APPROVED" }
-  
+  filters Json? // { track: "IDEA_SPRINT", status: "APPROVED" }
+
   // Stats
-  totalSent   Int      @default(0)
-  totalOpened Int      @default(0)
-  totalClicked Int     @default(0)
-  
-  createdBy   String
-  createdAt   DateTime @default(now())
-  sentAt      DateTime?
-  
+  totalSent    Int @default(0)
+  totalOpened  Int @default(0)
+  totalClicked Int @default(0)
+
+  createdBy String
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
   @@index([status])
   @@index([createdAt])
   @@map("email_campaigns")
@@ -383,24 +428,24 @@ model EmailCampaign {
 // ═══════════════════════════════════════════════════════════
 
 model EmailLog {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   to          String
   from        String
   subject     String
   type        EmailType
   status      EmailStatus @default(PENDING)
-  provider    String   @default("resend")
-  messageId   String?  @unique
-  error       String?  @db.Text
-  attempts    Int      @default(0)
+  provider    String      @default("resend")
+  messageId   String?     @unique
+  error       String?     @db.Text
+  attempts    Int         @default(0)
   lastAttempt DateTime?
   sentAt      DateTime?
   deliveredAt DateTime?
   openedAt    DateTime?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([to])
   @@index([status])
   @@index([type])
@@ -436,7 +481,7 @@ model IdempotencyKey {
   response  Json
   createdAt DateTime @default(now())
   expiresAt DateTime // 24 hours from creation
-  
+
   @@index([key])
   @@index([expiresAt])
   @@map("idempotency_keys")
@@ -450,7 +495,7 @@ model Admin {
   id          String    @id @default(cuid())
   email       String    @unique
   name        String
-  password    String    // bcrypt hash
+  password    String // bcrypt hash
   role        AdminRole @default(ADMIN)
   isActive    Boolean   @default(true)
   lastLoginAt DateTime?
@@ -458,7 +503,7 @@ model Admin {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  sessions    AdminSession[]
+  sessions AdminSession[]
 
   @@index([email])
   @@index([role])
@@ -513,13 +558,13 @@ enum MemberRole {
 }
 
 enum RegistrationStatus {
-  DRAFT          // Started but not submitted
-  PENDING        // Submitted, awaiting review
-  UNDER_REVIEW   // Being reviewed by admin
-  APPROVED       // Accepted
-  REJECTED       // Not accepted
-  WAITLISTED     // On waitlist
-  WITHDRAWN      // Team withdrew
+  DRAFT // Started but not submitted
+  PENDING // Submitted, awaiting review
+  UNDER_REVIEW // Being reviewed by admin
+  APPROVED // Accepted
+  REJECTED // Not accepted
+  WAITLISTED // On waitlist
+  WITHDRAWN // Team withdrew
 }
 
 enum FileCategory {

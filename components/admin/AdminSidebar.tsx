@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Terminal,
   X,
+  ListChecks,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/admin", label: "DASHBOARD", code: "01", icon: LayoutDashboard, exact: true },
   { href: "/admin/teams", label: "TEAMS", code: "02", icon: Users },
   { href: "/admin/analytics", label: "ANALYTICS", code: "03", icon: BarChart3 },
+  { href: "/admin/criteria", label: "CRITERIA", code: "04", icon: ListChecks },
 ];
 
 export function AdminSidebar({
@@ -138,11 +140,10 @@ export function AdminSidebar({
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-mono font-bold tracking-widest transition-all relative group ${
-                  active
-                    ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent"
-                }`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-mono font-bold tracking-widest transition-all relative group ${active
+                  ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                  : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03] border border-transparent"
+                  }`}
               >
                 {active && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-orange-500 rounded-r shadow-[0_0_8px_rgba(255,102,0,0.6)]" />
@@ -168,9 +169,8 @@ export function AdminSidebar({
             <div className="text-sm font-medium text-gray-300 truncate">{user.name}</div>
             <div className="text-[11px] text-gray-500 font-mono truncate">{user.email}</div>
             <span
-              className={`inline-block mt-1.5 text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border ${
-                roleColors[user.role] || "bg-white/5 text-gray-400 border-white/10"
-              }`}
+              className={`inline-block mt-1.5 text-[9px] font-mono font-bold tracking-wider px-2 py-0.5 rounded border ${roleColors[user.role] || "bg-white/5 text-gray-400 border-white/10"
+                }`}
             >
               {user.role.replace("_", " ")}
             </span>

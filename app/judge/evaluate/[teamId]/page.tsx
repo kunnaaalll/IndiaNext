@@ -1,45 +1,52 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc-client";
 import { Button } from "@/components/judge/button";
 import { Textarea } from "@/components/judge/textarea";
 import { Input } from "@/components/judge/input";
 import { Label } from "@/components/judge/label";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, FileText, Github, Globe, Terminal } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { ArrowLeft, ExternalLink, FileText, Github, Globe, Terminal, Info } from "lucide-react";
 import Link from "next/link";
 
-export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId: string }> }) {
+export default function EvaluateTeamPage() {
     const router = useRouter();
-    const { teamId } = use(params);
+    const params = useParams();
+    const teamId = params.teamId as string;
     const utils = trpc.useUtils();
-    const { data: team, isLoading } = trpc.judge.getTeamForEvaluation.useQuery({ teamId });
+
+    // Ensure teamId is a string and not empty before enabling the query
+    const isTeamIdValid = typeof teamId === 'string' && teamId.length > 0;
+
+    const { data, isLoading } = trpc.judge.getTeamForEvaluation.useQuery(
+        { teamId },
+        { enabled: isTeamIdValid }
+    );
     const submitEvaluation = trpc.judge.submitEvaluation.useMutation({
-        onSuccess: () => {
-            utils.judge.getTeamsToJudge.invalidate();
-            utils.judge.getTeamForEvaluation.invalidate({ teamId });
+        onSuccess: async () => {
+            await Promise.all([
+                utils.judge.getTeamsToJudge.invalidate(),
+                utils.judge.getTeamForEvaluation.invalidate({ teamId })
+            ]);
+            toast.success("Evaluation submitted successfully");
+            router.push("/judge/teams");
+        },
+        onError: (err) => {
+            toast.error(err.message || "Failed to submit evaluation");
         }
     });
 
-    const handleSubmit = async (scoreVal: string, commentsVal: string) => {
-        const numScore = parseFloat(scoreVal);
-        if (isNaN(numScore) || numScore < 0 || numScore > 100) {
-            toast.error("Please enter a valid score between 0 and 100");
-            return;
-        }
-
+    const handleSubmit = async (criteriaScores: Record<string, number>, commentsVal: string) => {
         try {
             await submitEvaluation.mutateAsync({
                 teamId,
-                score: numScore,
+                criteriaScores,
                 comments: commentsVal,
             });
-            toast.success("Evaluation submitted successfully");
-            router.push("/judge/teams");
         } catch (_error) {
-            toast.error("Failed to submit evaluation");
+            // Error handled in onError
         }
     };
 
@@ -52,8 +59,10 @@ export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId:
         </div>
     );
 
-    if (!team) return <div className="p-12 text-center text-red-500 font-mono">ERROR: TEAM_NOT_FOUND</div>;
+    if (!data) return <div className="p-12 text-center text-red-500 font-mono">ERROR: TEAM_NOT_FOUND</div>;
 
+    const { team: rawTeam, criteria } = data;
+    const team = rawTeam as any; // Bypass type inference issue
     const submission = team.submission;
 
     return (
@@ -136,7 +145,7 @@ export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId:
                                 Attached Files
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {submission.files.map((file) => (
+                                {submission.files.map((file: any) => (
                                     <a
                                         key={file.id}
                                         href={file.fileUrl}
@@ -166,8 +175,9 @@ export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId:
                             Evaluation Protocol
                         </h2>
                         <EvaluationForm
-                            key={team.submission?.id || 'loading'}
-                            initialScore={team.submission?.judgeScore?.toString() ?? ""}
+                            key={`${team.submission?.id || 'loading'}-${team.judgeScores?.length || 0}`}
+                            criteria={criteria || []}
+                            existingScores={team.judgeScores || []}
                             initialComments={team.submission?.judgeComments ?? ""}
                             onSubmit={handleSubmit}
                             isSubmitting={submitEvaluation.isPending}
@@ -177,7 +187,7 @@ export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId:
                     <div className="bg-[#0A0A0A] p-6 rounded border border-white/10">
                         <h2 className="text-sm font-mono font-bold text-gray-500 uppercase tracking-widest mb-4">Team Members</h2>
                         <div className="space-y-3">
-                            {team.members.map((member) => (
+                            {team.members.map((member: any) => (
                                 <div key={member.id} className="flex items-center gap-3 p-2 rounded hover:bg-white/5 transition-colors">
                                     <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center text-xs font-mono font-bold text-gray-400">
                                         {member.user.name.charAt(0)}
@@ -197,40 +207,115 @@ export default function EvaluateTeamPage({ params }: { params: Promise<{ teamId:
 }
 
 function EvaluationForm({
-    initialScore,
+    criteria,
+    existingScores,
     initialComments,
     onSubmit,
     isSubmitting
 }: {
-    initialScore: string,
+    criteria: any[],
+    existingScores: any[],
     initialComments: string,
-    onSubmit: (score: string, comments: string) => void,
+    onSubmit: (criteriaScores: Record<string, number>, comments: string) => void,
     isSubmitting: boolean
 }) {
-    const [score, setScore] = useState(initialScore);
+    const [scores, setScores] = useState<Record<string, number>>(() => {
+        const initialScores: Record<string, number> = {};
+        criteria.forEach(c => {
+            const existing = existingScores.find(s => s.criteriaId === c.id);
+            if (existing) {
+                initialScores[c.id] = existing.score;
+            }
+        });
+        return initialScores;
+    });
     const [comments, setComments] = useState(initialComments);
+
+    const handleScoreChange = (criteriaId: string, value: string) => {
+        const numVal = parseFloat(value);
+        if (!isNaN(numVal)) {
+            setScores(prev => ({ ...prev, [criteriaId]: numVal }));
+        }
+    };
+
+    const calculatedTotal = useMemo(() => {
+        let totalWeighted = 0;
+        let totalMax = 0;
+
+        criteria.forEach(c => {
+            const score = scores[c.id] || 0;
+            totalWeighted += score * c.weight;
+            totalMax += c.maxScore * c.weight;
+        });
+
+        return totalMax > 0 ? (totalWeighted / totalMax) * 100 : 0;
+    }, [scores, criteria]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(score, comments);
+        onSubmit(scores, comments);
     };
 
+    if (criteria.length === 0) {
+        return (
+            <div className="text-center py-8 text-gray-500 text-sm font-mono">
+                NO_CRITERIA_DEFINED_FOR_THIS_TRACK
+            </div>
+        );
+    }
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-                <Label htmlFor="score" className="text-xs font-mono text-gray-400 uppercase tracking-wider">Total Score (0-100)</Label>
-                <Input
-                    id="score"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    placeholder="00.0"
-                    value={score}
-                    onChange={(e) => setScore(e.target.value)}
-                    required
-                    className="bg-black border-white/10 text-white text-lg font-mono font-bold focus:border-orange-500/50 focus:ring-orange-500/20"
-                />
+        <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-6">
+                {criteria.map((c) => (
+                    <div key={c.id} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label htmlFor={`criteria-${c.id}`} className="text-xs font-mono text-gray-300 font-bold uppercase tracking-wider">
+                                {c.name}
+                            </Label>
+                            <span className="text-[10px] font-mono text-gray-500">
+                                MAX: {c.maxScore} (x{c.weight})
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="range"
+                                min="0"
+                                max={c.maxScore}
+                                step="0.5"
+                                value={scores[c.id] || 0}
+                                onChange={(e) => handleScoreChange(c.id, e.target.value)}
+                                className="flex-1 h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                            />
+                            <Input
+                                id={`criteria-${c.id}`}
+                                type="number"
+                                min="0"
+                                max={c.maxScore}
+                                step="0.1"
+                                value={scores[c.id] || 0}
+                                onChange={(e) => handleScoreChange(c.id, e.target.value)}
+                                className="w-16 h-8 bg-black border-white/10 text-white text-sm font-mono font-bold text-center focus:border-orange-500/50 focus:ring-orange-500/20"
+                            />
+                        </div>
+                        {c.description && (
+                            <p className="text-[10px] text-gray-600">{c.description}</p>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+                <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Calculated Score</span>
+                    <span className="text-2xl font-mono font-black text-orange-500">{calculatedTotal.toFixed(1)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500"
+                        style={{ width: `${calculatedTotal}%` }}
+                    />
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -238,7 +323,7 @@ function EvaluationForm({
                 <Textarea
                     id="comments"
                     placeholder="ENTER_FEEDBACK..."
-                    rows={6}
+                    rows={4}
                     value={comments}
                     onChange={(e) => setComments(e.target.value)}
                     className="bg-black border-white/10 text-white font-mono text-sm focus:border-orange-500/50 focus:ring-orange-500/20 resize-none"

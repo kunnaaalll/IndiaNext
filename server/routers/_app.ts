@@ -9,12 +9,14 @@ import { adminRouter } from "./admin";
 import { teamRouter } from "./team";
 import { authRouter } from "./auth";
 import { judgeRouter } from "./judge";
+import { criteriaRouter } from "./criteria";
 
 export const appRouter = router({
   admin: adminRouter,
   team: teamRouter,
   auth: authRouter,
   judge: judgeRouter,
+  criteria: criteriaRouter,
 });
 
 export type AppRouter = typeof appRouter;

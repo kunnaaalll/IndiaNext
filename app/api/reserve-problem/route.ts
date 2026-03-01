@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { cacheGet, cacheSet } from '@/lib/redis-cache';
 
@@ -15,13 +16,29 @@ const LAST_ASSIGNED_KEY = 'problem:last_assigned_order'; // Redis key for rotati
  * - When problems have equal load, rotates the starting point
  *   so consecutive users get different problems
  * - Cycles back to Problem #1 after Problem #10
+ *
+ * SessionId is read from the session_token cookie (set by verify-otp).
+ * Falls back to sessionId in request body for backward compatibility.
  */
 export async function POST(req: Request) {
   try {
-    const { sessionId } = await req.json();
+    // Read session_token from HttpOnly cookie (matches register route cleanup)
+    const cookieStore = await cookies();
+    const sessionTokenFromCookie = cookieStore.get('session_token')?.value;
+
+    // Fallback: also accept sessionId from request body
+    let bodySessionId: string | undefined;
+    try {
+      const body = await req.json();
+      bodySessionId = body.sessionId;
+    } catch {
+      // Body may be empty if only using cookie
+    }
+
+    const sessionId = sessionTokenFromCookie || bodySessionId;
 
     if (!sessionId) {
-      return NextResponse.json({ success: false, message: 'Missing session ID.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Not authenticated. Please verify your email first.' }, { status: 401 });
     }
 
     // 1. Cleanup expired reservations globally to free up slots

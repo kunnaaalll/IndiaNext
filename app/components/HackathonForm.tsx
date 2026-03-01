@@ -43,13 +43,12 @@ const QUESTIONS: Question[] = [
     required: true,
   },
   
-  // --- MISSION BRIEFING --
+  // --- MISSION BRIEFING (dynamically loaded from API) --
   {
       id: 'buildBrief',
-      type: 'info',
+      type: 'dynamic-problem',
       question: "MISSION BRIEFING",
-      subtext: "Review your objective before proceeding.",
-      text: "PROBLEM STATEMENT:\n\nDisaster Response Coordination\n\nObjective: Build a real-time, offline-first system to connect flood victims with local rescue teams.",
+      subtext: "Your assigned problem statement (round-robin distribution).",
       condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
 
@@ -582,7 +581,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail }: { 
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail, assignedProblem, problemLoading, problemError, fetchAssignedProblem }: { 
   question: Question; 
   value: string | string[] | undefined; 
   onChange: (val: string) => void; 
@@ -594,6 +593,10 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
   showChangeEmailWarning?: boolean;
   onChangeEmailClick?: () => void;
   onCancelChangeEmail?: () => void;
+  assignedProblem?: { id: string; title: string; objective: string; extensionsRemaining: number } | null;
+  problemLoading?: boolean;
+  problemError?: string;
+  fetchAssignedProblem?: () => void;
 }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -750,13 +753,16 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
          />
          
          {/* Guidance Panel */}
-         {question.guidance && (
+         {(question.guidance || (question.id === 'problemDesc' && assignedProblem)) && (
              <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
                  <div className="text-orange-500 font-bold mb-2 uppercase tracking-wider text-xs border-b border-orange-500/20 pb-1">
                      RESPONSE PATTERN
                  </div>
                  <div className="whitespace-pre-wrap leading-relaxed text-xs">
-                     {question.guidance}
+                     {question.id === 'problemDesc' && assignedProblem
+                       ? `PROBLEM STATEMENT:\n${assignedProblem.title} - ${assignedProblem.objective}\n\nSuggested Response Pattern:\n\n1. Analysis: Breakdown of the specific problem statement.\n2. Technical Approach: Architecture & Stack choice.\n3. Innovation: What makes your fix unique?\n4. Execution Plan: 24-hour timeline strategy.`
+                       : question.guidance
+                     }
                  </div>
                  {question.noPaste && (
                      <div className="mt-4 text-xs text-red-500 border border-red-900/50 bg-red-900/10 p-2 text-center uppercase tracking-widest font-bold">
@@ -805,6 +811,59 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
               </div>
           </div>
       );
+  }
+
+  // Dynamic problem statement (BuildStorm round-robin)
+  if (question.type === 'dynamic-problem') {
+    return (
+      <div className="w-full max-w-2xl">
+        {problemLoading && (
+          <div className="bg-slate-900 border border-slate-700 p-8 rounded text-center">
+            <div className="animate-pulse flex flex-col items-center gap-4">
+              <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-slate-400 font-mono text-sm uppercase tracking-wider">Assigning problem statement...</p>
+            </div>
+          </div>
+        )}
+        {problemError && (
+          <div className="bg-red-950/50 border border-red-500/50 p-6 rounded">
+            <p className="text-red-400 font-mono text-sm">{problemError}</p>
+            <button
+              onClick={() => fetchAssignedProblem?.()}
+              className="mt-4 px-4 py-2 border border-orange-500 text-orange-400 text-xs font-mono uppercase tracking-wider hover:bg-orange-500/10 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {assignedProblem && !problemLoading && (
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-orange-500/50" />
+            <div className="flex items-center gap-2 text-orange-400 font-bold mb-4 uppercase tracking-widest text-xs">
+              <span className="w-2 h-2 bg-orange-500 animate-pulse rounded-full" />
+              Your Assigned Problem Statement
+            </div>
+            <div className="mb-4">
+              <h3 className="text-2xl md:text-3xl font-mono text-white font-bold mb-3">
+                {assignedProblem.title}
+              </h3>
+              <div className="text-lg md:text-xl font-mono text-slate-300 leading-relaxed">
+                <span className="text-orange-400 font-bold">Objective: </span>
+                {assignedProblem.objective}
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-700/50 flex items-center justify-between">
+              <span className="text-slate-500 font-mono text-xs uppercase tracking-wider">
+                Round-robin assigned
+              </span>
+              <span className="text-slate-500 font-mono text-xs">
+                Reservation: {assignedProblem.extensionsRemaining} extensions remaining
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (question.type === 'combobox' && question.suggestions) {
@@ -912,6 +971,16 @@ export default function HackathonForm() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // BuildStorm: dynamically assigned problem statement
+  const [assignedProblem, setAssignedProblem] = useState<{
+    id: string;
+    title: string;
+    objective: string;
+    extensionsRemaining: number;
+  } | null>(null);
+  const [problemLoading, setProblemLoading] = useState(false);
+  const [problemError, setProblemError] = useState("");
+
   // ✅ NEW: Generate idempotency key once per form session
   const [idempotencyKey] = useState(() => {
     // Use crypto.randomUUID() if available
@@ -942,6 +1011,55 @@ export default function HackathonForm() {
   const currentQuestion = QUESTIONS[currentStep];
 
   const handleStart = () => setStarted(true);
+
+  // Fetch assigned problem statement from round-robin API
+  const fetchAssignedProblem = React.useCallback(async () => {
+    setProblemLoading(true);
+    setProblemError("");
+    try {
+      const res = await fetch('/api/reserve-problem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // session_token cookie is sent automatically (HttpOnly)
+        body: JSON.stringify({}),
+      });
+      const response = await res.json();
+
+      if (!response.success) {
+        if (response.allFilled) {
+          setProblemError("All problem statements have been filled. Registration is currently closed.");
+        } else {
+          setProblemError(response.message || "Failed to assign problem statement.");
+        }
+        return;
+      }
+
+      if (response.data) {
+        setAssignedProblem({
+          id: response.data.id,
+          title: response.data.title,
+          objective: response.data.objective,
+          extensionsRemaining: response.data.extensionsRemaining ?? 0,
+        });
+      }
+    } catch (err) {
+      setProblemError(err instanceof Error ? err.message : "Network error. Please try again.");
+    } finally {
+      setProblemLoading(false);
+    }
+  }, []);
+
+  // Auto-fetch problem when reaching buildBrief step
+  useEffect(() => {
+    if (
+      currentQuestion?.id === 'buildBrief' &&
+      currentQuestion?.type === 'dynamic-problem' &&
+      !assignedProblem &&
+      !problemLoading
+    ) {
+      fetchAssignedProblem();
+    }
+  }, [currentQuestion, assignedProblem, problemLoading, fetchAssignedProblem]);
 
   // Logic Helpers
   const getNextValidStep = React.useCallback((current: number, dir: number, currentAnswers: Answers) => {
@@ -1021,6 +1139,11 @@ export default function HackathonForm() {
           if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
           if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
 
+          // Include assigned problem statement ID for BuildStorm track
+          if (assignedProblem?.id && finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") {
+            finalAnswers.assignedProblemStatementId = assignedProblem.id;
+          }
+
           const res = await fetch('/api/register', {
               method: 'POST',
               headers: {
@@ -1047,12 +1170,34 @@ export default function HackathonForm() {
       } finally {
           setLoading(false);
       }
-  }, [answers, idempotencyKey, setIsCompleted]);
+  }, [answers, idempotencyKey, assignedProblem, setIsCompleted]);
 
   const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
     const q = currentQuestion;
     let ans = answers[q.id];
+
+    // BuildStorm problem assignment: must have a problem before proceeding
+    if (q.type === 'dynamic-problem') {
+      if (problemLoading) {
+        setErrorMsg("Please wait while your problem statement is being assigned...");
+        return;
+      }
+      if (!assignedProblem) {
+        setErrorMsg("Failed to assign problem statement. Please retry.");
+        return;
+      }
+      // Problem assigned — proceed
+      const nextStep = getNextValidStep(currentStep, 1, answers);
+      if (nextStep < totalSteps) {
+        setDirection(1);
+        setCurrentStep(nextStep);
+        setErrorMsg("");
+      } else {
+        await submitForm();
+      }
+      return;
+    }
 
     // Trim string values before validation
     if (typeof ans === 'string') {
@@ -1171,7 +1316,7 @@ export default function HackathonForm() {
     } else {
       await submitForm();
     }
-  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep]);
+  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep, assignedProblem, problemLoading]);
 
   const verifyOtp = React.useCallback(async () => {
       setLoading(true);
@@ -1355,6 +1500,10 @@ export default function HackathonForm() {
                                     showChangeEmailWarning={showChangeEmailWarning}
                                     onChangeEmailClick={handleChangeEmailClick}
                                     onCancelChangeEmail={handleCancelChangeEmail}
+                                    assignedProblem={assignedProblem}
+                                    problemLoading={problemLoading}
+                                    problemError={problemError}
+                                    fetchAssignedProblem={fetchAssignedProblem}
                                />
                            </div>
                            

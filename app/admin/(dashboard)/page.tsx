@@ -1,25 +1,45 @@
 // Admin Dashboard Home Page
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
 import { StatsCards } from "@/components/admin/dashboard/StatsCards";
 import { RegistrationChart } from "@/components/admin/dashboard/RegistrationChart";
 import { RecentActivity } from "@/components/admin/dashboard/RecentActivity";
 import { TopColleges } from "@/components/admin/dashboard/TopColleges";
 import { TrackDistribution } from "@/components/admin/dashboard/TrackDistribution";
-import { Loader2 } from "lucide-react";
+import { SkeletonCard } from "@/components/animations";
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { data: stats, isLoading: statsLoading } =
     trpc.admin.getStats.useQuery();
   const { data: analytics, isLoading: analyticsLoading } =
     trpc.admin.getAnalytics.useQuery();
 
+  // Redirect judges to teams page (they don't have dashboard access)
+  useEffect(() => {
+    // Check if user is a judge by trying to access stats
+    // If stats query fails with permission error, redirect
+    if (!statsLoading && !stats) {
+      router.push("/admin/teams");
+    }
+  }, [stats, statsLoading, router]);
+
   if (statsLoading || analyticsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-        <span className="ml-3 text-xs font-mono text-gray-500 tracking-widest">LOADING DATA...</span>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
     );
   }

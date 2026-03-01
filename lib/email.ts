@@ -1,14 +1,14 @@
 ﻿// ═══════════════════════════════════════════════════════════
 // Production-Ready Email Service using Resend
 // ═══════════════════════════════════════════════════════════
-// ✅ Fixes ALL 7 critical production issues:
-// 1. ✅ Retry logic with exponential backoff
-// 2. ✅ Consistent from address (process.env.EMAIL_FROM)
-// 3. ✅ Email logging to database (EmailLog model)
-// 4. ✅ Proper TypeScript types (no 'any')
-// 5. ✅ Email validation before sending
-// 6. ✅ Structured logging with error tracking
-// 7. ✅ Rate limit handling and error recovery
+// [CONFIRMED] Fixes ALL 7 critical production issues:
+// 1. [CONFIRMED] Retry logic with exponential backoff
+// 2. [CONFIRMED] Consistent from address (process.env.EMAIL_FROM)
+// 3. [CONFIRMED] Email logging to database (EmailLog model)
+// 4. [CONFIRMED] Proper TypeScript types (no 'any')
+// 5. [CONFIRMED] Email validation before sending
+// 6. [CONFIRMED] Structured logging with error tracking
+// 7. [CONFIRMED] Rate limit handling and error recovery
 // ═══════════════════════════════════════════════════════════
 
 import { Resend } from "resend";
@@ -257,7 +257,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
 
       // Success!
       const messageId = result.data?.id;
-      console.log(`[Email] ✅ Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`);
+      console.log(`[Email] [CONFIRMED] Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`);
 
       // Non-blocking log — don't wait for DB write
       logEmail({
@@ -298,7 +298,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
 
   // All retries exhausted
   const finalError = lastError?.message || 'Failed to send email after retries';
-  console.error(`[Email] 💥 Final failure after ${attempt} attempts:`, {
+  console.error(`[Email] [ERROR] Final failure after ${attempt} attempts:`, {
     type,
     to: to.replace(/(.{3}).*@/, '$1***@'),
     error: finalError,
@@ -328,13 +328,13 @@ export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT
     'IDEA_SPRINT': {
       color: '#00CC44',
       label: 'Idea Sprint Track',
-      icon: '💡',
+      icon: 'IS',
       description: 'Transform your innovative ideas into reality'
     },
     'BUILD_STORM': {
       color: '#2266FF',
       label: 'Build Storm Track',
-      icon: '⚡',
+      icon: 'BS',
       description: 'Build and showcase your technical prowess'
     }
   }[track] : null;
@@ -356,7 +356,7 @@ export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 ${trackInfo ? `
                   <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(${trackInfo.color === '#00CC44' ? '0, 204, 68' : '34, 102, 255'}, 0.1); border: 1px solid ${trackInfo.color}; border-radius: 8px; display: inline-block;">
-                    <span style="font-size: 20px; margin-right: 6px;">${trackInfo.icon}</span>
+                    <span style="font-size: 14px; margin-right: 6px; color: ${trackInfo.color}; font-weight: bold;">[${trackInfo.icon}]</span>
                     <span class="badge-txt" style="color: ${trackInfo.color}; font-weight: bold; font-size: 13px; letter-spacing: 1px;">${trackInfo.label.toUpperCase()}</span>
                   </div>
                   <p class="sm-text" style="color: #999; margin: 10px 0 0 0; font-size: 13px;">${trackInfo.description}</p>
@@ -378,8 +378,8 @@ export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT
                 </div>
                 
                 <p class="sm-text" style="color: #999; margin: 24px 0 0 0; font-size: 14px; line-height: 1.6;">
-                  ⏱️ This code will expire in <strong style="color: #FF6600;">${EMAIL_CONFIG.otpExpiryMinutes} minutes</strong>.<br>
-                  🔒 If you didn't request this code, please ignore this email.
+                  [TIME] This code will expire in <strong style="color: #FF6600;">${EMAIL_CONFIG.otpExpiryMinutes} minutes</strong>.<br>
+                  [SECURITY] If you didn't request this code, please ignore this email.
                 </p>
                 
                 <!-- Footer -->
@@ -432,9 +432,9 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
     .join('');
 
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
-  const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
+  const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
-  const subject = `✅ Registration Confirmed — IndiaNext Hackathon`;
+  const subject = `Registration Confirmed — IndiaNext Hackathon`;
 
   const html = `
         <!DOCTYPE html>
@@ -453,7 +453,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
-                  <span style="color: #10b981; font-size: 18px; margin-right: 6px;">✅</span>
+                  <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
                   <span class="badge-txt" style="color: #10b981; font-weight: bold; font-size: 13px; letter-spacing: 1px;">REGISTRATION CONFIRMED</span>
                 </div>
               </div>
@@ -462,7 +462,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
               <div class="email-bd" style="background: #1a1a1a; padding: 28px 20px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 24px 0; font-size: 15px; line-height: 1.7;">
-                  🎉 Congratulations! Your team has been successfully registered for 
+                  Congratulations! Your team has been successfully registered for 
                   <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
@@ -518,7 +518,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
 
                 <!-- What's Next -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">📋 What Happens Next?</h3>
+                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">[INFO] What Happens Next?</h3>
                   <ol class="sm-text" style="color: #ccc; margin: 0; padding-left: 20px; line-height: 2; font-size: 14px;">
                     <li>Our team will review your registration details</li>
                     <li>You will receive an email once your status is approved</li>
@@ -537,7 +537,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                 <!-- Official Website -->
                 <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 20px;">
                   <p style="color: #ccc; margin: 0; font-size: 13px;">
-                    🌐 Official Website: 
+                    [WEB] Official Website: 
                     <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                       www.indianexthackthon.online
                     </a>
@@ -586,9 +586,9 @@ interface MemberNotificationData {
 
 export async function sendTeamMemberNotification(to: string, data: MemberNotificationData): Promise<EmailResult> {
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
-  const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
+  const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
-  const subject = `✅ You're Added to Team ${escapeHtml(data.teamName)} — IndiaNext Hackathon`;
+  const subject = `[CONFIRMED] You're Added to Team ${escapeHtml(data.teamName)} — IndiaNext Hackathon`;
   const html = `
         <!DOCTYPE html>
         <html>
@@ -612,7 +612,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
-                  <span style="color: #FF6600; font-size: 16px; margin-right: 6px;">👥</span>
+                  <span style="color: #FF6600; font-size: 16px; margin-right: 6px;">[TEAM]</span>
                   <span class="badge-txt" style="color: #FF6600; font-weight: bold; font-size: 12px; letter-spacing: 1px;">
                     TEAM MEMBER CONFIRMATION
                   </span>
@@ -623,11 +623,11 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
               <div class="email-bd" style="background: #1a1a1a; padding: 28px 20px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
 
                 <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 20px;">
-                  Hi ${escapeHtml(data.memberName)} 👋
+                  Hi ${escapeHtml(data.memberName)} 
                 </h2>
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
-                  Great news! 🎉 You have been officially added to a registered team for the 
+                  Great news!  You have been officially added to a registered team for the 
                   <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
@@ -635,7 +635,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                 <!-- Team Card -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                   <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">
-                    📌 Team Details
+                    [DETAILS] Team Details
                   </h3>
 
                   <table style="width: 100%; border-collapse: collapse;">
@@ -674,7 +674,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                 <!-- What's Next -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                   <h3 style="color: #ededed; margin: 0 0 12px 0; font-size: 15px;">
-                    🚀 What Should You Do Next?
+                    [START] What Should You Do Next?
                   </h3>
 
                   <ul class="sm-text" style="color: #ccc; margin: 0; padding-left: 18px; font-size: 13px; line-height: 2;">
@@ -693,14 +693,14 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                 <!-- Security Note -->
                 <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 14px; margin-bottom: 20px;">
                   <p class="sm-text" style="color: #f59e0b; margin: 0; font-size: 12px; line-height: 1.6;">
-                    ⚠️ If you did not expect to be added to this team, please immediately contact the team leader or email us.
+                    [WARNING] If you did not expect to be added to this team, please immediately contact the team leader or email us.
                   </p>
                 </div>
 
                 <!-- Official Website -->
                 <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 20px;">
                   <p style="color: #ccc; margin: 0; font-size: 13px;">
-                    🌐 Official Website:
+                    [WEB] Official Website:
                     <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                       www.indianexthackthon.online
                     </a>
@@ -844,7 +844,7 @@ async function sendApprovalEmail(
   teamName: string,
   notes?: string
 ): Promise<EmailResult> {
-  const subject = `🎉 You're IN! Team "${escapeHtml(teamName)}" Approved — IndiaNext Hackathon 2026`;
+  const subject = ` You're IN! Team "${escapeHtml(teamName)}" Approved — IndiaNext Hackathon 2026`;
 
   const html = `
     <!DOCTYPE html>
@@ -863,7 +863,7 @@ async function sendApprovalEmail(
             <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 3px;">HACKATHON 2026</p>
             
             <div class="badge-wrap" style="margin-top: 20px; padding: 12px 24px; background: rgba(16, 185, 129, 0.12); border: 2px solid #10b981; border-radius: 10px; display: inline-block;">
-              <span style="color: #10b981; font-size: 18px; margin-right: 6px;">🎉</span>
+              <span style="color: #10b981; font-size: 18px; margin-right: 6px;"></span>
               <span class="badge-txt" style="color: #10b981; font-weight: bold; font-size: 13px; letter-spacing: 2px;">TEAM APPROVED</span>
             </div>
           </div>
@@ -873,7 +873,7 @@ async function sendApprovalEmail(
 
             <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.8;">
               Dear Team Leader,<br><br>
-              Congratulations! 🎊 Your team <strong style="color: #FF6600;">${escapeHtml(teamName)}</strong> has been 
+              Congratulations!  Your team <strong style="color: #FF6600;">${escapeHtml(teamName)}</strong> has been 
               <strong style="color: #10b981;">officially approved</strong> for the <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>. 
               We’re thrilled to have you on board!
             </p>
@@ -887,26 +887,26 @@ async function sendApprovalEmail(
 
             <!-- Hackathon Details -->
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
-              <h2 style="color: #FF6600; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">📋 Hackathon Details</h2>
+              <h2 style="color: #FF6600; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[INFO] Hackathon Details</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 10px 0; color: #666; font-size: 12px; width: 100px; vertical-align: top;">📅 Date</td>
+                  <td style="padding: 10px 0; color: #666; font-size: 12px; width: 100px; vertical-align: top;">[DATE] Date</td>
                   <td style="padding: 10px 0; color: #ededed; font-size: 13px; font-weight: 600;">March 15 – 16, 2026</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">⏰ Duration</td>
+                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[TIME] Duration</td>
                   <td style="padding: 10px 0; color: #ededed; font-size: 13px; border-top: 1px solid #222;">24 Hours (Non-stop)</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">📍 Venue</td>
+                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[LOCATION] Venue</td>
                   <td style="padding: 10px 0; color: #ededed; font-size: 13px; border-top: 1px solid #222;">KES Shroff College, Mumbai</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">🏷️ Mode</td>
+                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[MODE] Mode</td>
                   <td style="padding: 10px 0; color: #ededed; font-size: 13px; border-top: 1px solid #222;">Offline (In-Person)</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">🎯 Team</td>
+                  <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[TEAM] Team</td>
                   <td style="padding: 10px 0; color: #FF6600; font-size: 13px; font-weight: bold; border-top: 1px solid #222;">${escapeHtml(teamName)}</td>
                 </tr>
               </table>
@@ -914,7 +914,7 @@ async function sendApprovalEmail(
 
             <!-- Schedule -->
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
-              <h2 style="color: #00CCFF; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">🗓️ Event Schedule</h2>
+              <h2 style="color: #00CCFF; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[SCHEDULE] Event Schedule</h2>
               
               <p style="color: #FF6600; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 1 — MARCH 15, 2026</p>
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
@@ -930,7 +930,7 @@ async function sendApprovalEmail(
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">10:00 AM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #10b981; font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.06); border-radius: 0 4px 4px 0;">🚀 Hacking Begins!</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #10b981; font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.06); border-radius: 0 4px 4px 0;">[START] Hacking Begins!</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
@@ -968,7 +968,7 @@ async function sendApprovalEmail(
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #00CCFF; font-size: 12px; font-weight: bold; background: rgba(0,204,255,0.06); border-radius: 4px 0 0 4px;">10:00 AM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #ef4444; font-size: 12px; font-weight: bold; background: rgba(239,68,68,0.06); border-radius: 0 4px 4px 0;">⏱️ Hacking Stops — Code Freeze!</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #ef4444; font-size: 12px; font-weight: bold; background: rgba(239,68,68,0.06); border-radius: 0 4px 4px 0;">[TIME] Hacking Stops — Code Freeze!</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
@@ -988,7 +988,7 @@ async function sendApprovalEmail(
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #00CCFF; font-size: 12px; font-weight: bold; background: rgba(0,204,255,0.06); border-radius: 4px 0 0 4px;">03:00 PM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #f59e0b; font-size: 12px; font-weight: bold; background: rgba(245,158,11,0.06); border-radius: 0 4px 4px 0;">🏆 Results & Prize Ceremony</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #f59e0b; font-size: 12px; font-weight: bold; background: rgba(245,158,11,0.06); border-radius: 0 4px 4px 0;">[RESULTS] Results & Prize Ceremony</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
@@ -1000,7 +1000,7 @@ async function sendApprovalEmail(
 
             <!-- Rules & Guidelines -->
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
-              <h2 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">⚠️ Rules & Guidelines</h2>
+              <h2 style="color: #f59e0b; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[WARNING] Rules & Guidelines</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 10px; color: #f59e0b; font-size: 14px; vertical-align: top; width: 28px;">1.</td>
@@ -1039,7 +1039,7 @@ async function sendApprovalEmail(
 
             <!-- What to Bring -->
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
-              <h2 style="color: #10b981; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">🎒 What to Bring</h2>
+              <h2 style="color: #10b981; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[CHECKLIST] What to Bring</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 6px 10px; color: #10b981; font-size: 14px; width: 28px;">✓</td>
@@ -1059,7 +1059,7 @@ async function sendApprovalEmail(
                 </tr>
                 <tr>
                   <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">✓</td>
-                  <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Enthusiasm and a winning attitude! 🔥</td>
+                  <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Enthusiasm and a winning attitude! </td>
                 </tr>
               </table>
             </div>
@@ -1070,14 +1070,14 @@ async function sendApprovalEmail(
               <p class="cta-name" style="color: #FF6600; margin: 0 0 12px 0; font-size: 22px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 2px; word-break: break-all;">${escapeHtml(teamName)}</p>
               <p class="sm-text" style="color: #ccc; margin: 0; font-size: 12px; line-height: 1.5;">
                 Share this news with your team members and start preparing!<br>
-                We can’t wait to see what you build. 💪
+                We can’t wait to see what you build. 
               </p>
             </div>
 
             <!-- Website -->
             <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 14px; text-align: center; margin-bottom: 20px;">
               <p style="color: #ccc; margin: 0; font-size: 12px;">
-                🌐 Official Website: 
+                [WEB] Official Website: 
                 <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                   www.indianexthackthon.online
                 </a>
@@ -1211,7 +1211,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
             status: 'SENT', provider: 'resend', messageId,
             attempts: attempt + 1, lastAttempt: new Date(), sentAt: new Date(),
           });
-          console.log(`[Email] ✅ ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`);
+          console.log(`[Email] [CONFIRMED] ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`);
           validIdx++;
         }
       }
@@ -1220,7 +1220,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
       prisma.emailLog.createMany({ data: logEntries })
         .catch((err: unknown) => console.error('[Email] Failed to bulk-log sent emails:', err));
 
-      console.log(`[Email] ✅ Batch complete — ${validEmails.length} emails sent in 1 API call`);
+      console.log(`[Email] [CONFIRMED] Batch complete — ${validEmails.length} emails sent in 1 API call`);
       return results;
 
     } catch (error) {
@@ -1295,7 +1295,7 @@ export async function sendRegistrationBatchEmails(data: RegistrationBatchData): 
   const confirmationHtml = buildConfirmationHtml(data);
   emails.push({
     to: data.leaderEmail,
-    subject: `✅ Registration Confirmed — IndiaNext Hackathon`,
+    subject: `[CONFIRMED] Registration Confirmed — IndiaNext Hackathon`,
     html: confirmationHtml,
     type: 'CONFIRMATION' as EmailType,
   });
@@ -1322,7 +1322,7 @@ export async function sendRegistrationBatchEmails(data: RegistrationBatchData): 
   const submissionHtml = buildSubmissionDetailsHtml(data);
   emails.push({
     to: data.leaderEmail,
-    subject: `📋 Your Submission Details — ${data.teamName} | IndiaNext Hackathon`,
+    subject: `[INFO] Your Submission Details — ${data.teamName} | IndiaNext Hackathon`,
     html: submissionHtml,
     type: 'CONFIRMATION' as EmailType,
   });
@@ -1347,7 +1347,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
     .join('');
 
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
-  const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
+  const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
   return `<!DOCTYPE html>
         <html>
@@ -1365,7 +1365,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
-                  <span style="color: #10b981; font-size: 18px; margin-right: 6px;">✅</span>
+                  <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
                   <span class="badge-txt" style="color: #10b981; font-weight: bold; font-size: 13px; letter-spacing: 1px;">REGISTRATION CONFIRMED</span>
                 </div>
               </div>
@@ -1374,7 +1374,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
               <div class="email-bd" style="background: #1a1a1a; padding: 28px 20px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
-                  🎉 Congratulations! Your team has been successfully registered for 
+                   Congratulations! Your team has been successfully registered for 
                   <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
@@ -1422,7 +1422,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
 
                 <!-- What's Next -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">📋 What Happens Next?</h3>
+                  <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">[INFO] What Happens Next?</h3>
                   <ol class="sm-text" style="color: #ccc; margin: 0; padding-left: 20px; line-height: 2; font-size: 13px;">
                     <li>Our team will review your registration details</li>
                     <li>You will receive an email once your status is approved</li>
@@ -1441,7 +1441,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
                 <!-- Official Website -->
                 <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 20px;">
                   <p style="color: #ccc; margin: 0; font-size: 13px;">
-                    🌐 Official Website: 
+                    [WEB] Official Website: 
                     <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                       www.indianexthackthon.online
                     </a>
@@ -1469,7 +1469,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
 
 function buildMemberNotificationHtml(data: { memberName: string; teamName: string; leaderName: string; leaderEmail: string; track: string }): string {
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
-  const trackIcon = data.track.includes('Idea') ? '💡' : '⚡';
+  const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
   return `<!DOCTYPE html>
         <html>
@@ -1493,7 +1493,7 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
-                  <span style="color: #FF6600; font-size: 16px; margin-right: 6px;">👥</span>
+                  <span style="color: #FF6600; font-size: 16px; margin-right: 6px;">[TEAM]</span>
                   <span class="badge-txt" style="color: #FF6600; font-weight: bold; font-size: 12px; letter-spacing: 1px;">
                     TEAM MEMBER CONFIRMATION
                   </span>
@@ -1504,11 +1504,11 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
               <div class="email-bd" style="background: #1a1a1a; padding: 28px 20px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
 
                 <h2 style="color: #ededed; margin: 0 0 10px 0; font-size: 20px;">
-                  Hi ${escapeHtml(data.memberName)} 👋
+                  Hi ${escapeHtml(data.memberName)} 
                 </h2>
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
-                  Great news! 🎉 You have been officially added to a registered team for the 
+                  Great news!  You have been officially added to a registered team for the 
                   <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
@@ -1516,7 +1516,7 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                 <!-- Team Card -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                   <h3 style="color: #ededed; margin: 0 0 14px 0; font-size: 15px;">
-                    📌 Team Details
+                    [DETAILS] Team Details
                   </h3>
 
                   <table style="width: 100%; border-collapse: collapse;">
@@ -1555,7 +1555,7 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                 <!-- What's Next -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                   <h3 style="color: #ededed; margin: 0 0 12px 0; font-size: 15px;">
-                    🚀 What Should You Do Next?
+                    [START] What Should You Do Next?
                   </h3>
 
                   <ul class="sm-text" style="color: #ccc; margin: 0; padding-left: 18px; font-size: 13px; line-height: 2;">
@@ -1573,14 +1573,14 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                 <!-- Security Note -->
                 <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 10px; padding: 14px; margin-bottom: 20px;">
                   <p class="sm-text" style="color: #f59e0b; margin: 0; font-size: 12px; line-height: 1.6;">
-                    ⚠️ If you did not expect to be added to this team, please immediately contact the team leader or email us.
+                    [WARNING] If you did not expect to be added to this team, please immediately contact the team leader or email us.
                   </p>
                 </div>
 
                 <!-- Official Website -->
                 <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 20px;">
                   <p style="color: #ccc; margin: 0; font-size: 13px;">
-                    🌐 Official Website:
+                    [WEB] Official Website:
                     <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                       www.indianexthackthon.online
                     </a>
@@ -1651,7 +1651,7 @@ interface SubmissionDetailsData {
  * This serves as a receipt/backup of everything they entered in the form.
  */
 export async function sendSubmissionDetailsEmail(to: string, data: SubmissionDetailsData): Promise<EmailResult> {
-  const subject = `📋 Your Submission Details — ${escapeHtml(data.teamName)} | IndiaNext Hackathon`;
+  const subject = `[INFO] Your Submission Details — ${escapeHtml(data.teamName)} | IndiaNext Hackathon`;
   const html = buildSubmissionDetailsHtml(data);
 
   return sendEmailWithRetry({
@@ -1665,7 +1665,7 @@ export async function sendSubmissionDetailsEmail(to: string, data: SubmissionDet
 function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
   const isIdeaSprint = data.track.includes('Idea') || data.track === 'IDEA_SPRINT';
   const trackColor = isIdeaSprint ? '#00CC44' : '#2266FF';
-  const trackIcon = isIdeaSprint ? '💡' : '⚡';
+  const trackIcon = isIdeaSprint ? '[IS]' : '[BS]';
   const trackLabel = isIdeaSprint ? 'IdeaSprint: Build MVP in 24 Hours' : 'BuildStorm: Solve Problem Statement in 24 Hours';
 
   // Build member rows with college & degree
@@ -1756,7 +1756,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(34, 102, 255, 0.08); border: 1px solid rgba(34, 102, 255, 0.5); border-radius: 8px; display: inline-block;">
-                  <span style="color: #2266FF; font-size: 16px; margin-right: 6px;">📋</span>
+                  <span style="color: #2266FF; font-size: 16px; margin-right: 6px;">[INFO]</span>
                   <span class="badge-txt" style="color: #2266FF; font-weight: bold; font-size: 12px; letter-spacing: 1px;">SUBMISSION RECEIPT</span>
                 </div>
               </div>
@@ -1773,7 +1773,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
 
                 <!-- Team Overview -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">🎯 Team Overview</h2>
+                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">[TEAM] Team Overview</h2>
                   <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px; width: 100px;">Team Name</td>
@@ -1829,7 +1829,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
 
                 <!-- All Members Table -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">👥 All Team Members (${data.members.length})</h2>
+                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">[TEAM] All Team Members (${data.members.length})</h2>
                   <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table style="width: 100%; border-collapse: collapse; min-width: 320px;">
                       <thead>
@@ -1864,7 +1864,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <!-- Submission Details -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                   <h2 style="color: #ededed; margin: 0 0 16px 0; font-size: 18px;">
-                    ${isIdeaSprint ? '💡 IdeaSprint Submission' : '⚡ BuildStorm Submission'}
+                    ${isIdeaSprint ? '[IS] IdeaSprint Submission' : '[BS] BuildStorm Submission'}
                   </h2>
                   <div style="border-left: 3px solid ${trackColor}; padding-left: 16px;">
                     ${submissionSection || '<p style="color: #666; margin: 0; font-size: 13px; font-style: italic;">No submission details provided.</p>'}
@@ -1881,7 +1881,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <!-- Important Notice -->
                 <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 8px; padding: 14px; margin-bottom: 20px;">
                   <p class="sm-text" style="color: #f59e0b; margin: 0; font-size: 12px; line-height: 1.6;">
-                    ⚠️ This is an auto-generated copy of your submission. If any detail is incorrect, please contact us immediately at 
+                    [WARNING] This is an auto-generated copy of your submission. If any detail is incorrect, please contact us immediately at 
                     <a href="mailto:hackathon@kessc.edu.in" style="color: #f59e0b; text-decoration: underline;">hackathon@kessc.edu.in</a>
                   </p>
                 </div>
@@ -1895,7 +1895,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <!-- Official Website -->
                 <div style="background: rgba(34, 102, 255, 0.08); border: 1px solid #2266FF; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 20px;">
                   <p style="color: #ccc; margin: 0; font-size: 13px;">
-                    🌐 Official Website: 
+                    [WEB] Official Website: 
                     <a href="https://www.indianexthackthon.online" style="color: #2266FF; text-decoration: none; font-weight: bold;">
                       www.indianexthackthon.online
                     </a>

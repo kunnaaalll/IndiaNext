@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { rateLimitRegister, createRateLimitHeaders } from '@/lib/rate-limit';
 import { sendRegistrationBatchEmails } from '@/lib/email';
+import { sanitizeObject, containsXss, containsSqlInjection } from '@/lib/input-sanitizer';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client/edge';
 
@@ -69,6 +70,7 @@ const RegisterSchema = z.object({
   problemDesc: z.string().optional(),
   githubLink: z.string().url().optional().or(z.literal('')),
   assignedProblemStatementId: z.string().optional(),
+  
   // Meta
   hearAbout: z.string().optional(),
   additionalNotes: z.string().optional(),
@@ -176,11 +178,51 @@ export async function POST(req: Request) {
 
     const data = validation.data;
 
+    // ✅ SANITIZE INPUT to prevent XSS and injection attacks
+    const sanitizedData = sanitizeObject(data, {
+      sanitizeHtml: true,
+      sanitizeUrls: true,
+    });
+
+    // ✅ CHECK FOR XSS in critical fields
+    const criticalFields = [
+      sanitizedData.teamName,
+      sanitizedData.leaderName,
+      sanitizedData.ideaTitle,
+      sanitizedData.problemStatement,
+      sanitizedData.proposedSolution,
+    ].filter(Boolean);
+
+    for (const field of criticalFields) {
+      if (typeof field === 'string' && containsXss(field)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'VALIDATION_ERROR',
+            message: 'Invalid input detected. Please remove any HTML or script tags.',
+          },
+          { status: 400, headers: createRateLimitHeaders(rateLimit) }
+        );
+      }
+    }
+
+    // ✅ CHECK FOR SQL INJECTION patterns
+    if (containsSqlInjection(sanitizedData.teamName)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'Invalid team name format.',
+        },
+        { status: 400, headers: createRateLimitHeaders(rateLimit) }
+      );
+    }
+
     // Check idempotency
-    if (data.idempotencyKey) {
-      const cachedResponse = await checkIdempotency(data.idempotencyKey);
+    if (sanitizedData.idempotencyKey) {
+      const cachedResponse = await checkIdempotency(sanitizedData.idempotencyKey);
       if (cachedResponse) {
-        console.log(`[Register] Returning cached response for idempotency key: ${data.idempotencyKey}`);
+        console.log(`[Register] Returning cached response for idempotency key: ${sanitizedData.idempotencyKey}`);
         return NextResponse.json(cachedResponse);
       }
     }
@@ -218,23 +260,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify session user matches the leader email
-    if (session.user.email !== data.leaderEmail) {
+    // Verify session user matches the leader email (case-insensitive comparison)
+    const sessionEmail = session.user.email.toLowerCase().trim();
+    const leaderEmail = sanitizedData.leaderEmail.toLowerCase().trim();
+    
+    if (sessionEmail !== leaderEmail) {
       return NextResponse.json(
         {
           success: false,
           error: 'EMAIL_MISMATCH',
-          message: 'Session email does not match leader email.',
+          message: `Session email (${session.user.email}) does not match leader email (${sanitizedData.leaderEmail}). Please use the same email you verified with OTP.`,
         },
         { status: 403 }
       );
     }
 
-    // Verify OTP was verified for this email
+    // Verify OTP was verified for this email (use normalized email)
+    const normalizedLeaderEmail = sanitizedData.leaderEmail.toLowerCase().trim();
+    
     const otpRecord = await prisma.otp.findUnique({
       where: {
         email_purpose: {
-          email: data.leaderEmail,
+          email: normalizedLeaderEmail,
           purpose: 'REGISTRATION',
         },
       },
@@ -245,7 +292,7 @@ export async function POST(req: Request) {
         {
           success: false,
           error: 'EMAIL_NOT_VERIFIED',
-          message: 'Email not verified. Please verify OTP first.',
+          message: `Email not verified. Please verify OTP first. (Looking for: ${normalizedLeaderEmail})`,
         },
         { status: 403 }
       );
@@ -259,7 +306,7 @@ export async function POST(req: Request) {
       'BUILD_STORM': 'BUILD_STORM',
     };
 
-    const trackEnum = trackMap[data.track];
+    const trackEnum = trackMap[sanitizedData.track];
     if (!trackEnum) {
       return NextResponse.json(
         {
@@ -282,45 +329,45 @@ export async function POST(req: Request) {
       role: 'LEADER' | 'MEMBER';
     }> = [
       {
-        email: data.leaderEmail,
-        name: data.leaderName,
-        gender: data.leaderGender || '',
-        college: data.leaderCollege,
-        degree: data.leaderDegree,
-        phone: data.leaderMobile,
+        email: sanitizedData.leaderEmail,
+        name: sanitizedData.leaderName,
+        gender: sanitizedData.leaderGender || '',
+        college: sanitizedData.leaderCollege,
+        degree: sanitizedData.leaderDegree,
+        phone: sanitizedData.leaderMobile,
         role: 'LEADER' as const,
       },
     ];
 
-    if (data.member2Email && data.member2Name) {
+    if (sanitizedData.member2Email && sanitizedData.member2Name) {
       members.push({
-        email: data.member2Email,
-        name: data.member2Name,
-        gender: data.member2Gender || '',
-        college: data.member2College || data.leaderCollege,
-        degree: data.member2Degree || '',
+        email: sanitizedData.member2Email,
+        name: sanitizedData.member2Name,
+        gender: sanitizedData.member2Gender || '',
+        college: sanitizedData.member2College || sanitizedData.leaderCollege,
+        degree: sanitizedData.member2Degree || '',
         phone: '',
         role: 'MEMBER' as const,
       });
     }
-    if (data.member3Email && data.member3Name) {
+    if (sanitizedData.member3Email && sanitizedData.member3Name) {
       members.push({
-        email: data.member3Email,
-        name: data.member3Name,
-        gender: data.member3Gender || '',
-        college: data.member3College || data.leaderCollege,
-        degree: data.member3Degree || '',
+        email: sanitizedData.member3Email,
+        name: sanitizedData.member3Name,
+        gender: sanitizedData.member3Gender || '',
+        college: sanitizedData.member3College || sanitizedData.leaderCollege,
+        degree: sanitizedData.member3Degree || '',
         phone: '',
         role: 'MEMBER' as const,
       });
     }
-    if (data.member4Email && data.member4Name) {
+    if (sanitizedData.member4Email && sanitizedData.member4Name) {
       members.push({
-        email: data.member4Email,
-        name: data.member4Name,
-        gender: data.member4Gender || '',
-        college: data.member4College || data.leaderCollege,
-        degree: data.member4Degree || '',
+        email: sanitizedData.member4Email,
+        name: sanitizedData.member4Name,
+        gender: sanitizedData.member4Gender || '',
+        college: sanitizedData.member4College || sanitizedData.leaderCollege,
+        degree: sanitizedData.member4Degree || '',
         phone: '',
         role: 'MEMBER' as const,
       });
@@ -403,13 +450,13 @@ export async function POST(req: Request) {
       // 2. Create team
       const team = await tx.team.create({
         data: {
-          name: data.teamName,
+          name: sanitizedData.teamName,
           track: trackEnum,
           status: 'PENDING',
           size: members.length,
-          college: data.leaderCollege,
-          hearAbout: data.hearAbout,
-          additionalNotes: data.additionalNotes,
+          college: sanitizedData.leaderCollege,
+          hearAbout: sanitizedData.hearAbout,
+          additionalNotes: sanitizedData.additionalNotes,
           createdBy: userIds[0].userId, // Leader's user ID
         },
       });
@@ -426,153 +473,21 @@ export async function POST(req: Request) {
       }
 
       // 4. Create submission
-      // For BuildStorm: atomically assign problem statement and increment counter
-      let assignedProblemTitle: string | null = null;
-      let assignedProblemStatementId: string | null = null;
-
-      if (trackEnum === 'BUILD_STORM') {
-        const sessionId = data.idempotencyKey;
-
-        // Try to get the one they were assigned, or fallback to the current active one
-        let problemStatement = null;
-        
-        if (data.assignedProblemStatementId) {
-          problemStatement = await tx.problemStatement.findUnique({
-            where: { id: data.assignedProblemStatementId },
-          });
-        }
-
-        // If no assignment passed or inactive, get the CURRENT active one
-        if (!problemStatement || !problemStatement.isActive) {
-          problemStatement = await tx.problemStatement.findFirst({
-            where: { isCurrent: true, isActive: true },
-          });
-        }
-
-        // If still no problem statement => get the very first available one
-        if (!problemStatement || problemStatement.submissionCount >= problemStatement.maxSubmissions) {
-          problemStatement = await tx.problemStatement.findFirst({
-            where: {
-              isActive: true,
-              submissionCount: { lt: prisma.problemStatement.fields.maxSubmissions as any } // Not directly possible to query `lt: maxSubmissions` in early Prisma versions easily without RAW, so let's do a findMany loop
-            },
-            orderBy: { order: 'asc' },
-          });
-
-          // Accurate manual check since dynamic findFirst with field ref is tricky 
-          if (!problemStatement || problemStatement.submissionCount >= problemStatement.maxSubmissions) {
-            const allProblems = await tx.problemStatement.findMany({
-              where: { isActive: true },
-              orderBy: { order: 'asc' },
-            });
-            problemStatement = allProblems.find(p => p.submissionCount < p.maxSubmissions) || null;
-          }
-        }
-
-        // If ABSOLUTELY NO problem statements have capacity, check if we can EXPAND to 50
-        if (!problemStatement) {
-          const allActive = await tx.problemStatement.findMany({
-            where: { isActive: true },
-            orderBy: { order: 'asc' },
-          });
-          const canExpand = allActive.some(p => p.maxSubmissions < 50);
-
-          if (canExpand) {
-            await tx.problemStatement.updateMany({
-              where: { isActive: true },
-              data: { maxSubmissions: 50 },
-            });
-
-            const firstProblem = allActive[0];
-            if (firstProblem) {
-              await tx.problemStatement.updateMany({
-                where: { isActive: true },
-                data: { isCurrent: false },
-              });
-              problemStatement = await tx.problemStatement.update({
-                where: { id: firstProblem.id },
-                data: { isCurrent: true },
-              });
-            }
-          }
-        }
-
-        // If still no problem statements have capacity, ABORT registration
-
-        if (!problemStatement) {
-          throw new Error('BUILDSTORM_FULL:Registration for the BuildStorm track is full.');
-        }
-
-        // Atomically increment submission count
-        const updated = await tx.problemStatement.update({
-          where: { id: problemStatement.id },
-          data: { submissionCount: { increment: 1 } },
-        });
-
-        // DELETE the reservation since it's now a permanent submission
-        await tx.problemReservation.deleteMany({
-          where: { sessionId },
-        });
-
-        assignedProblemStatementId = problemStatement.id;
-        assignedProblemTitle = problemStatement.title;
-
-        // Check if this problem is now full (actual submissions + remaining active reservations)
-        // Since we just deleted ours, we check if total remaining is >= max
-        const activeReservationsCount = await tx.problemReservation.count({
-          where: { problemStatementId: problemStatement.id },
-        });
-
-        if ((updated.submissionCount + activeReservationsCount) >= updated.maxSubmissions) {
-          // Unmark as current
-          await tx.problemStatement.update({
-            where: { id: problemStatement.id },
-            data: { isCurrent: false },
-          });
-
-          // Find next available problem
-          const allNext = await tx.problemStatement.findMany({
-            where: {
-              isActive: true,
-              order: { gt: problemStatement.order },
-            },
-            orderBy: { order: 'asc' },
-          });
-
-          let nextProblem = null;
-          for (const p of allNext) {
-            const resCount = await tx.problemReservation.count({ where: { problemStatementId: p.id } });
-            if (p.submissionCount + resCount < p.maxSubmissions) {
-              nextProblem = p;
-              break;
-            }
-          }
-
-          if (nextProblem) {
-            await tx.problemStatement.update({
-              where: { id: nextProblem.id },
-              data: { isCurrent: true },
-            });
-          }
-          // If no next problem, all are filled — isCurrent stays false everywhere
-        }
-      }
-
       const submission = await tx.submission.create({
         data: {
           teamId: team.id,
           // IdeaSprint fields
-          ideaTitle: trackEnum === 'IDEA_SPRINT' ? data.ideaTitle : null,
-          problemStatement: trackEnum === 'IDEA_SPRINT' ? data.problemStatement : null,
-          proposedSolution: trackEnum === 'IDEA_SPRINT' ? data.proposedSolution : null,
-          targetUsers: trackEnum === 'IDEA_SPRINT' ? data.targetUsers : null,
-          expectedImpact: trackEnum === 'IDEA_SPRINT' ? data.expectedImpact : null,
-          techStack: trackEnum === 'IDEA_SPRINT' ? data.techStack : null,
+          ideaTitle: trackEnum === 'IDEA_SPRINT' ? sanitizedData.ideaTitle : null,
+          problemStatement: trackEnum === 'IDEA_SPRINT' ? sanitizedData.problemStatement : null,
+          proposedSolution: trackEnum === 'IDEA_SPRINT' ? sanitizedData.proposedSolution : null,
+          targetUsers: trackEnum === 'IDEA_SPRINT' ? sanitizedData.targetUsers : null,
+          expectedImpact: trackEnum === 'IDEA_SPRINT' ? sanitizedData.expectedImpact : null,
+          techStack: trackEnum === 'IDEA_SPRINT' ? sanitizedData.techStack : null,
+          docLink: trackEnum === 'IDEA_SPRINT' ? sanitizedData.docLink : null,
           // BuildStorm fields
-          problemDesc: trackEnum === 'BUILD_STORM' ? data.problemDesc : null,
-          githubLink: trackEnum === 'BUILD_STORM' ? data.githubLink : null,
-          // Assigned problem statement
-          assignedProblemStatementId: assignedProblemStatementId,
+          problemDesc: trackEnum === 'BUILD_STORM' ? sanitizedData.problemDesc : null,
+          githubLink: trackEnum === 'BUILD_STORM' ? sanitizedData.githubLink : null,
+          assignedProblemStatementId: trackEnum === 'BUILD_STORM' ? sanitizedData.assignedProblemStatementId : null,
         },
       });
 
@@ -584,7 +499,7 @@ export async function POST(req: Request) {
           entity: 'Team',
           entityId: team.id,
           metadata: {
-            teamName: data.teamName,
+            teamName: sanitizedData.teamName,
             track: trackEnum,
             memberCount: members.length,
           },
@@ -593,11 +508,30 @@ export async function POST(req: Request) {
         },
       });
 
+      // 5b. ✅ BuildStorm: Increment submissionCount and clean up reservation
+      if (trackEnum === 'BUILD_STORM' && sanitizedData.assignedProblemStatementId) {
+        await tx.problemStatement.update({
+          where: { id: sanitizedData.assignedProblemStatementId },
+          data: { submissionCount: { increment: 1 } },
+        });
+
+        // Clean up the reservation for this session (if any)
+        const sessionToken = (await cookies()).get('session_token')?.value;
+        if (sessionToken) {
+          await tx.problemReservation.deleteMany({
+            where: {
+              problemStatementId: sanitizedData.assignedProblemStatementId,
+              sessionId: sessionToken,
+            },
+          });
+        }
+      }
+
       // 6. ✅ SECURITY FIX: Delete OTP record after successful registration
       await tx.otp.delete({
         where: {
           email_purpose: {
-            email: data.leaderEmail,
+            email: sanitizedData.leaderEmail,
             purpose: 'REGISTRATION',
           },
         },
@@ -605,7 +539,38 @@ export async function POST(req: Request) {
         // Ignore if already deleted
       });
 
-      return { team, submission, assignedProblemTitle };
+      // 7. Track analytics: successful registration
+      await tx.metric.create({
+        data: {
+          name: 'registration_completed',
+          value: 1,
+          metadata: {
+            track: trackEnum,
+            teamSize: members.length,
+            college: sanitizedData.leaderCollege,
+            hasReservation: !!sanitizedData.assignedProblemStatementId,
+            problemStatementId: sanitizedData.assignedProblemStatementId,
+          },
+          timestamp: new Date(),
+        },
+      });
+
+      // 8. If BuildStorm with reservation, track conversion rate
+      if (trackEnum === 'BUILD_STORM' && sanitizedData.assignedProblemStatementId) {
+        await tx.metric.create({
+          data: {
+            name: 'reservation_to_registration_conversion',
+            value: 1,
+            metadata: {
+              problemStatementId: sanitizedData.assignedProblemStatementId,
+              sessionId: sessionToken,
+            },
+            timestamp: new Date(),
+          },
+        });
+      }
+
+      return { team, submission };
     }, {
       timeout: 15000, // 15 seconds timeout for complex registration
     });
@@ -618,13 +583,12 @@ export async function POST(req: Request) {
         submissionId: result.submission.id,
         teamName: result.team.name,
         track: result.team.track,
-        assignedProblemTitle: result.assignedProblemTitle,
       },
     };
 
     // Store idempotency response
-    if (data.idempotencyKey) {
-      await storeIdempotency(data.idempotencyKey, response);
+    if (sanitizedData.idempotencyKey) {
+      await storeIdempotency(sanitizedData.idempotencyKey, response);
     }
 
     // ✅ BATCH API: Send ALL registration emails in 1 Resend API call
@@ -637,29 +601,29 @@ export async function POST(req: Request) {
     after(async () => {
       try {
         const results = await sendRegistrationBatchEmails({
-          leaderEmail: data.leaderEmail,
+          leaderEmail: sanitizedData.leaderEmail,
           teamId: result.team.id,
           teamName: result.team.name,
           track: trackLabel,
           members: members.map(m => ({ name: m.name, email: m.email, role: m.role, college: m.college, degree: m.degree, phone: m.phone })),
-          leaderName: data.leaderName,
-          leaderMobile: data.leaderMobile,
-          leaderCollege: data.leaderCollege,
-          leaderDegree: data.leaderDegree,
+          leaderName: sanitizedData.leaderName,
+          leaderMobile: sanitizedData.leaderMobile,
+          leaderCollege: sanitizedData.leaderCollege,
+          leaderDegree: sanitizedData.leaderDegree,
           // IdeaSprint submission
-          ideaTitle: data.ideaTitle,
-          problemStatement: data.problemStatement,
-          proposedSolution: data.proposedSolution,
-          targetUsers: data.targetUsers,
-          expectedImpact: data.expectedImpact,
-          techStack: data.techStack,
-          docLink: data.docLink,
+          ideaTitle: sanitizedData.ideaTitle,
+          problemStatement: sanitizedData.problemStatement,
+          proposedSolution: sanitizedData.proposedSolution,
+          targetUsers: sanitizedData.targetUsers,
+          expectedImpact: sanitizedData.expectedImpact,
+          techStack: sanitizedData.techStack,
+          docLink: sanitizedData.docLink,
           // BuildStorm submission
-          problemDesc: data.problemDesc,
-          githubLink: data.githubLink,
+          problemDesc: sanitizedData.problemDesc,
+          githubLink: sanitizedData.githubLink,
           // Meta
-          hearAbout: data.hearAbout,
-          additionalNotes: data.additionalNotes,
+          hearAbout: sanitizedData.hearAbout,
+          additionalNotes: sanitizedData.additionalNotes,
         });
         const failed = results.filter(r => !r.success);
         if (failed.length > 0) {
@@ -686,18 +650,6 @@ export async function POST(req: Request) {
           {
             success: false,
             error: 'DUPLICATE_REGISTRATION',
-            message,
-          },
-          { status: 409 }
-        );
-      }
-
-      if (error.message.startsWith('BUILDSTORM_FULL:')) {
-        const message = error.message.split(':')[1];
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'BUILDSTORM_FULL',
             message,
           },
           { status: 409 }

@@ -3,82 +3,103 @@ import { z } from "zod";
 import { router, adminProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { sendStatusUpdateEmail } from "@/lib/email";
+import {
+  cacheGetOrSet,
+  CacheKeys,
+  invalidateDashboardCache,
+  invalidateTeamCache,
+} from "@/lib/redis-cache";
 
 export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
-  // DASHBOARD STATS
+  // DASHBOARD STATS (WITH CACHING)
   // ═══════════════════════════════════════════════════════════
   
   getStats: adminProcedure.query(async ({ ctx }) => {
-    const [
-      totalTeams,
-      pendingTeams,
-      approvedTeams,
-      rejectedTeams,
-      waitlistedTeams,
-      underReviewTeams,
-      totalUsers,
-      totalSubmissions,
-      newTeamsToday,
-      newTeamsThisWeek,
-    ] = await Promise.all([
-      ctx.prisma.team.count({ where: { deletedAt: null } }),
-      ctx.prisma.team.count({ where: { status: "PENDING", deletedAt: null } }),
-      ctx.prisma.team.count({ where: { status: "APPROVED", deletedAt: null } }),
-      ctx.prisma.team.count({ where: { status: "REJECTED", deletedAt: null } }),
-      ctx.prisma.team.count({ where: { status: "WAITLISTED", deletedAt: null } }),
-      ctx.prisma.team.count({ where: { status: "UNDER_REVIEW", deletedAt: null } }),
-      ctx.prisma.user.count({ where: { deletedAt: null } }),
-      ctx.prisma.submission.count(),
-      ctx.prisma.team.count({
-        where: {
-          createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-          deletedAt: null,
-        },
-      }),
-      ctx.prisma.team.count({
-        where: {
-          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-          deletedAt: null,
-        },
-      }),
-    ]);
+    // ⭐ PERMISSION CHECK: Judges cannot access dashboard stats
+    if (ctx.admin.role === 'JUDGE') {
+      throw new TRPCError({ 
+        code: "FORBIDDEN", 
+        message: "Judges do not have permission to view dashboard statistics" 
+      });
+    }
+    
+    // Cache dashboard stats for 5 minutes
+    return cacheGetOrSet(
+      CacheKeys.dashboardStats(),
+      async () => {
+        const [
+          totalTeams,
+          pendingTeams,
+          approvedTeams,
+          rejectedTeams,
+          waitlistedTeams,
+          underReviewTeams,
+          totalUsers,
+          totalSubmissions,
+          newTeamsToday,
+          newTeamsThisWeek,
+        ] = await Promise.all([
+          ctx.prisma.team.count({ where: { deletedAt: null } }),
+          ctx.prisma.team.count({ where: { status: "PENDING", deletedAt: null } }),
+          ctx.prisma.team.count({ where: { status: "APPROVED", deletedAt: null } }),
+          ctx.prisma.team.count({ where: { status: "REJECTED", deletedAt: null } }),
+          ctx.prisma.team.count({ where: { status: "WAITLISTED", deletedAt: null } }),
+          ctx.prisma.team.count({ where: { status: "UNDER_REVIEW", deletedAt: null } }),
+          ctx.prisma.user.count({ where: { deletedAt: null } }),
+          ctx.prisma.submission.count(),
+          ctx.prisma.team.count({
+            where: {
+              createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+              deletedAt: null,
+            },
+          }),
+          ctx.prisma.team.count({
+            where: {
+              createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+              deletedAt: null,
+            },
+          }),
+        ]);
 
-    // Calculate average review time
-    const reviewedTeams = await ctx.prisma.team.findMany({
-      where: {
-        reviewedAt: { not: null },
-        deletedAt: null,
+        // Calculate average review time
+        const reviewedTeams = await ctx.prisma.team.findMany({
+          where: {
+            reviewedAt: { not: null },
+            deletedAt: null,
+          },
+          select: {
+            createdAt: true,
+            reviewedAt: true,
+          },
+          take: 100,
+        });
+
+        const avgReviewTime = reviewedTeams.length > 0
+          ? reviewedTeams.reduce((acc: number, team: { createdAt: Date; reviewedAt: Date | null }) => {
+              const diff = team.reviewedAt!.getTime() - team.createdAt.getTime();
+              return acc + diff / (1000 * 60 * 60); // Convert to hours
+            }, 0) / reviewedTeams.length
+          : 0;
+
+        return {
+          totalTeams,
+          pendingTeams,
+          approvedTeams,
+          rejectedTeams,
+          waitlistedTeams,
+          underReviewTeams,
+          totalUsers,
+          totalSubmissions,
+          newTeamsToday,
+          newTeamsThisWeek,
+          approvalRate: totalTeams > 0 ? (approvedTeams / totalTeams) * 100 : 0,
+          rejectionRate: totalTeams > 0 ? (rejectedTeams / totalTeams) * 100 : 0,
+          avgReviewTime: Math.round(avgReviewTime * 10) / 10,
+        };
       },
-      select: {
-        createdAt: true,
-        reviewedAt: true,
-      },
-      take: 100,
-    });
-
-    const avgReviewTime = reviewedTeams.length > 0
-      ? reviewedTeams.reduce((acc: number, team: { createdAt: Date; reviewedAt: Date | null }) => {
-          const diff = team.reviewedAt!.getTime() - team.createdAt.getTime();
-          return acc + diff / (1000 * 60 * 60); // Convert to hours
-        }, 0) / reviewedTeams.length
-      : 0;
-
-    return {
-      totalTeams,
-      pendingTeams,
-      approvedTeams,
-      rejectedTeams,
-      waitlistedTeams,
-      underReviewTeams,
-      totalUsers,
-      totalSubmissions,
-      newTeamsToday,
-      newTeamsThisWeek,
-      approvalRate: totalTeams > 0 ? (approvedTeams / totalTeams) * 100 : 0,
-      rejectionRate: totalTeams > 0 ? (rejectedTeams / totalTeams) * 100 : 0,
-      avgReviewTime: Math.round(avgReviewTime * 10) / 10,
-    };
+      { ttl: 300 } // Cache for 5 minutes
+    );
   }),
 
   // ═══════════════════════════════════════════════════════════
@@ -242,6 +263,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot update team status
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to update team status" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const team = await ctx.prisma.team.update({
@@ -259,6 +288,12 @@ export const adminRouter = router({
           },
         },
       });
+
+      // ✅ INVALIDATE CACHES after mutation
+      await Promise.all([
+        invalidateDashboardCache(),
+        invalidateTeamCache(input.teamId),
+      ]);
 
       // Log activity (userId is null because admin IDs are in separate Admin table)
       await ctx.prisma.activityLog.create({
@@ -311,6 +346,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot bulk update team status
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to bulk update team status" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const result = await ctx.prisma.team.updateMany({
@@ -322,6 +365,12 @@ export const adminRouter = router({
           reviewedAt: new Date(),
         },
       });
+
+      // ✅ INVALIDATE CACHES after bulk mutation
+      await Promise.all([
+        invalidateDashboardCache(),
+        invalidateTeamCache(), // Invalidate all team caches
+      ]);
 
       // Log activity for each team
       await ctx.prisma.activityLog.createMany({
@@ -366,6 +415,14 @@ export const adminRouter = router({
   deleteTeam: adminProcedure
     .input(z.object({ teamId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot delete teams
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to delete teams" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       // Soft delete
@@ -373,6 +430,12 @@ export const adminRouter = router({
         where: { id: input.teamId },
         data: { deletedAt: new Date() },
       });
+
+      // ✅ INVALIDATE CACHES after deletion
+      await Promise.all([
+        invalidateDashboardCache(),
+        invalidateTeamCache(input.teamId),
+      ]);
 
       await ctx.prisma.activityLog.create({
         data: {
@@ -456,56 +519,70 @@ export const adminRouter = router({
     }),
 
   // ═══════════════════════════════════════════════════════════
-  // ANALYTICS
+  // ANALYTICS (WITH CACHING)
   // ═══════════════════════════════════════════════════════════
 
   getAnalytics: adminProcedure.query(async ({ ctx }) => {
-    // Registration trends (last 30 days)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    // ⭐ PERMISSION CHECK: Judges cannot access analytics
+    if (ctx.admin.role === 'JUDGE') {
+      throw new TRPCError({ 
+        code: "FORBIDDEN", 
+        message: "Judges do not have permission to view analytics" 
+      });
+    }
     
-    const registrationTrends = await ctx.prisma.$queryRaw<
-      Array<{ date: Date; count: bigint }>
-    >`
-      SELECT DATE("createdAt") as date, COUNT(*) as count
-      FROM teams
-      WHERE "createdAt" >= ${thirtyDaysAgo} AND "deletedAt" IS NULL
-      GROUP BY DATE("createdAt")
-      ORDER BY date
-    `;
+    return cacheGetOrSet(
+      CacheKeys.analyticsOverview(),
+      async () => {
+        // Registration trends (last 30 days)
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        
+        const registrationTrends = await ctx.prisma.$queryRaw<
+          Array<{ date: Date; count: bigint }>
+        >`
+          SELECT DATE("createdAt") as date, COUNT(*) as count
+          FROM teams
+          WHERE "createdAt" >= ${thirtyDaysAgo} AND "deletedAt" IS NULL
+          GROUP BY DATE("createdAt")
+          ORDER BY date
+        `;
 
-    // Top colleges
-    const collegeDistribution = await ctx.prisma.team.groupBy({
-      by: ["college"],
-      where: { deletedAt: null, college: { not: null } },
-      _count: true,
-      orderBy: { _count: { college: "desc" } },
-      take: 10,
-    });
+        // Top colleges
+        const collegeDistribution = await ctx.prisma.team.groupBy({
+          by: ["college"],
+          where: { deletedAt: null, college: { not: null } },
+          _count: true,
+          orderBy: { _count: { college: "desc" } },
+          take: 10,
+        });
 
-    // Track comparison
-    const trackComparison = await ctx.prisma.team.groupBy({
-      by: ["track", "status"],
-      where: { deletedAt: null },
-      _count: true,
-    });
+        // Track comparison
+        const trackComparison = await ctx.prisma.team.groupBy({
+          by: ["track", "status"],
+          where: { deletedAt: null },
+          _count: true,
+        });
 
-    // Team size distribution
-    const teamSizeDistribution = await ctx.prisma.team.groupBy({
-      by: ["size"],
-      where: { deletedAt: null },
-      _count: true,
-      orderBy: { size: "asc" },
-    });
+        // Team size distribution
+        const teamSizeDistribution = await ctx.prisma.team.groupBy({
+          by: ["size"],
+          where: { deletedAt: null },
+          _count: true,
+          orderBy: { size: "asc" },
+        });
 
-    return {
-      registrationTrends: registrationTrends.map((r: { date: Date; count: bigint }) => ({
-        date: r.date,
-        count: Number(r.count),
-      })),
-      collegeDistribution,
-      trackComparison,
-      teamSizeDistribution,
-    };
+        return {
+          registrationTrends: registrationTrends.map((r: { date: Date; count: bigint }) => ({
+            date: r.date,
+            count: Number(r.count),
+          })),
+          collegeDistribution,
+          trackComparison,
+          teamSizeDistribution,
+        };
+      },
+      { ttl: 600 } // Cache for 10 minutes
+    );
   }),
 
   // ═══════════════════════════════════════════════════════════
@@ -664,6 +741,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot export teams
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to export team data" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const where: Record<string, unknown> = {
@@ -692,12 +777,32 @@ export const adminRouter = router({
                   college: true,
                   degree: true,
                   year: true,
+                  branch: true,
                   role: true,
+                  github: true,
+                  linkedIn: true,
+                  portfolio: true,
                 },
               },
             },
           },
-          submission: true,
+          submission: {
+            select: {
+              id: true,
+              ideaTitle: true,
+              problemStatement: true,
+              proposedSolution: true,
+              targetUsers: true,
+              expectedImpact: true,
+              techStack: true,
+              docLink: true,
+              problemDesc: true,
+              githubLink: true,
+              demoLink: true,
+              techStackUsed: true,
+              submittedAt: true,
+            },
+          },
         },
       });
 

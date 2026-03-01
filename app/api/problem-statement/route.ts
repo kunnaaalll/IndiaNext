@@ -1,110 +1,236 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cacheGet, cacheSet, cacheDelete } from '@/lib/redis-cache';
+
+const CACHE_KEY = 'problem_statement:distribution';
+const CACHE_TTL = 10; // 10 seconds
 
 /**
  * GET /api/problem-statement
+ *
+ * Returns distribution statistics for all active problem statements.
  * 
- * Returns the currently active problem statement for the BuildStorm track.
- * 
- * Rotation logic:
- *   1. Find the problem marked as `isCurrent = true` and `isActive = true`
- *   2. If it has reached `maxSubmissions`, auto-rotate to the next by `order`
- *   3. If no problem is current, activate the first available one
- *   4. If all problems are exhausted, return `allFilled: true`
+ * Round-robin distribution:
+ * - Shows all available problems
+ * - Each user gets assigned to the problem with least load
+ * - Ensures even distribution across all problems
+ *
+ * Caching: Results are cached in Redis for 10 seconds to reduce DB load
  */
 export async function GET() {
   try {
-    // Step 1: Get the current problem statement
-    let current = await prisma.problemStatement.findFirst({
-      where: {
-        isCurrent: true,
-        isActive: true,
-      },
+    // Try to get from cache first
+    const cached = await cacheGet<string>(CACHE_KEY);
+    if (cached) {
+      console.log('[ProblemStatement] Cache hit');
+      return NextResponse.json(typeof cached === 'string' ? JSON.parse(cached) : cached);
+    }
+
+    console.log('[ProblemStatement] Cache miss, fetching from DB');
+
+    // Get all active problems with their load
+    const problems = await prisma.problemStatement.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' },
     });
 
-    // Step 2: If current is full, rotate to the next one
-    if (current && current.submissionCount >= current.maxSubmissions) {
-      // Unmark current
-      await prisma.problemStatement.update({
-        where: { id: current.id },
-        data: { isCurrent: false },
-      });
+    if (problems.length === 0) {
+      const response = {
+        success: true,
+        data: null,
+        message: 'No active problem statements available.',
+        allFilled: true,
+      };
 
-      // Find next available problem by order that still has capacity
-      const allAvailable = await prisma.problemStatement.findMany({
-        where: {
-          isActive: true,
-          order: { gt: current.order },
-        },
-        orderBy: { order: 'asc' },
-      });
-
-      const next = allAvailable.find((p: { submissionCount: number; maxSubmissions: number }) => p.submissionCount < p.maxSubmissions);
-
-      if (next) {
-        current = await prisma.problemStatement.update({
-          where: { id: next.id },
-          data: { isCurrent: true },
-        });
-      } else {
-        current = null; // All problems exhausted
-      }
+      await cacheSet(CACHE_KEY, JSON.stringify(response), { ttl: CACHE_TTL });
+      return NextResponse.json(response);
     }
 
-    // Step 3: If no current problem, try to activate the first available
-    if (!current) {
-      const allProblems = await prisma.problemStatement.findMany({
-        where: { isActive: true },
-        orderBy: { order: 'asc' },
-      });
-
-      const firstAvailable = allProblems.find((p: { submissionCount: number; maxSubmissions: number }) => p.submissionCount < p.maxSubmissions);
-
-      if (firstAvailable) {
-        // Reset all isCurrent flags first
-        await prisma.problemStatement.updateMany({
-          where: { isCurrent: true },
-          data: { isCurrent: false },
+    // Calculate load for each problem
+    const problemsWithLoad = await Promise.all(
+      problems.map(async (problem) => {
+        const activeReservations = await prisma.problemReservation.count({
+          where: { problemStatementId: problem.id },
         });
 
-        current = await prisma.problemStatement.update({
-          where: { id: firstAvailable.id },
-          data: { isCurrent: true },
-        });
-      }
-    }
+        const totalCommitted = problem.submissionCount + activeReservations;
+        const slotsRemaining = problem.maxSubmissions - totalCommitted;
+        const utilizationRate = ((totalCommitted / problem.maxSubmissions) * 100).toFixed(1);
 
-    // Step 4: No available problems
-    if (!current) {
-      return NextResponse.json({
+        return {
+          id: problem.id,
+          order: problem.order,
+          title: problem.title,
+          objective: problem.objective,
+          description: problem.description,
+          submissionCount: problem.submissionCount,
+          activeReservations,
+          totalCommitted,
+          maxSubmissions: problem.maxSubmissions,
+          slotsRemaining,
+          utilizationRate,
+          isCurrent: problem.isCurrent,
+        };
+      })
+    );
+
+    // Check if all problems are full
+    const allFull = problemsWithLoad.every(p => p.slotsRemaining <= 0);
+
+    if (allFull) {
+      const response = {
         success: true,
         data: null,
         message: 'All problem statements have been filled. Registration for BuildStorm is currently closed.',
         allFilled: true,
-      });
+      };
+
+      await cacheSet(CACHE_KEY, JSON.stringify(response), { ttl: CACHE_TTL });
+      await notifyAdminsAllFilled();
+
+      return NextResponse.json(response);
     }
 
-    return NextResponse.json({
+    // Find the problem with least load (for display purposes)
+    const leastLoadedProblem = problemsWithLoad
+      .filter(p => p.slotsRemaining > 0)
+      .reduce((min, current) => 
+        current.totalCommitted < min.totalCommitted ? current : min
+      );
+
+    const response = {
       success: true,
       data: {
-        id: current.id,
-        title: current.title,
-        objective: current.objective,
-        description: current.description,
-        slotsRemaining: current.maxSubmissions - current.submissionCount,
-        totalSlots: current.maxSubmissions,
+        distributionStrategy: 'round-robin',
+        problems: problemsWithLoad.map(p => ({
+          id: p.id,
+          order: p.order,
+          title: p.title,
+          objective: p.objective,
+          slotsRemaining: p.slotsRemaining,
+          totalSlots: p.maxSubmissions,
+          utilizationRate: p.utilizationRate,
+          isCurrent: p.isCurrent,
+        })),
+        nextAssignment: {
+          id: leastLoadedProblem.id,
+          order: leastLoadedProblem.order,
+          title: leastLoadedProblem.title,
+          objective: leastLoadedProblem.objective,
+        },
+        totalCapacity: problemsWithLoad.reduce((sum, p) => sum + p.maxSubmissions, 0),
+        totalUsed: problemsWithLoad.reduce((sum, p) => sum + p.totalCommitted, 0),
       },
       allFilled: false,
-    });
+    };
+
+    // Cache the response for 10 seconds
+    await cacheSet(CACHE_KEY, JSON.stringify(response), { ttl: CACHE_TTL });
+
+    // Check if any problem is almost full and notify admins
+    for (const problem of problemsWithLoad) {
+      const utilization = parseFloat(problem.utilizationRate);
+      if (utilization >= 90 && problem.slotsRemaining > 0) {
+        await notifyAdminsAlmostFull(problem, utilization);
+      }
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('[ProblemStatement] Error fetching current:', error);
+    console.error('[ProblemStatement] Error fetching distribution:', error);
     return NextResponse.json(
       {
         success: false,
         error: 'INTERNAL_ERROR',
-        message: 'Failed to fetch problem statement.',
+        message: 'Failed to fetch problem statements.',
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Notify admins when all problem slots are exhausted
+ */
+async function notifyAdminsAllFilled() {
+  try {
+    const admins = await prisma.admin.findMany({
+      where: { isActive: true },
+    });
+
+    for (const admin of admins) {
+      await prisma.notification.create({
+        data: {
+          userId: admin.id,
+          type: 'SYSTEM',
+          title: '🚨 All Problem Statements Filled',
+          message: 'All problem statement slots have been exhausted. BuildStorm registration is now closed.',
+          link: '/admin/problem-statements',
+        },
+      });
+    }
+
+    console.log(`[ProblemStatement] Notified ${admins.length} admins that all slots are filled`);
+  } catch (error) {
+    console.error('[ProblemStatement] Failed to notify admins about all filled:', error);
+  }
+}
+
+/**
+ * Notify admins when a problem is almost full (90%+)
+ */
+async function notifyAdminsAlmostFull(
+  problem: { id: string; title: string; submissionCount: number; maxSubmissions: number; order: number }, 
+  utilizationRate: number
+) {
+  try {
+    // Check if we already notified for this problem at 90%
+    const recentNotification = await prisma.notification.findFirst({
+      where: {
+        title: '⚠️ Problem Statement Almost Full',
+        message: {
+          contains: problem.title,
+        },
+        createdAt: {
+          gte: new Date(Date.now() - 60 * 60 * 1000), // Within last hour
+        },
+      },
+    });
+
+    if (recentNotification) {
+      return; // Already notified recently
+    }
+
+    const admins = await prisma.admin.findMany({
+      where: { isActive: true },
+    });
+
+    for (const admin of admins) {
+      await prisma.notification.create({
+        data: {
+          userId: admin.id,
+          type: 'SYSTEM',
+          title: '⚠️ Problem Statement Almost Full',
+          message: `Problem #${problem.order} "${problem.title}" is ${utilizationRate.toFixed(1)}% full (${problem.submissionCount}/${problem.maxSubmissions} slots used)`,
+          link: '/admin/problem-statements',
+        },
+      });
+    }
+
+    console.log(`[ProblemStatement] Notified ${admins.length} admins that Problem #${problem.order} is ${utilizationRate.toFixed(1)}% full`);
+  } catch (error) {
+    console.error('[ProblemStatement] Failed to notify admins about almost full:', error);
+  }
+}
+
+/**
+ * Helper function to invalidate cache (call this when problems are updated)
+ */
+export async function invalidateCache() {
+  try {
+    await cacheDelete(CACHE_KEY);
+    console.log('[ProblemStatement] Cache invalidated');
+  } catch (error) {
+    console.error('[ProblemStatement] Failed to invalidate cache:', error);
   }
 }

@@ -16,7 +16,7 @@ interface DevfolioButtonProps {
  */
 const DevfolioButton: React.FC<DevfolioButtonProps> = ({
   hackathonSlug = "indianext",
-  buttonTheme = "dark",
+  buttonTheme = "dark-inverted",
   width = 312,
   height = 44,
 }) => {

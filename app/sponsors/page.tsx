@@ -7,7 +7,6 @@ import {
   motion,
   useScroll,
   useSpring,
-  Variants,
 } from "framer-motion";
 import {
   Download,
@@ -23,24 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-
-// --- Animation Variants ---
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.2 },
-  },
-};
+import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 
 // --- Shared Navbar (same as main site) ---
 const NAV_LINKS = [

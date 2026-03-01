@@ -1,6 +1,7 @@
 // Analytics Page — Registration trends, track comparison, college stats
 "use client";
 
+import Link from "next/link";
 import { trpc } from "@/lib/trpc-client";
 import {
   AreaChart,
@@ -23,6 +24,7 @@ import {
   Users,
   Building2,
   PieChart as PieChartIcon,
+  Award,
 } from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -160,6 +162,30 @@ export default function AnalyticsPage() {
           />
         </div>
       )}
+
+      {/* Registration Trends — Full Width */}
+      {/* Scoring Analytics Quick Link */}
+      <Link
+        href="/admin/analytics/scoring"
+        className="block bg-[#0A0A0A] rounded-lg border border-amber-500/20 hover:border-amber-500/40 p-4 md:p-5 transition-all group"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex p-2 rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-400">
+              <Award className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-mono font-bold text-white group-hover:text-amber-400 transition-colors">
+                SCORING_ANALYTICS
+              </h3>
+              <p className="text-[10px] font-mono text-gray-500 tracking-[0.15em]">
+                MULTI-JUDGE SCORES // CRITERION COMPARISON // JUDGE CONSISTENCY // EXPORT CSV
+              </p>
+            </div>
+          </div>
+          <TrendingUp className="h-5 w-5 text-gray-600 group-hover:text-amber-400 transition-colors" />
+        </div>
+      </Link>
 
       {/* Registration Trends — Full Width */}
       <div className="bg-[#0A0A0A] rounded-lg border border-white/[0.06] p-4 md:p-6">

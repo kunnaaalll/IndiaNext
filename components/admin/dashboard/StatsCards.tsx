@@ -10,6 +10,7 @@ import {
   UserCheck,
   Timer,
 } from "lucide-react";
+import { AnimatedCard } from "@/components/animations";
 
 interface Stats {
   totalTeams: number;
@@ -113,7 +114,7 @@ export function StatsCards({ stats }: { stats: Stats }) {
             : value;
 
         return (
-          <div
+          <AnimatedCard
             key={card.key}
             className={`bg-[#0A0A0A] rounded-lg border ${card.border} p-5 ${card.glow} hover:bg-[#0D0D0D] transition-all group`}
           >
@@ -143,7 +144,7 @@ export function StatsCards({ stats }: { stats: Stats }) {
                 {stats.approvalRate.toFixed(1)}% approval rate
               </div>
             )}
-          </div>
+          </AnimatedCard>
         );
       })}
     </div>

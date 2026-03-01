@@ -88,16 +88,22 @@ export async function createContext(opts: FetchCreateContextFnOptions) {
 
 type Context = Awaited<ReturnType<typeof createContext>>;
 
-// Initialize tRPC
+// Initialize tRPC with enhanced error formatting
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
   errorFormatter({ shape, error }) {
+    // Enhanced error formatting with more details
     return {
       ...shape,
       data: {
         ...shape.data,
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
+        timestamp: new Date().toISOString(),
+        // Include stack trace in development
+        ...(process.env.NODE_ENV === 'development' && {
+          stack: error.stack,
+        }),
       },
     };
   },

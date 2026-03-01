@@ -3,9 +3,9 @@ import { prisma } from '../lib/prisma';
 
 /**
  * Seed script for Rotating Problem Statements (BuildStorm track)
- * 
+ *
  * Run: npx tsx prisma/seed-problems.ts
- * 
+ *
  * This creates 10 problem statements, each allowing 30 teams.
  * The first one is marked as `isCurrent = true` to kick off rotation.
  * Total capacity: 300 teams (10 problems × 30 submissions each).

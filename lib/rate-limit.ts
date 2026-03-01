@@ -63,6 +63,14 @@ export const RATE_LIMITS = {
   'register': {
     ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 :  5, window: 3600 }),
   },
+  /** Problem statement fetch — IP only (generous, read-only) */
+  'problem-statement': {
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 100 : 30, window: 60 }),
+  },
+  /** Problem reservation — IP only (tighter, creates resources) */
+  'reserve-problem': {
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 10, window: 60 }),
+  },
 } as const;
 
 // ─── In-memory store (sliding window) ──────────────────────────────────────────

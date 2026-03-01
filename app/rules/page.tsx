@@ -9,7 +9,6 @@ import {
   useScroll,
   useSpring,
   AnimatePresence,
-  Variants,
 } from "framer-motion";
 import {
   ArrowRight,
@@ -37,29 +36,12 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
+import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 
 // --- Theme Colors ---
 const CYAN = "#00CCFF";
 const ORANGE = "#FF6600";
 const GREEN = "#00FF55";
-
-// --- Animation Variants ---
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
-  },
-};
 
 // ─────────────────────────────────────────────────────────────
 // Page

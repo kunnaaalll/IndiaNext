@@ -1,0 +1,287 @@
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+// Validation schema
+const CreateProblemSchema = z.object({
+  title: z.string().min(5).max(200),
+  objective: z.string().min(10).max(500),
+  description: z.string().optional(),
+  maxSubmissions: z.number().int().min(1).max(100).default(30),
+  isActive: z.boolean().default(true),
+  order: z.number().int().min(1),
+});
+
+const UpdateProblemSchema = CreateProblemSchema.partial().extend({
+  id: z.string(),
+});
+
+// Verify admin authentication
+async function verifyAdmin(_req: Request) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin_token')?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  const session = await prisma.adminSession.findUnique({
+    where: { token },
+    include: { admin: true },
+  });
+
+  if (!session || session.expiresAt < new Date()) {
+    return null;
+  }
+
+  return session.admin;
+}
+
+/**
+ * GET /api/admin/problem-statements
+ * List all problem statements with stats
+ */
+export async function GET(req: Request) {
+  try {
+    const admin = await verifyAdmin(req);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const problems = await prisma.problemStatement.findMany({
+      orderBy: { order: 'asc' },
+      include: {
+        _count: {
+          select: {
+            submissions: true,
+            reservations: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: problems.map(p => ({
+        id: p.id,
+        order: p.order,
+        title: p.title,
+        objective: p.objective,
+        description: p.description,
+        submissionCount: p.submissionCount,
+        maxSubmissions: p.maxSubmissions,
+        activeReservations: p._count.reservations,
+        isActive: p.isActive,
+        isCurrent: p.isCurrent,
+        slotsRemaining: p.maxSubmissions - p.submissionCount,
+        utilizationRate: ((p.submissionCount / p.maxSubmissions) * 100).toFixed(1),
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error('[Admin] Error fetching problems:', error);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/problem-statements
+ * Create a new problem statement
+ */
+export async function POST(req: Request) {
+  try {
+    const admin = await verifyAdmin(req);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const validation = CreateProblemSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation error',
+        details: validation.error.errors,
+      }, { status: 400 });
+    }
+
+    const data = validation.data;
+
+    // Check if order already exists
+    const existing = await prisma.problemStatement.findFirst({
+      where: { order: data.order },
+    });
+
+    if (existing) {
+      return NextResponse.json({
+        success: false,
+        error: 'Order already exists',
+        message: `Problem statement with order ${data.order} already exists`,
+      }, { status: 409 });
+    }
+
+    const problem = await prisma.problemStatement.create({
+      data: {
+        title: data.title,
+        objective: data.objective,
+        description: data.description,
+        maxSubmissions: data.maxSubmissions,
+        isActive: data.isActive,
+        order: data.order,
+        isCurrent: false,
+      },
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: null, // Admin actions don't have userId
+        action: 'problem_statement.created',
+        entity: 'ProblemStatement',
+        entityId: problem.id,
+        metadata: { 
+          title: problem.title, 
+          order: problem.order,
+          adminId: admin.id,
+          adminEmail: admin.email,
+        },
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+        userAgent: req.headers.get('user-agent') || 'unknown',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: problem,
+      message: 'Problem statement created successfully',
+    });
+  } catch (error) {
+    console.error('[Admin] Error creating problem:', error);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/admin/problem-statements
+ * Update an existing problem statement
+ */
+export async function PATCH(req: Request) {
+  try {
+    const admin = await verifyAdmin(req);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const validation = UpdateProblemSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation error',
+        details: validation.error.errors,
+      }, { status: 400 });
+    }
+
+    const { id, ...data } = validation.data;
+
+    const problem = await prisma.problemStatement.update({
+      where: { id },
+      data,
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: null, // Admin actions don't have userId
+        action: 'problem_statement.updated',
+        entity: 'ProblemStatement',
+        entityId: problem.id,
+        metadata: { 
+          title: problem.title, 
+          changes: data,
+          adminId: admin.id,
+          adminEmail: admin.email,
+        },
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+        userAgent: req.headers.get('user-agent') || 'unknown',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: problem,
+      message: 'Problem statement updated successfully',
+    });
+  } catch (error) {
+    console.error('[Admin] Error updating problem:', error);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/admin/problem-statements
+ * Delete a problem statement (only if no submissions)
+ */
+export async function DELETE(req: Request) {
+  try {
+    const admin = await verifyAdmin(req);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Missing problem ID' }, { status: 400 });
+    }
+
+    const problem = await prisma.problemStatement.findUnique({
+      where: { id },
+      include: { _count: { select: { submissions: true } } },
+    });
+
+    if (!problem) {
+      return NextResponse.json({ success: false, error: 'Problem not found' }, { status: 404 });
+    }
+
+    if (problem._count.submissions > 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot delete',
+        message: 'Cannot delete problem statement with existing submissions',
+      }, { status: 409 });
+    }
+
+    await prisma.problemStatement.delete({ where: { id } });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        userId: null, // Admin actions don't have userId
+        action: 'problem_statement.deleted',
+        entity: 'ProblemStatement',
+        entityId: id,
+        metadata: { 
+          title: problem.title,
+          adminId: admin.id,
+          adminEmail: admin.email,
+        },
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+        userAgent: req.headers.get('user-agent') || 'unknown',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Problem statement deleted successfully',
+    });
+  } catch (error) {
+    console.error('[Admin] Error deleting problem:', error);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
+}

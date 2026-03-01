@@ -26,7 +26,7 @@ const MAX_ITEMS = 20; // Performance limit
 export const StaggerList: React.FC<StaggerListProps> = ({
   children,
   staggerDelay,
-  variant = 'fadeIn',
+  variant: _variant = 'fadeIn',
   className = '',
 }) => {
   const { config, reducedMotion } = useAnimationContext();

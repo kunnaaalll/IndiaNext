@@ -61,6 +61,7 @@ interface TeamsTableProps {
   onSelectionChange: (ids: string[]) => void;
   onPageChange: (page: number) => void;
   onSort: (field: string, order: string) => void;
+  judgeMode?: boolean;
 }
 
 const statusStyles: Record<string, string> = {

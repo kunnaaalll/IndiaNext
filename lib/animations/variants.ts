@@ -211,7 +211,7 @@ export const createVariant = (config: VariantConfig): Variants => {
  * Removes transforms and reduces duration
  */
 export const createReducedMotionVariant = (variant: Variants): Variants => {
-  const visible = variant.visible as any;
+  const _visible = variant.visible as any;
   
   return {
     hidden: { opacity: 0 },

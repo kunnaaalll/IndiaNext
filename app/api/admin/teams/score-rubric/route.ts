@@ -125,9 +125,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Calculate weighted total score
+    // Calculate weighted total score and build criterion map
     let totalWeightedScore = 0;
     const criteriaMap = new Map(criteria.map((c) => [c.criterionId, c]));
+    const criterionIdToDbId = new Map(criteria.map((c) => [c.criterionId, c.id]));
 
     for (const score of scores) {
       const criterion = criteriaMap.get(score.criterionId);
@@ -179,7 +180,7 @@ export async function POST(req: Request) {
           tx.criterionScore.create({
             data: {
               submissionId: team.submission!.id,
-              criterionId: score.criterionId,
+              criterionId: criterionIdToDbId.get(score.criterionId)!, // Use database ID, not criterionId field
               judgeId: admin.id,
               judgeName: admin.name,
               points: score.points,

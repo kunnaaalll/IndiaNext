@@ -4,11 +4,10 @@
  * Tests caching, input sanitization, and error handling
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { cacheGet, cacheSet, cacheDelete, cacheGetOrSet } from '@/lib/redis-cache';
 import {
   sanitizeHtml,
-  sanitizeText,
   sanitizeEmail,
   sanitizeUrl,
   sanitizeObject,
@@ -18,9 +17,7 @@ import {
 import {
   createErrorResponse,
   getStatusCode,
-  handleGenericError,
 } from '@/lib/error-handler';
-import { ZodError, z } from 'zod';
 
 describe('Redis Caching', () => {
   const testKey = 'test:key';

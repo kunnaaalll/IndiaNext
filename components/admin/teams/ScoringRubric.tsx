@@ -65,7 +65,7 @@ interface MultiJudgeData {
 
 interface ScoringRubricProps {
   teamId: string;
-  track: "IDEA_SPRINT" | "BUILD_STORM";
+  track: "IDEA_SPRINT" | "BUILD_STORM"; // kept for future track-specific UI
   criteria: ScoringCriterion[];
   existingScores?: CriterionScoreData[];
   multiJudge?: MultiJudgeData;
@@ -74,7 +74,7 @@ interface ScoringRubricProps {
 
 export function ScoringRubric({
   teamId,
-  track,
+  track: _track,
   criteria,
   existingScores = [],
   multiJudge,
@@ -317,6 +317,8 @@ export function ScoringRubric({
                   style={{
                     background: `linear-gradient(to right, rgb(251, 191, 36) 0%, rgb(251, 191, 36) ${percentage}%, rgba(255,255,255,0.05) ${percentage}%, rgba(255,255,255,0.05) 100%)`,
                   }}
+                  title={`Score for ${criterion.name}: 0 to ${criterion.maxPoints} points`}
+                  aria-label={`${criterion.name} score slider`}
                 />
                 <div className="flex justify-between mt-1">
                   {Array.from({ length: criterion.maxPoints + 1 }, (_, i) => (

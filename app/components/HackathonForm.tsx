@@ -582,7 +582,19 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { question: Question; value: string | string[] | undefined; onChange: (val: string) => void; onCheckbox: (opt: string) => void; answers: Answers }) => {
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail }: { 
+  question: Question; 
+  value: string | string[] | undefined; 
+  onChange: (val: string) => void; 
+  onCheckbox: (opt: string) => void; 
+  answers: Answers;
+  emailVerified?: boolean;
+  verifiedEmail?: string | null;
+  onResetVerification?: () => void;
+  showChangeEmailWarning?: boolean;
+  onChangeEmailClick?: () => void;
+  onCancelChangeEmail?: () => void;
+}) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -591,6 +603,92 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers }: { que
     }, 100);
     return () => clearTimeout(timer);
   }, [question]);
+
+  // Special handling for verified email field
+  if (question.id === 'leaderEmail' && emailVerified && verifiedEmail) {
+    return (
+      <div className="w-full space-y-4">
+        {/* Locked Email Display */}
+        <div className="flex items-center gap-4 border-2 border-green-500/30 bg-green-500/5 rounded p-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Check className="w-5 h-5 text-green-500" />
+              <span className="text-xs uppercase tracking-wider text-green-400 font-bold">Verified</span>
+            </div>
+            <div className="text-xl md:text-2xl font-mono text-green-400 tracking-wide">
+              {verifiedEmail}
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 font-mono">
+            ✓ AUTHENTICATED
+          </div>
+        </div>
+
+        {/* Warning Dialog */}
+        {showChangeEmailWarning ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-yellow-900/20 border-2 border-yellow-500/50 rounded p-6 space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="text-3xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-yellow-400 uppercase tracking-wider mb-2">
+                  Security Warning
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed mb-4">
+                  Changing your email address will <strong className="text-yellow-400">invalidate your current verification</strong>. 
+                  You will need to:
+                </p>
+                <ul className="text-slate-400 text-sm space-y-2 mb-4 list-disc list-inside">
+                  <li>Enter a new email address</li>
+                  <li>Receive a new OTP code</li>
+                  <li>Verify the new email before continuing</li>
+                </ul>
+                <div className="bg-slate-900/50 border border-slate-700 p-3 rounded text-xs text-slate-400 font-mono">
+                  <strong className="text-orange-400">Current verified email:</strong> {verifiedEmail}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={onResetVerification}
+                className="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 uppercase tracking-wider text-sm transition-all"
+              >
+                Yes, Change Email
+              </button>
+              <button
+                onClick={onCancelChangeEmail}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 px-4 uppercase tracking-wider text-sm transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            {/* Change Email Button */}
+            <button
+              onClick={onChangeEmailClick}
+              className="text-sm text-orange-500 hover:text-orange-400 font-mono uppercase tracking-wider border border-orange-500/30 hover:border-orange-500/50 px-4 py-2 transition-all flex items-center gap-2 group"
+            >
+              <span>⚠</span>
+              <span>Change Email</span>
+            </button>
+
+            {/* Info Box */}
+            <div className="bg-slate-800/50 border border-slate-700 p-3 text-xs text-slate-400 font-mono">
+              <div className="text-orange-400 font-bold mb-1">🔒 SECURITY NOTICE</div>
+              Your email has been verified and secured. Changing it will require re-verification.
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   if (question.type === 'choice') {
     return (
@@ -809,6 +907,8 @@ export default function HackathonForm() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otpValue, setOtpValue] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [showChangeEmailWarning, setShowChangeEmailWarning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -1104,6 +1204,7 @@ export default function HackathonForm() {
           }
           
           setEmailVerified(true);
+          setVerifiedEmail(answers.leaderEmail as string); // Store verified email
           setShowOtpInput(false);
           setTimeout(() => {
              const nextStep = getNextValidStep(currentStep, 1, answers);
@@ -1116,6 +1217,35 @@ export default function HackathonForm() {
           setLoading(false);
       }
   }, [otpValue, currentStep, answers, getNextValidStep]);
+
+  const resetVerification = React.useCallback(async () => {
+    // Clear verification state
+    setEmailVerified(false);
+    setVerifiedEmail(null);
+    setShowOtpInput(false);
+    setOtpValue("");
+    setErrorMsg("");
+    setShowChangeEmailWarning(false);
+    
+    // Clear the email answer to force re-entry
+    setAnswers((prev: Answers) => ({ ...prev, leaderEmail: '' }));
+    
+    // Invalidate session cookie by calling logout endpoint
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+      localStorage.removeItem('user_email');
+    } catch (err) {
+      console.error('Failed to invalidate session:', err);
+    }
+  }, []);
+
+  const handleChangeEmailClick = React.useCallback(() => {
+    setShowChangeEmailWarning(true);
+  }, []);
+
+  const handleCancelChangeEmail = React.useCallback(() => {
+    setShowChangeEmailWarning(false);
+  }, []);
 
   const handlePrev = () => {
     if (showOtpInput) { setShowOtpInput(false); return; }
@@ -1219,6 +1349,12 @@ export default function HackathonForm() {
                                     onChange={handleAnswer} 
                                     onCheckbox={handleCheckbox}
                                     answers={answers}
+                                    emailVerified={emailVerified}
+                                    verifiedEmail={verifiedEmail}
+                                    onResetVerification={resetVerification}
+                                    showChangeEmailWarning={showChangeEmailWarning}
+                                    onChangeEmailClick={handleChangeEmailClick}
+                                    onCancelChangeEmail={handleCancelChangeEmail}
                                />
                            </div>
                            

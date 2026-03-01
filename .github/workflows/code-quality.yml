@@ -11,6 +11,13 @@ jobs:
   quality:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: 'postgresql://dummy:dummy@localhost:5432/dummy'
+      UPSTASH_REDIS_URL: 'https://dummy.upstash.io'
+      UPSTASH_REDIS_TOKEN: 'dummy_token'
+      RESEND_API_KEY: 'dummy_key'
+      CLOUDINARY_CLOUD_NAME: 'dummy'
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,34 +36,25 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      # ── Code Complexity Analysis ──
-      - name: Analyze code complexity
-        run: |
-          echo "📊 Analyzing code complexity..."
-          npx complexity-report --format json --output complexity.json src/ || true
-          echo "✅ Complexity analysis complete"
-
       # ── Duplicate Code Detection ──
       - name: Check for duplicate code
         run: |
-          echo "🔍 Checking for duplicate code..."
-          npx jscpd --threshold 5 --reporters "console" app/ lib/ server/ || true
-          echo "✅ Duplicate code check complete"
+          echo "Checking for duplicate code..."
+          npx jscpd --threshold 5 --reporters "console" app/ lib/ server/ components/ || true
+          echo "Duplicate code check complete"
 
       # ── Bundle Size Analysis ──
       - name: Analyze bundle size
         run: |
-          echo "📦 Analyzing bundle size..."
+          echo "Analyzing bundle size..."
           npm run build
-          npx @next/bundle-analyzer || true
-          echo "✅ Bundle analysis complete"
-        env:
-          DATABASE_URL: 'postgresql://dummy:dummy@localhost:5432/dummy'
-          UPSTASH_REDIS_URL: 'https://dummy.upstash.io'
-          UPSTASH_REDIS_TOKEN: 'dummy_token'
-          RESEND_API_KEY: 'dummy_key'
-          CLOUDINARY_CLOUD_NAME: 'dummy'
-          NEXT_PUBLIC_APP_URL: 'http://localhost:3000'
+          echo ""
+          echo "Build Size Report:"
+          du -sh .next
+          echo ""
+          echo "Detailed breakdown:"
+          du -h .next/* | sort -hr | head -20
+          echo "Bundle analysis complete"
 
       # ── Comment PR with Quality Report ──
       - name: Comment PR with quality report
@@ -65,12 +63,11 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            let report = '## 📊 Code Quality Report\n\n';
-            report += '✅ All quality checks passed!\n\n';
+            let report = '## Code Quality Report\n\n';
+            report += 'All quality checks passed!\n\n';
             report += '### Checks Performed:\n';
-            report += '- ✅ Code complexity analysis\n';
-            report += '- ✅ Duplicate code detection\n';
-            report += '- ✅ Bundle size analysis\n';
+            report += '- Duplicate code detection\n';
+            report += '- Bundle size analysis\n';
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,

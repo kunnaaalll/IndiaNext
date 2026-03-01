@@ -69,6 +69,7 @@ const RegisterSchema = z.object({
   // BuildStorm Fields
   problemDesc: z.string().optional(),
   githubLink: z.string().url().optional().or(z.literal('')),
+  assignedProblemStatementId: z.string().optional(),
   
   // Meta
   hearAbout: z.string().optional(),
@@ -259,23 +260,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify session user matches the leader email
-    if (session.user.email !== sanitizedData.leaderEmail) {
+    // Verify session user matches the leader email (case-insensitive comparison)
+    const sessionEmail = session.user.email.toLowerCase().trim();
+    const leaderEmail = sanitizedData.leaderEmail.toLowerCase().trim();
+    
+    if (sessionEmail !== leaderEmail) {
       return NextResponse.json(
         {
           success: false,
           error: 'EMAIL_MISMATCH',
-          message: 'Session email does not match leader email.',
+          message: `Session email (${session.user.email}) does not match leader email (${sanitizedData.leaderEmail}). Please use the same email you verified with OTP.`,
         },
         { status: 403 }
       );
     }
 
-    // Verify OTP was verified for this email
+    // Verify OTP was verified for this email (use normalized email)
+    const normalizedLeaderEmail = sanitizedData.leaderEmail.toLowerCase().trim();
+    
     const otpRecord = await prisma.otp.findUnique({
       where: {
         email_purpose: {
-          email: sanitizedData.leaderEmail,
+          email: normalizedLeaderEmail,
           purpose: 'REGISTRATION',
         },
       },
@@ -286,7 +292,7 @@ export async function POST(req: Request) {
         {
           success: false,
           error: 'EMAIL_NOT_VERIFIED',
-          message: 'Email not verified. Please verify OTP first.',
+          message: `Email not verified. Please verify OTP first. (Looking for: ${normalizedLeaderEmail})`,
         },
         { status: 403 }
       );
@@ -477,9 +483,11 @@ export async function POST(req: Request) {
           targetUsers: trackEnum === 'IDEA_SPRINT' ? sanitizedData.targetUsers : null,
           expectedImpact: trackEnum === 'IDEA_SPRINT' ? sanitizedData.expectedImpact : null,
           techStack: trackEnum === 'IDEA_SPRINT' ? sanitizedData.techStack : null,
+          docLink: trackEnum === 'IDEA_SPRINT' ? sanitizedData.docLink : null,
           // BuildStorm fields
           problemDesc: trackEnum === 'BUILD_STORM' ? sanitizedData.problemDesc : null,
           githubLink: trackEnum === 'BUILD_STORM' ? sanitizedData.githubLink : null,
+          assignedProblemStatementId: trackEnum === 'BUILD_STORM' ? sanitizedData.assignedProblemStatementId : null,
         },
       });
 
@@ -500,6 +508,25 @@ export async function POST(req: Request) {
         },
       });
 
+      // 5b. ✅ BuildStorm: Increment submissionCount and clean up reservation
+      if (trackEnum === 'BUILD_STORM' && sanitizedData.assignedProblemStatementId) {
+        await tx.problemStatement.update({
+          where: { id: sanitizedData.assignedProblemStatementId },
+          data: { submissionCount: { increment: 1 } },
+        });
+
+        // Clean up the reservation for this session (if any)
+        const sessionToken = (await cookies()).get('session_token')?.value;
+        if (sessionToken) {
+          await tx.problemReservation.deleteMany({
+            where: {
+              problemStatementId: sanitizedData.assignedProblemStatementId,
+              sessionId: sessionToken,
+            },
+          });
+        }
+      }
+
       // 6. ✅ SECURITY FIX: Delete OTP record after successful registration
       await tx.otp.delete({
         where: {
@@ -511,6 +538,37 @@ export async function POST(req: Request) {
       }).catch(() => {
         // Ignore if already deleted
       });
+
+      // 7. Track analytics: successful registration
+      await tx.metric.create({
+        data: {
+          name: 'registration_completed',
+          value: 1,
+          metadata: {
+            track: trackEnum,
+            teamSize: members.length,
+            college: sanitizedData.leaderCollege,
+            hasReservation: !!sanitizedData.assignedProblemStatementId,
+            problemStatementId: sanitizedData.assignedProblemStatementId,
+          },
+          timestamp: new Date(),
+        },
+      });
+
+      // 8. If BuildStorm with reservation, track conversion rate
+      if (trackEnum === 'BUILD_STORM' && sanitizedData.assignedProblemStatementId) {
+        await tx.metric.create({
+          data: {
+            name: 'reservation_to_registration_conversion',
+            value: 1,
+            metadata: {
+              problemStatementId: sanitizedData.assignedProblemStatementId,
+              sessionId: sessionToken,
+            },
+            timestamp: new Date(),
+          },
+        });
+      }
 
       return { team, submission };
     }, {

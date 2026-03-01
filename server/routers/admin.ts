@@ -8,7 +8,6 @@ import {
   CacheKeys,
   invalidateDashboardCache,
   invalidateTeamCache,
-  invalidateAnalyticsCache,
 } from "@/lib/redis-cache";
 
 export const adminRouter = router({
@@ -17,6 +16,14 @@ export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
   
   getStats: adminProcedure.query(async ({ ctx }) => {
+    // ⭐ PERMISSION CHECK: Judges cannot access dashboard stats
+    if (ctx.admin.role === 'JUDGE') {
+      throw new TRPCError({ 
+        code: "FORBIDDEN", 
+        message: "Judges do not have permission to view dashboard statistics" 
+      });
+    }
+    
     // Cache dashboard stats for 5 minutes
     return cacheGetOrSet(
       CacheKeys.dashboardStats(),
@@ -256,6 +263,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot update team status
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to update team status" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const team = await ctx.prisma.team.update({
@@ -331,6 +346,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot bulk update team status
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to bulk update team status" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const result = await ctx.prisma.team.updateMany({
@@ -392,6 +415,14 @@ export const adminRouter = router({
   deleteTeam: adminProcedure
     .input(z.object({ teamId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot delete teams
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to delete teams" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       // Soft delete
@@ -492,6 +523,14 @@ export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
 
   getAnalytics: adminProcedure.query(async ({ ctx }) => {
+    // ⭐ PERMISSION CHECK: Judges cannot access analytics
+    if (ctx.admin.role === 'JUDGE') {
+      throw new TRPCError({ 
+        code: "FORBIDDEN", 
+        message: "Judges do not have permission to view analytics" 
+      });
+    }
+    
     return cacheGetOrSet(
       CacheKeys.analyticsOverview(),
       async () => {
@@ -702,6 +741,14 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // ⭐ PERMISSION CHECK: Judges cannot export teams
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ 
+          code: "FORBIDDEN", 
+          message: "Judges do not have permission to export team data" 
+        });
+      }
+      
       const adminId = ctx.admin.id;
       
       const where: Record<string, unknown> = {
@@ -730,12 +777,32 @@ export const adminRouter = router({
                   college: true,
                   degree: true,
                   year: true,
+                  branch: true,
                   role: true,
+                  github: true,
+                  linkedIn: true,
+                  portfolio: true,
                 },
               },
             },
           },
-          submission: true,
+          submission: {
+            select: {
+              id: true,
+              ideaTitle: true,
+              problemStatement: true,
+              proposedSolution: true,
+              targetUsers: true,
+              expectedImpact: true,
+              techStack: true,
+              docLink: true,
+              problemDesc: true,
+              githubLink: true,
+              demoLink: true,
+              techStackUsed: true,
+              submittedAt: true,
+            },
+          },
         },
       });
 

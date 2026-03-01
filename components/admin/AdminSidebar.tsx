@@ -11,8 +11,10 @@ import {
   ChevronRight,
   Terminal,
   X,
+  FileQuestion,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getAllowedNavItems, type AdminRole } from "@/lib/rbac";
 
 interface AdminUser {
   id: string;
@@ -20,12 +22,6 @@ interface AdminUser {
   email: string;
   role: string;
 }
-
-const navItems = [
-  { href: "/admin", label: "DASHBOARD", code: "01", icon: LayoutDashboard, exact: true },
-  { href: "/admin/teams", label: "TEAMS", code: "02", icon: Users },
-  { href: "/admin/analytics", label: "ANALYTICS", code: "03", icon: BarChart3 },
-];
 
 export function AdminSidebar({
   user,
@@ -39,6 +35,12 @@ export function AdminSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by deferring active-state rendering to client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -47,6 +49,7 @@ export function AdminSidebar({
   }, [pathname]);
 
   const isActive = (href: string, exact?: boolean) => {
+    if (!mounted) return false; // SSR-safe: no active state until hydrated
     if (exact) return pathname === href;
     return pathname.startsWith(href);
   };
@@ -67,6 +70,23 @@ export function AdminSidebar({
     ORGANIZER: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
     JUDGE: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   };
+
+  // Get navigation items based on role
+  const allowedNavItems = getAllowedNavItems(user.role as AdminRole);
+  
+  // Icon mapping
+  const iconMap: Record<string, typeof LayoutDashboard> = {
+    DASHBOARD: LayoutDashboard,
+    TEAMS: Users,
+    PROBLEMS: FileQuestion,
+    ANALYTICS: BarChart3,
+  };
+
+  const navItems = allowedNavItems.map(item => ({
+    ...item,
+    icon: iconMap[item.label] || Users,
+    exact: item.href === "/admin",
+  }));
 
   return (
     <>

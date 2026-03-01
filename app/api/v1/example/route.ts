@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withErrorHandler, createErrorResponse } from '@/lib/error-handler';
 import { sanitizeObject, containsXss } from '@/lib/input-sanitizer';
-import { cacheGetOrSet, CacheKeys } from '@/lib/redis-cache';
+import { cacheGetOrSet } from '@/lib/redis-cache';
 import { rateLimitByIP, createRateLimitHeaders } from '@/lib/rate-limit';
 import { getSessionToken, SESSION_CONFIGS } from '@/lib/session-security';
 import { prisma } from '@/lib/prisma';

@@ -197,18 +197,21 @@ model Submission {
   targetUsers      String?  @db.Text
   expectedImpact   String?  @db.Text
   techStack        String?  @db.Text
+  docLink          String?  // Document link for IdeaSprint
   marketSize       String?
   competitors      String?  @db.Text
   
   // BuildStorm fields
-  problemDesc      String?  @db.Text
-  githubLink       String?
-  demoLink         String?
-  techStackUsed    String?  @db.Text
-  challenges       String?  @db.Text
-  futureScope      String?  @db.Text
+  problemDesc                String?            @db.Text
+  githubLink                 String?
+  demoLink                   String?
+  techStackUsed              String?            @db.Text
+  challenges                 String?            @db.Text
+  futureScope                String?            @db.Text
+  assignedProblemStatementId String?
+  assignedProblemStatement   ProblemStatement?  @relation(fields: [assignedProblemStatementId], references: [id])
   
-  // Judging
+  // Judging (legacy single score - kept for backward compatibility)
   judgeScore       Float?
   judgeComments    String?  @db.Text
   
@@ -219,9 +222,11 @@ model Submission {
   updatedAt   DateTime @updatedAt
   
   // Relations
-  files File[]
+  files           File[]
+  criterionScores CriterionScore[]
 
   @@index([teamId])
+  @@index([assignedProblemStatementId])
   @@map("submissions")
 }
 
@@ -492,6 +497,54 @@ model AdminSession {
 }
 
 // ═══════════════════════════════════════════════════════════
+// PROBLEM STATEMENTS (BuildStorm Track)
+// ═══════════════════════════════════════════════════════════
+
+model ProblemStatement {
+  id              String   @id @default(cuid())
+  order           Int      @unique
+  title           String
+  objective       String
+  description     String?  @db.Text
+  
+  // Submission tracking
+  submissionCount Int      @default(0)
+  maxSubmissions  Int      @default(30)
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isCurrent       Boolean  @default(false)
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  submissions     Submission[]
+  reservations    ProblemReservation[]
+
+  @@index([isActive, isCurrent])
+  @@index([isCurrent])
+  @@index([order])
+  @@map("problem_statements")
+}
+
+model ProblemReservation {
+  id                 String           @id @default(cuid())
+  sessionId          String           @unique
+  problemStatementId String
+  expiresAt          DateTime
+  extensionCount     Int              @default(0)
+  createdAt          DateTime         @default(now())
+  
+  problemStatement   ProblemStatement @relation(fields: [problemStatementId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([problemStatementId])
+  @@map("problem_reservations")
+}
+
+// ═══════════════════════════════════════════════════════════
 // ENUMS
 // ═══════════════════════════════════════════════════════════
 
@@ -570,4 +623,55 @@ enum CampaignStatus {
   SENDING
   SENT
   FAILED
+}
+
+// ═══════════════════════════════════════════════════════════
+// CRITERIA-BASED SCORING RUBRIC SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+model ScoringCriterion {
+  id          String   @id @default(cuid())
+  track       Track    // IDEA_SPRINT or BUILD_STORM
+  criterionId String   // e.g., "innovation", "feasibility"
+  name        String   // Display name: "Innovation & Creativity"
+  description String   @db.Text
+  weight      Float    // Percentage weight (0-100)
+  maxPoints   Int      @default(10) // Max points for this criterion
+  order       Int      // Display order
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  scores      CriterionScore[]
+  
+  @@unique([track, criterionId])
+  @@index([track, isActive])
+  @@index([order])
+  @@map("scoring_criteria")
+}
+
+model CriterionScore {
+  id           String   @id @default(cuid())
+  submissionId String
+  criterionId  String   // References ScoringCriterion.id (not criterionId field)
+  judgeId      String   // Admin ID who scored
+  judgeName    String   // Cached for performance
+  
+  points       Float    // Points awarded (0 to maxPoints)
+  comments     String?  @db.Text
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  submission   Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  criterion    ScoringCriterion @relation(fields: [criterionId], references: [id])
+  
+  @@unique([submissionId, criterionId, judgeId])
+  @@index([submissionId])
+  @@index([criterionId])
+  @@index([judgeId])
+  @@map("criterion_scores")
 }

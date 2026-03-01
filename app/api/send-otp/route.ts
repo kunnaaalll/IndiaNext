@@ -32,7 +32,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, purpose, track } = validation.data;
+    const { email: rawEmail, purpose, track } = validation.data;
+    
+    // Normalize email to lowercase and trim
+    const email = rawEmail.toLowerCase().trim();
 
     // ✅ Sliding-window rate limiting (IP + Email)
     // Limits centralised in lib/rate-limit.ts → RATE_LIMITS['send-otp']
@@ -62,7 +65,7 @@ export async function POST(req: Request) {
     if (purpose === 'REGISTRATION') {
       const existingMembership = await prisma.teamMember.findFirst({
         where: {
-          user: { email: email.toLowerCase().trim() },
+          user: { email },
           team: { deletedAt: null },
         },
         include: {

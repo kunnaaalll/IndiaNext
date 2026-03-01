@@ -4,6 +4,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc-client";
+import { StatusOrScoring } from "@/components/admin/teams/StatusOrScoring";
 import {
   ArrowLeft,
   Users,
@@ -54,7 +55,7 @@ const trackLabels: Record<string, string> = {
   BUILD_STORM: "Build Storm",
 };
 
-const statusActions = [
+const _statusActions = [
   {
     status: "APPROVED",
     label: "Approve",
@@ -108,6 +109,11 @@ export default function TeamDetailPage({
   const [statusNote, setStatusNote] = useState("");
   const [commentText, setCommentText] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [userRole] = useState<string>(() => {
+    if (typeof document === 'undefined') return "ADMIN";
+    const roleElement = document.querySelector('[data-admin-role]');
+    return roleElement?.getAttribute('data-admin-role') || "ADMIN";
+  });
 
   const {
     data: team,
@@ -160,6 +166,21 @@ export default function TeamDetailPage({
     } catch {
       toast.error("Failed to update status");
     }
+  };
+
+  const handleScoreUpdate = async (score: number, comments: string) => {
+    const res = await fetch("/api/admin/teams/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamId: id, score, comments }),
+    });
+    
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.message || "Failed to submit score");
+    }
+    
+    refetch();
   };
 
   const handleAddComment = async () => {
@@ -333,44 +354,18 @@ export default function TeamDetailPage({
         </form>
       </div>
 
-      {/* ── Status Management ──────────────────────────── */}
-      <div className="bg-[#0A0A0A] rounded-lg border border-white/[0.06] p-5">
-        <h3 className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-[0.3em] mb-4">
-          UPDATE_STATUS
-        </h3>
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
-          <div className="w-full sm:flex-1 sm:min-w-[200px]">
-            <input
-              type="text"
-              value={statusNote}
-              onChange={(e) => setStatusNote(e.target.value)}
-              placeholder="Review notes (optional)..."
-              className="w-full px-3 py-2 text-xs font-mono bg-white/[0.02] border border-white/[0.06] rounded-md text-gray-300 placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50 focus:border-orange-500/30"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {statusActions.map((action) => (
-              <button
-                key={action.status}
-                onClick={() => handleStatusChange(action.status)}
-                disabled={
-                  updateStatus.isPending || team.status === action.status
-                }
-                className={`inline-flex items-center gap-1.5 px-3 py-2 text-[10px] font-mono font-bold tracking-wider rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed ${action.color}`}
-              >
-                <action.icon className="h-3.5 w-3.5" />
-                {action.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {team.reviewNotes && (
-          <div className="mt-3 text-xs font-mono text-gray-400 bg-white/[0.02] border border-white/[0.04] rounded-md p-3">
-            <span className="text-gray-500 font-bold">LAST_NOTE: </span>
-            {team.reviewNotes}
-          </div>
-        )}
-      </div>
+      {/* ── Status Management or Scoring ──────────────────────────── */}
+      <StatusOrScoring
+        userRole={userRole}
+        teamId={id}
+        teamStatus={team.status}
+        teamTrack={team.track}
+        currentScore={team.submission?.judgeScore || null}
+        currentComments={team.submission?.judgeComments || null}
+        reviewNotes={team.reviewNotes}
+        onStatusUpdate={handleStatusChange}
+        onScoreUpdate={handleScoreUpdate}
+      />
 
       {/* ── Additional Info ────────────────────────────── */}
       {(team.college || team.hearAbout || team.additionalNotes) && (
@@ -636,6 +631,7 @@ interface SubmissionData {
   targetUsers: string | null;
   expectedImpact: string | null;
   techStack: string | null;
+  docLink: string | null;
   marketSize: string | null;
   competitors: string | null;
   problemDesc: string | null;
@@ -723,6 +719,22 @@ function SubmissionTab({
               )
           )}
         </div>
+
+        {/* Links for IdeaSprint */}
+        {track === "IDEA_SPRINT" && submission.docLink && (
+          <div className="flex gap-3 mt-4 pt-4 border-t border-white/[0.06]">
+            <a
+              href={submission.docLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-bold tracking-wider text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 rounded-md hover:bg-cyan-500/15 transition-all"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              SUPPORTING DOCUMENTS
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          </div>
+        )}
 
         {/* Links for BuildStorm */}
         {track === "BUILD_STORM" &&

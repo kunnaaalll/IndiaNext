@@ -85,7 +85,7 @@ export const useFormAnimation = () => {
     });
   };
 
-  const showError = async (message: string) => {
+  const showError = async (_message: string) => {
     await shake();
   };
 

@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion, type HTMLMotionProps as _HTMLMotionProps } from 'framer-motion';
 import { useAnimationContext } from '@/lib/animations/context/AnimationProvider';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';

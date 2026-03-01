@@ -14,7 +14,6 @@ import {
   CacheKeys,
   invalidateDashboardCache,
   invalidateTeamCache,
-  invalidateAnalyticsCache,
 } from "@/lib/redis-cache";
 
 export const adminRouterCached = router({

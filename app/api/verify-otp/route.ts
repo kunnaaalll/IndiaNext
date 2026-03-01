@@ -55,7 +55,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, otp, purpose } = validation.data;
+    const { email: rawEmail, otp, purpose } = validation.data;
+    
+    // Normalize email to lowercase and trim for consistent lookups
+    const email = rawEmail.toLowerCase().trim();
 
     // Hash the provided OTP to compare with stored hash
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');

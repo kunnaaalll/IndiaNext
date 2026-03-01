@@ -77,13 +77,14 @@ export async function GET(req: Request) {
     const problemStats: Record<string, any> = {};
 
     for (const metric of reservationMetrics) {
-      const problemId = metric.metadata?.problemStatementId as string;
+      const meta = metric.metadata as Record<string, any> | null;
+      const problemId = meta?.problemStatementId as string;
       if (!problemId) continue;
 
       if (!problemStats[problemId]) {
         problemStats[problemId] = {
           problemId,
-          problemTitle: metric.metadata?.problemTitle || 'Unknown',
+          problemTitle: meta?.problemTitle || 'Unknown',
           reservations: 0,
           conversions: 0,
           conversionRate: '0.00',
@@ -93,7 +94,8 @@ export async function GET(req: Request) {
     }
 
     for (const metric of conversionMetrics) {
-      const problemId = metric.metadata?.problemStatementId as string;
+      const meta = metric.metadata as Record<string, any> | null;
+      const problemId = meta?.problemStatementId as string;
       if (!problemId || !problemStats[problemId]) continue;
 
       problemStats[problemId].conversions++;
@@ -144,7 +146,7 @@ export async function GET(req: Request) {
 
     reservationMetrics.forEach(m => addToDaily(m.timestamp, 'reservations'));
     conversionMetrics.forEach(m => addToDaily(m.timestamp, 'conversions'));
-    registrationMetrics.filter(m => m.metadata?.track === 'BUILD_STORM').forEach(m => addToDaily(m.timestamp, 'registrations'));
+    registrationMetrics.filter(m => (m.metadata as Record<string, any> | null)?.track === 'BUILD_STORM').forEach(m => addToDaily(m.timestamp, 'registrations'));
 
     return NextResponse.json({
       success: true,

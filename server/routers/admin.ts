@@ -46,7 +46,13 @@ export const adminRouter = router({
           ctx.prisma.team.count({ where: { status: "REJECTED", deletedAt: null } }),
           ctx.prisma.team.count({ where: { status: "WAITLISTED", deletedAt: null } }),
           ctx.prisma.team.count({ where: { status: "UNDER_REVIEW", deletedAt: null } }),
-          ctx.prisma.user.count({ where: { deletedAt: null } }),
+          ctx.prisma.teamMember.count({
+            where: {
+              leftAt: null,
+              user: { deletedAt: null },
+              team: { deletedAt: null },
+            },
+          }),
           ctx.prisma.submission.count(),
           ctx.prisma.team.count({
             where: {

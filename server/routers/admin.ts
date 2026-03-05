@@ -349,7 +349,8 @@ export const adminRouter = router({
           leader.user.email,
           team.name,
           input.status,
-          input.reviewNotes || input.rejectionReason
+          input.reviewNotes || input.rejectionReason,
+          team.shortCode ?? undefined
         ).catch((err) => {
           console.error(`[EMAIL] Failed to send status update email to ${leader.user.email}:`, err);
         });
@@ -409,6 +410,7 @@ export const adminRouter = router({
         where: { id: { in: input.teamIds } },
         select: {
           name: true,
+          shortCode: true,
           members: {
             where: { role: 'LEADER' },
             select: { user: { select: { email: true } } },
@@ -423,7 +425,8 @@ export const adminRouter = router({
             leaderEmail,
             t.name,
             input.status,
-            input.reviewNotes
+            input.reviewNotes,
+            t.shortCode ?? undefined
           ).catch((err) => {
             console.error(`[EMAIL] Failed to send bulk status email to ${leaderEmail}:`, err);
           });

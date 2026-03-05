@@ -12,15 +12,14 @@ interface QRScannerModalProps {
   onResult: (teamId: string) => void;
 }
 
-type PermissionState = "prompt" | "granted" | "denied" | "checking" | "unsupported";
+type CameraState = "idle" | "requesting" | "active" | "denied" | "unsupported" | "error";
 
 export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
   const [mode, setMode] = useState<"camera" | "manual">("manual");
   const [shortCode, setShortCode] = useState("");
+  const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [cameraError, setCameraError] = useState("");
   const [scanning, setScanning] = useState(false);
-  const [permissionState, setPermissionState] = useState<PermissionState>("checking");
-  const [retryCount, setRetryCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -46,67 +45,52 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     [utils, onResult]
   );
 
-  // Check camera permission state
+  // Stop camera tracks on cleanup or mode change
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
+  // Cleanup on unmount
   useEffect(() => {
-    if (mode !== "camera") return;
+    return () => stopCamera();
+  }, [stopCamera]);
 
-    let cancelled = false;
+  // Cleanup when switching away from camera mode
+  useEffect(() => {
+    if (mode !== "camera") {
+      stopCamera();
+    }
+  }, [mode, stopCamera]);
 
-    async function checkPermission() {
-      // Check if mediaDevices is available (requires HTTPS or localhost)
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        if (!cancelled) {
-          setPermissionState("unsupported");
-          setCameraError("Camera API not available. Make sure you're using HTTPS.");
-        }
-        return;
-      }
-
-      try {
-        // Use Permissions API to check current state without triggering prompt
-        const result = await navigator.permissions.query({ name: "camera" as PermissionName });
-        if (!cancelled) {
-          setPermissionState(result.state as PermissionState);
-        }
-
-        // Listen for permission changes (e.g., user changes in browser settings)
-        result.addEventListener("change", () => {
-          if (!cancelled) {
-            setPermissionState(result.state as PermissionState);
-            if (result.state === "granted") {
-              // Auto-retry when permission is granted
-              setRetryCount((c) => c + 1);
-            }
-          }
-        });
-      } catch {
-        // Permissions API not supported — we'll just try getUserMedia directly
-        if (!cancelled) {
-          setPermissionState("prompt");
-        }
-      }
+  /**
+   * Request camera — MUST be called from a direct user click handler.
+   * This triggers the browser's native "Allow / Block" permission popup.
+   */
+  const startCamera = useCallback(async () => {
+    // Check if mediaDevices API is available (requires HTTPS or localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraState("unsupported");
+      setCameraError("Camera API not available. Make sure you're using HTTPS.");
+      return;
     }
 
-    checkPermission();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [mode]);
-
-  // Request camera access
-  const requestCameraAccess = useCallback(async () => {
+    setCameraState("requesting");
     setCameraError("");
-    setPermissionState("checking");
 
     try {
+      // This is the call that triggers the browser's system permission popup
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
       });
 
-      // Permission was granted
-      setPermissionState("granted");
+      // User clicked "Allow" — start video feed
       streamRef.current = stream;
+      setCameraState("active");
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -114,71 +98,76 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
       }
     } catch (err) {
       if (err instanceof DOMException) {
-        if (err.name === "NotAllowedError") {
-          setPermissionState("denied");
-          setCameraError("Camera permission was denied.");
-        } else if (err.name === "NotFoundError") {
-          setPermissionState("unsupported");
-          setCameraError("No camera found on this device.");
-        } else if (err.name === "NotReadableError") {
-          setPermissionState("unsupported");
-          setCameraError("Camera is in use by another application.");
-        } else {
-          setCameraError("Camera not available: " + err.message);
+        switch (err.name) {
+          case "NotAllowedError":
+            setCameraState("denied");
+            setCameraError("Camera permission was denied. Please allow camera access to scan QR codes.");
+            break;
+
+          case "NotFoundError":
+            setCameraState("unsupported");
+            setCameraError("No camera found on this device.");
+            break;
+
+          case "NotReadableError":
+            setCameraState("error");
+            setCameraError("Camera is in use by another application. Close other apps using the camera and try again.");
+            break;
+
+          case "OverconstrainedError":
+            // Retry with basic video constraint (no facingMode)
+            try {
+              const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
+              streamRef.current = fallbackStream;
+              setCameraState("active");
+              if (videoRef.current) {
+                videoRef.current.srcObject = fallbackStream;
+                await videoRef.current.play();
+                setScanning(true);
+              }
+            } catch {
+              setCameraState("error");
+              setCameraError("Camera not available: " + err.message);
+            }
+            break;
+
+          default:
+            setCameraState("error");
+            setCameraError("Camera not available: " + err.message);
         }
       } else {
+        setCameraState("error");
         setCameraError("Could not access camera. Use manual entry.");
       }
     }
   }, []);
 
-  // Start camera when permission is already granted or on retry
-  useEffect(() => {
-    if (mode !== "camera") return;
-    if (permissionState !== "granted") return;
+  /**
+   * Handle "SCAN QR" tab click — directly triggers getUserMedia from click event.
+   * This is critical: browsers require getUserMedia to originate from a user gesture.
+   */
+  const handleScanQRClick = useCallback(async () => {
+    setMode("camera");
 
-    let active = true;
-
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
-        });
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-          setScanning(true);
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "NotAllowedError") {
-          setPermissionState("denied");
-          setCameraError("Camera permission was denied.");
-        } else {
-          setCameraError("Camera not available. Use manual entry.");
-        }
+    // Check if permission is already granted (avoids re-prompting)
+    try {
+      const permResult = await navigator.permissions.query({ name: "camera" as PermissionName });
+      if (permResult.state === "granted") {
+        // Already have permission — start camera directly
+        await startCamera();
+        return;
       }
+    } catch {
+      // Permissions API not supported, proceed with getUserMedia
     }
 
-    startCamera();
-
-    return () => {
-      active = false;
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
-      setScanning(false);
-    };
-  }, [mode, permissionState, retryCount]);
+    // Call getUserMedia directly from this click handler
+    await startCamera();
+  }, [startCamera]);
 
   // Simple barcode detection using BarcodeDetector API if available
   useEffect(() => {
-    if (!scanning || mode !== "camera") return;
+    if (!scanning || cameraState !== "active") return;
 
     let active = true;
 
@@ -232,7 +221,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     return () => {
       active = false;
     };
-  }, [scanning, mode, handleLookup]);
+  }, [scanning, cameraState, handleLookup]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -263,10 +252,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
             MANUAL ENTRY
           </button>
           <button
-            onClick={() => {
-              setCameraError("");
-              setMode("camera");
-            }}
+            onClick={handleScanQRClick}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[10px] font-mono font-bold tracking-wider transition-all ${
               mode === "camera"
                 ? "text-emerald-400 border-b-2 border-emerald-400 bg-emerald-500/5"
@@ -311,19 +297,9 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Permission: checking */}
-              {permissionState === "checking" && (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
-                  <p className="text-[10px] font-mono text-gray-400 tracking-wider">
-                    CHECKING CAMERA ACCESS...
-                  </p>
-                </div>
-              )}
-
-              {/* Permission: prompt — ask user to allow */}
-              {permissionState === "prompt" && (
-                <div className="flex flex-col items-center gap-4 py-6">
+              {/* State: idle — waiting for user to click */}
+              {cameraState === "idle" && (
+                <div className="flex flex-col items-center gap-4 py-8">
                   <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
                     <Camera className="h-8 w-8 text-emerald-400" />
                   </div>
@@ -332,16 +308,15 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                       CAMERA ACCESS REQUIRED
                     </p>
                     <p className="text-[10px] font-mono text-gray-400 max-w-[260px] leading-relaxed">
-                      We need camera access to scan QR codes for team check-in. 
-                      Tap the button below and allow when your browser asks.
+                      Tap the button below to enable your camera for QR code scanning.
                     </p>
                   </div>
                   <button
-                    onClick={requestCameraAccess}
+                    onClick={startCamera}
                     className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-mono font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-all tracking-wider"
                   >
                     <Camera className="h-3.5 w-3.5" />
-                    ALLOW CAMERA ACCESS
+                    ENABLE CAMERA
                   </button>
                   <button
                     onClick={() => setMode("manual")}
@@ -352,8 +327,33 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                 </div>
               )}
 
-              {/* Permission: denied — show instructions to enable */}
-              {permissionState === "denied" && (
+              {/* State: requesting — browser permission dialog is showing */}
+              {cameraState === "requesting" && (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Camera className="h-8 w-8 text-emerald-400 animate-pulse" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-xs font-mono font-bold text-white tracking-wider">
+                      ALLOW CAMERA ACCESS
+                    </p>
+                    <p className="text-[10px] font-mono text-gray-400 max-w-[280px] leading-relaxed">
+                      Your browser is asking for camera permission.
+                      Please tap <span className="text-emerald-400 font-bold">&quot;Allow&quot;</span> in the popup to enable QR scanning.
+                    </p>
+                  </div>
+                  <Loader2 className="h-5 w-5 text-emerald-400/60 animate-spin" />
+                  <button
+                    onClick={() => setMode("manual")}
+                    className="text-[10px] font-mono text-gray-500 hover:text-gray-300 tracking-wider mt-2"
+                  >
+                    USE MANUAL ENTRY INSTEAD →
+                  </button>
+                </div>
+              )}
+
+              {/* State: denied — user blocked camera */}
+              {cameraState === "denied" && (
                 <div className="flex flex-col items-center gap-4 py-6">
                   <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
                     <ShieldAlert className="h-8 w-8 text-red-400" />
@@ -387,11 +387,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        setCameraError("");
-                        setPermissionState("prompt");
-                        setRetryCount((c) => c + 1);
-                      }}
+                      onClick={startCamera}
                       className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-mono font-bold text-emerald-400 border border-emerald-400/30 hover:bg-emerald-500/10 rounded-lg transition-all tracking-wider"
                     >
                       <RefreshCw className="h-3 w-3" />
@@ -408,8 +404,8 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                 </div>
               )}
 
-              {/* Permission: unsupported — no camera / no HTTPS */}
-              {permissionState === "unsupported" && (
+              {/* State: unsupported — no camera / no HTTPS */}
+              {cameraState === "unsupported" && (
                 <div className="flex flex-col items-center gap-3 py-8">
                   <CameraOff className="h-8 w-8 text-amber-400" />
                   <p className="text-[10px] font-mono text-amber-400 text-center max-w-[250px]">
@@ -424,8 +420,34 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                 </div>
               )}
 
-              {/* Permission: granted — show camera feed */}
-              {permissionState === "granted" && !cameraError && (
+              {/* State: error — camera available but something went wrong */}
+              {cameraState === "error" && (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <CameraOff className="h-8 w-8 text-red-400" />
+                  <p className="text-[10px] font-mono text-red-400 text-center max-w-[250px]">
+                    {cameraError}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={startCamera}
+                      className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 tracking-wider"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      RETRY
+                    </button>
+                    <span className="text-gray-600">|</span>
+                    <button
+                      onClick={() => setMode("manual")}
+                      className="text-[10px] font-mono text-gray-400 hover:text-gray-300 tracking-wider"
+                    >
+                      MANUAL ENTRY →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* State: active — camera feed running */}
+              {cameraState === "active" && (
                 <>
                   <div className="relative rounded overflow-hidden bg-black aspect-video">
                     <video
@@ -457,35 +479,6 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                     Point camera at team&apos;s QR code
                   </p>
                 </>
-              )}
-
-              {/* Permission granted but camera has error */}
-              {permissionState === "granted" && cameraError && (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <CameraOff className="h-8 w-8 text-red-400" />
-                  <p className="text-[10px] font-mono text-red-400 text-center max-w-[250px]">
-                    {cameraError}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setCameraError("");
-                        setRetryCount((c) => c + 1);
-                      }}
-                      className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 tracking-wider"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                      RETRY
-                    </button>
-                    <span className="text-gray-600">|</span>
-                    <button
-                      onClick={() => setMode("manual")}
-                      className="text-[10px] font-mono text-gray-400 hover:text-gray-300 tracking-wider"
-                    >
-                      MANUAL ENTRY →
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
           )}

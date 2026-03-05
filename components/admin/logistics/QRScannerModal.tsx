@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc-client";
-import { X, Camera, CameraOff, Keyboard, Search, Loader2 } from "lucide-react";
+import { X, Camera, CameraOff, Keyboard, Search, Loader2, ShieldAlert, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 interface QRScannerModalProps {
@@ -12,11 +12,15 @@ interface QRScannerModalProps {
   onResult: (teamId: string) => void;
 }
 
+type PermissionState = "prompt" | "granted" | "denied" | "checking" | "unsupported";
+
 export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
   const [mode, setMode] = useState<"camera" | "manual">("manual");
   const [shortCode, setShortCode] = useState("");
   const [cameraError, setCameraError] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [permissionState, setPermissionState] = useState<PermissionState>("checking");
+  const [retryCount, setRetryCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -42,9 +46,96 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     [utils, onResult]
   );
 
-  // Start camera
+  // Check camera permission state
   useEffect(() => {
     if (mode !== "camera") return;
+
+    let cancelled = false;
+
+    async function checkPermission() {
+      // Check if mediaDevices is available (requires HTTPS or localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (!cancelled) {
+          setPermissionState("unsupported");
+          setCameraError("Camera API not available. Make sure you're using HTTPS.");
+        }
+        return;
+      }
+
+      try {
+        // Use Permissions API to check current state without triggering prompt
+        const result = await navigator.permissions.query({ name: "camera" as PermissionName });
+        if (!cancelled) {
+          setPermissionState(result.state as PermissionState);
+        }
+
+        // Listen for permission changes (e.g., user changes in browser settings)
+        result.addEventListener("change", () => {
+          if (!cancelled) {
+            setPermissionState(result.state as PermissionState);
+            if (result.state === "granted") {
+              // Auto-retry when permission is granted
+              setRetryCount((c) => c + 1);
+            }
+          }
+        });
+      } catch {
+        // Permissions API not supported — we'll just try getUserMedia directly
+        if (!cancelled) {
+          setPermissionState("prompt");
+        }
+      }
+    }
+
+    checkPermission();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  // Request camera access
+  const requestCameraAccess = useCallback(async () => {
+    setCameraError("");
+    setPermissionState("checking");
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+
+      // Permission was granted
+      setPermissionState("granted");
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setScanning(true);
+      }
+    } catch (err) {
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError") {
+          setPermissionState("denied");
+          setCameraError("Camera permission was denied.");
+        } else if (err.name === "NotFoundError") {
+          setPermissionState("unsupported");
+          setCameraError("No camera found on this device.");
+        } else if (err.name === "NotReadableError") {
+          setPermissionState("unsupported");
+          setCameraError("Camera is in use by another application.");
+        } else {
+          setCameraError("Camera not available: " + err.message);
+        }
+      } else {
+        setCameraError("Could not access camera. Use manual entry.");
+      }
+    }
+  }, []);
+
+  // Start camera when permission is already granted or on retry
+  useEffect(() => {
+    if (mode !== "camera") return;
+    if (permissionState !== "granted") return;
 
     let active = true;
 
@@ -64,11 +155,12 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
           setScanning(true);
         }
       } catch (err) {
-        setCameraError(
-          err instanceof DOMException && err.name === "NotAllowedError"
-            ? "Camera access denied. Please allow camera permissions."
-            : "Camera not available. Use manual entry."
-        );
+        if (err instanceof DOMException && err.name === "NotAllowedError") {
+          setPermissionState("denied");
+          setCameraError("Camera permission was denied.");
+        } else {
+          setCameraError("Camera not available. Use manual entry.");
+        }
       }
     }
 
@@ -82,7 +174,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
       }
       setScanning(false);
     };
-  }, [mode]);
+  }, [mode, permissionState, retryCount]);
 
   // Simple barcode detection using BarcodeDetector API if available
   useEffect(() => {
@@ -219,11 +311,109 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {cameraError ? (
+              {/* Permission: checking */}
+              {permissionState === "checking" && (
                 <div className="flex flex-col items-center gap-3 py-8">
-                  <CameraOff className="h-8 w-8 text-red-400" />
-                  <p className="text-[10px] font-mono text-red-400 text-center max-w-[250px]">
-                    {cameraError}
+                  <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
+                  <p className="text-[10px] font-mono text-gray-400 tracking-wider">
+                    CHECKING CAMERA ACCESS...
+                  </p>
+                </div>
+              )}
+
+              {/* Permission: prompt — ask user to allow */}
+              {permissionState === "prompt" && (
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Camera className="h-8 w-8 text-emerald-400" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-xs font-mono font-bold text-white tracking-wider">
+                      CAMERA ACCESS REQUIRED
+                    </p>
+                    <p className="text-[10px] font-mono text-gray-400 max-w-[260px] leading-relaxed">
+                      We need camera access to scan QR codes for team check-in. 
+                      Tap the button below and allow when your browser asks.
+                    </p>
+                  </div>
+                  <button
+                    onClick={requestCameraAccess}
+                    className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-mono font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-all tracking-wider"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    ALLOW CAMERA ACCESS
+                  </button>
+                  <button
+                    onClick={() => setMode("manual")}
+                    className="text-[10px] font-mono text-gray-500 hover:text-gray-300 tracking-wider"
+                  >
+                    USE MANUAL ENTRY INSTEAD →
+                  </button>
+                </div>
+              )}
+
+              {/* Permission: denied — show instructions to enable */}
+              {permissionState === "denied" && (
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+                    <ShieldAlert className="h-8 w-8 text-red-400" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-xs font-mono font-bold text-red-400 tracking-wider">
+                      CAMERA ACCESS BLOCKED
+                    </p>
+                    <p className="text-[10px] font-mono text-gray-400 max-w-[280px] leading-relaxed">
+                      {cameraError || "Camera permission was denied."}
+                    </p>
+                  </div>
+
+                  {/* Browser-specific instructions */}
+                  <div className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 space-y-2">
+                    <p className="text-[10px] font-mono font-bold text-gray-300 tracking-wider">
+                      HOW TO ENABLE:
+                    </p>
+                    <div className="space-y-1.5 text-[9px] font-mono text-gray-500 leading-relaxed">
+                      <p>
+                        <span className="text-gray-300">Chrome/Edge:</span> Tap the lock icon 🔒 in the address bar → Site settings → Camera → Allow
+                      </p>
+                      <p>
+                        <span className="text-gray-300">Safari:</span> Settings → Safari → Camera → Allow
+                      </p>
+                      <p>
+                        <span className="text-gray-300">Firefox:</span> Tap the lock icon 🔒 → Connection secure → More info → Permissions → Camera ✓
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setCameraError("");
+                        setPermissionState("prompt");
+                        setRetryCount((c) => c + 1);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-mono font-bold text-emerald-400 border border-emerald-400/30 hover:bg-emerald-500/10 rounded-lg transition-all tracking-wider"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      TRY AGAIN
+                    </button>
+                    <button
+                      onClick={() => setMode("manual")}
+                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-mono font-bold text-gray-400 border border-white/[0.08] hover:bg-white/[0.04] rounded-lg transition-all tracking-wider"
+                    >
+                      <Keyboard className="h-3 w-3" />
+                      MANUAL ENTRY
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Permission: unsupported — no camera / no HTTPS */}
+              {permissionState === "unsupported" && (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <CameraOff className="h-8 w-8 text-amber-400" />
+                  <p className="text-[10px] font-mono text-amber-400 text-center max-w-[250px]">
+                    {cameraError || "Camera not available on this device."}
                   </p>
                   <button
                     onClick={() => setMode("manual")}
@@ -232,7 +422,10 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                     SWITCH TO MANUAL →
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {/* Permission: granted — show camera feed */}
+              {permissionState === "granted" && !cameraError && (
                 <>
                   <div className="relative rounded overflow-hidden bg-black aspect-video">
                     <video
@@ -264,6 +457,35 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                     Point camera at team&apos;s QR code
                   </p>
                 </>
+              )}
+
+              {/* Permission granted but camera has error */}
+              {permissionState === "granted" && cameraError && (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <CameraOff className="h-8 w-8 text-red-400" />
+                  <p className="text-[10px] font-mono text-red-400 text-center max-w-[250px]">
+                    {cameraError}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setCameraError("");
+                        setRetryCount((c) => c + 1);
+                      }}
+                      className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 hover:text-emerald-300 tracking-wider"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      RETRY
+                    </button>
+                    <span className="text-gray-600">|</span>
+                    <button
+                      onClick={() => setMode("manual")}
+                      className="text-[10px] font-mono text-gray-400 hover:text-gray-300 tracking-wider"
+                    >
+                      MANUAL ENTRY →
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )}

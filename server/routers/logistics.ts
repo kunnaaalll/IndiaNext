@@ -151,6 +151,75 @@ export const logisticsRouter = router({
     }),
 
   // ═══════════════════════════════════════════════════════════
+  // GET TEAM BY ID (detail page — avoids fetching all teams)
+  // ═══════════════════════════════════════════════════════════
+
+  getTeamById: adminProcedure
+    .input(z.object({ teamId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      requireLogisticsRole(ctx.admin.role, "View team detail");
+
+      const team = await ctx.prisma.team.findUnique({
+        where: { id: input.teamId },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  college: true,
+                  degree: true,
+                  year: true,
+                  branch: true,
+                  gender: true,
+                  emailVerified: true,
+                },
+              },
+            },
+            orderBy: { role: "asc" },
+          },
+        },
+      });
+
+      if (!team) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Team not found",
+        });
+      }
+
+      if (team.status !== "APPROVED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Team "${team.name}" is not approved (status: ${team.status})`,
+        });
+      }
+
+      return {
+        id: team.id,
+        shortCode: team.shortCode,
+        name: team.name,
+        track: team.track,
+        college: team.college,
+        size: team.size,
+        attendance: team.attendance,
+        checkedInAt: team.checkedInAt,
+        checkedInBy: team.checkedInBy,
+        attendanceNotes: team.attendanceNotes,
+        members: team.members.map((m) => ({
+          id: m.id,
+          role: m.role,
+          isPresent: m.isPresent,
+          checkedInAt: m.checkedInAt,
+          user: m.user,
+        })),
+      };
+    }),
+
+  // ═══════════════════════════════════════════════════════════
   // GET TEAM BY SHORT CODE (QR check-in lookup)
   // ═══════════════════════════════════════════════════════════
 

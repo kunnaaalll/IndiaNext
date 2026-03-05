@@ -51,13 +51,10 @@ export default function LogisticsTeamDetailPage({ params }: { params: Promise<{ 
   const [attendanceNotes, setAttendanceNotes] = useState("");
   const [notesEditing, setNotesEditing] = useState(false);
 
-  const { data: team, isLoading, refetch } = trpc.logistics.getApprovedTeams.useQuery(
-    { search: undefined, track: "all", attendance: "all", page: 1, pageSize: 1000 },
+  const { data: currentTeam, isLoading, refetch } = trpc.logistics.getTeamById.useQuery(
+    { teamId: id },
     { refetchInterval: POLL_INTERVAL }
   );
-
-  // Find the specific team from the list
-  const currentTeam = team?.teams.find((t) => t.id === id);
 
   const markTeamAttendance = trpc.logistics.markTeamAttendance.useMutation();
   const markMemberAttendance = trpc.logistics.markMemberAttendance.useMutation();

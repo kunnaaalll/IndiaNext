@@ -22,6 +22,8 @@ import { type FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
+import { hashSessionToken, SESSION_CONFIGS } from "@/lib/session-security";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * Parse cookies from a raw Cookie header string.
@@ -48,8 +50,9 @@ export async function createContext(opts: FetchCreateContextFnOptions) {
   // Check participant session
   const userToken = cookies.session_token || null;
   if (userToken) {
+    // ✅ SECURITY FIX: Hash cookie token before DB lookup
     const sessionData = await prisma.session.findUnique({
-      where: { token: userToken },
+      where: { token: hashSessionToken(userToken) },
       include: { user: true },
     });
 
@@ -64,16 +67,40 @@ export async function createContext(opts: FetchCreateContextFnOptions) {
   // Check admin session (separate table)
   const adminToken = cookies.admin_token || null;
   if (adminToken) {
+    // ✅ SECURITY FIX: Hash cookie token before DB lookup
     const adminData = await prisma.adminSession.findUnique({
-      where: { token: adminToken },
+      where: { token: hashSessionToken(adminToken) },
       include: { admin: true },
     });
 
     if (adminData && adminData.expiresAt > new Date() && adminData.admin.isActive) {
-      adminSession = {
-        admin: adminData.admin,
-        token: adminData.token,
-      };
+      // ✅ SECURITY FIX: Idle timeout — if session untouched for 30min, expire it
+      const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+      const now = new Date();
+      // Use updatedAt-like approach: keep extending expiresAt on activity
+      // If expiresAt was set far in the future but last activity was >30min ago,
+      // we check by seeing if the session's remaining lifetime exceeds max - idle
+      // Simpler: just touch expiresAt forward on each request (non-blocking)
+      const maxAge = SESSION_CONFIGS.admin.maxAge * 1000;
+      const sessionAge = now.getTime() - adminData.createdAt.getTime();
+      const timeSinceLastTouch = maxAge - (adminData.expiresAt.getTime() - now.getTime());
+
+      if (timeSinceLastTouch > IDLE_TIMEOUT_MS && sessionAge > IDLE_TIMEOUT_MS) {
+        // Session has been idle for >30min — treat as expired
+        // Clean up the stale session (non-blocking)
+        prisma.adminSession.delete({ where: { id: adminData.id } }).catch(() => {});
+      } else {
+        adminSession = {
+          admin: adminData.admin,
+          token: adminData.token,
+        };
+        // Extend expiry on activity (non-blocking refresh)
+        const newExpiry = new Date(now.getTime() + maxAge);
+        prisma.adminSession.update({
+          where: { id: adminData.id },
+          data: { expiresAt: newExpiry },
+        }).catch(() => {});
+      }
     }
   }
 
@@ -142,3 +169,20 @@ const isAdmin = t.middleware(({ ctx, next }) => {
 // Protected procedures
 export const protectedProcedure = t.procedure.use(isAuthed);
 export const adminProcedure = t.procedure.use(isAdmin);
+
+// ✅ SECURITY FIX: Rate-limited mutation procedures
+// Limits mutations to 30 req/min per admin or user to prevent abuse
+const rateLimitMutation = t.middleware(async ({ ctx, next }) => {
+  const id = ctx.adminSession?.admin?.id ?? ctx.session?.user?.id ?? 'anon';
+  const rl = await checkRateLimit(`trpc-mutation:${id}`, 30, 60);
+  if (!rl.success) {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many requests. Please slow down.',
+    });
+  }
+  return next();
+});
+
+export const rateLimitedAdminProcedure = adminProcedure.use(rateLimitMutation);
+export const rateLimitedProtectedProcedure = protectedProcedure.use(rateLimitMutation);

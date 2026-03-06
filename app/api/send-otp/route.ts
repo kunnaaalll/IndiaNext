@@ -153,17 +153,7 @@ export async function POST(req: Request) {
       );
     }
   } catch (error) {
-    console.error('[OTP] Error:', error instanceof Error ? { message: error.message, stack: error.stack, name: error.name } : error);
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: process.env.NODE_ENV === 'development' 
-          ? `Internal error: ${error instanceof Error ? error.message : String(error)}`
-          : 'An unexpected error occurred. Please try again.',
-      },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/send-otp');
   }
 }

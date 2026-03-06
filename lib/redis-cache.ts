@@ -234,6 +234,26 @@ export async function cacheGetOrSet<T>(
   return value;
 }
 
+/**
+ * Get or set cache — returns data wrapped with cache metadata (age, source).
+ */
+export async function cacheGetOrSetWithMeta<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  options: CacheOptions = {}
+): Promise<{ data: T; cachedAt: string; fromCache: boolean }> {
+  const cached = await cacheGet<{ data: T; cachedAt: string }>(key, options);
+  if (cached !== null) {
+    return { ...cached, fromCache: true };
+  }
+
+  const data = await fetcher();
+  const cachedAt = new Date().toISOString();
+  await cacheSet(key, { data, cachedAt }, options);
+
+  return { data, cachedAt, fromCache: false };
+}
+
 // ─── Predefined Cache Keys ─────────────────────────────────────────────────────
 
 export const CacheKeys = {

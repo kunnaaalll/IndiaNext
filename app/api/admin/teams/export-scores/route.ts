@@ -261,10 +261,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('[Admin] Error exporting scores:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/teams/export-scores');
   }
 }

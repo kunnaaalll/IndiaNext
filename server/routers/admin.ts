@@ -5,6 +5,7 @@ import { TRPCError } from "@trpc/server";
 import { sendStatusUpdateEmail } from "@/lib/email";
 import {
   cacheGetOrSet,
+  cacheGetOrSetWithMeta,
   CacheKeys,
   invalidateDashboardCache,
   invalidateTeamCache,
@@ -25,7 +26,8 @@ export const adminRouter = router({
     }
     
     // Cache dashboard stats for 5 minutes
-    return cacheGetOrSet(
+    // ✅ FIX: Return cache metadata so the UI can show cache age / last-updated
+    return cacheGetOrSetWithMeta(
       CacheKeys.dashboardStats(),
       async () => {
         const [
@@ -46,11 +48,15 @@ export const adminRouter = router({
           ctx.prisma.team.count({ where: { status: "REJECTED", deletedAt: null } }),
           ctx.prisma.team.count({ where: { status: "WAITLISTED", deletedAt: null } }),
           ctx.prisma.team.count({ where: { status: "UNDER_REVIEW", deletedAt: null } }),
-          ctx.prisma.teamMember.count({
+          ctx.prisma.user.count({
             where: {
-              leftAt: null,
-              user: { deletedAt: null },
-              team: { deletedAt: null },
+              deletedAt: null,
+              teamMemberships: {
+                some: {
+                  leftAt: null,
+                  team: { deletedAt: null },
+                },
+              },
             },
           }),
           ctx.prisma.submission.count(),
@@ -68,25 +74,13 @@ export const adminRouter = router({
           }),
         ]);
 
-        // Calculate average review time
-        const reviewedTeams = await ctx.prisma.team.findMany({
-          where: {
-            reviewedAt: { not: null },
-            deletedAt: null,
-          },
-          select: {
-            createdAt: true,
-            reviewedAt: true,
-          },
-          take: 100,
-        });
-
-        const avgReviewTime = reviewedTeams.length > 0
-          ? reviewedTeams.reduce((acc: number, team: { createdAt: Date; reviewedAt: Date | null }) => {
-              const diff = team.reviewedAt!.getTime() - team.createdAt.getTime();
-              return acc + diff / (1000 * 60 * 60); // Convert to hours
-            }, 0) / reviewedTeams.length
-          : 0;
+        // ✅ FIX: Use raw SQL aggregate instead of biased take:100 sample
+        const avgResult = await ctx.prisma.$queryRaw<[{ avg_hours: number | null }]>`
+          SELECT AVG(EXTRACT(EPOCH FROM ("reviewedAt" - "createdAt")) / 3600) as avg_hours
+          FROM "teams"
+          WHERE "reviewedAt" IS NOT NULL AND "deletedAt" IS NULL
+        `;
+        const avgReviewTime = avgResult[0]?.avg_hours ?? 0;
 
         return {
           totalTeams,
@@ -368,7 +362,7 @@ export const adminRouter = router({
   bulkUpdateStatus: adminProcedure
     .input(
       z.object({
-        teamIds: z.array(z.string()),
+        teamIds: z.array(z.string()).max(100),
         status: z.enum(["PENDING", "APPROVED", "REJECTED", "WAITLISTED", "UNDER_REVIEW"]),
         reviewNotes: z.string().optional(),
       })
@@ -488,7 +482,7 @@ export const adminRouter = router({
     .input(
       z.object({
         teamId: z.string(),
-        content: z.string().min(1),
+        content: z.string().min(1).max(5000),
         isInternal: z.boolean().default(true),
       })
     )
@@ -546,6 +540,20 @@ export const adminRouter = router({
       });
 
       return { success: true };
+    }),
+
+  // Get activity timeline for a specific team
+  getTeamActivity: adminProcedure
+    .input(z.object({ teamId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      if (ctx.admin.role === 'JUDGE') {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Judges cannot view team activity" });
+      }
+      return ctx.prisma.activityLog.findMany({
+        where: { entityId: input.teamId, entity: "Team" },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
     }),
 
   // ═══════════════════════════════════════════════════════════

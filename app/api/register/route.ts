@@ -680,39 +680,17 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('[Register] Error:', error);
 
-    // Handle specific errors
+    // Handle specific errors before falling through to generic handler
     if (error instanceof Error) {
       if (error.message.startsWith('DUPLICATE_REGISTRATION:')) {
         const message = error.message.split(':')[1];
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'DUPLICATE_REGISTRATION',
-            message,
-          },
-          { status: 409 }
-        );
-      }
-
-      if (error.message.includes('Unique constraint')) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'DUPLICATE_EMAIL',
-            message: 'One or more email addresses are already registered in another team. Each person can only be in one team.',
-          },
-          { status: 409 }
-        );
+        const { createErrorResponse, getStatusCode } = await import('@/lib/error-handler');
+        const err = createErrorResponse('ALREADY_REGISTERED', message, undefined, '/api/register');
+        return NextResponse.json(err, { status: getStatusCode('ALREADY_REGISTERED') });
       }
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred. Please try again.',
-      },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/register');
   }
 }

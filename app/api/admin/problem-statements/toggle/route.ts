@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       message: `Problem statement ${isActive ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
-    console.error('[Admin] Error toggling problem:', error);
-    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/problem-statements/toggle');
   }
 }

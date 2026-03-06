@@ -146,11 +146,8 @@ export async function POST(req: Request) {
       message: 'Comment added successfully',
     });
   } catch (error) {
-    console.error('[Admin] Error adding comment:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/teams/comment');
   }
 }
 
@@ -217,10 +214,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('[Admin] Error fetching comments:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/teams/comment');
   }
 }

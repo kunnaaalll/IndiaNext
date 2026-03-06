@@ -704,6 +704,13 @@ export const logisticsRouter = router({
       }
 
       // 3. Perform the swap in a transaction
+      if (!newUser) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to find or create replacement user",
+        });
+      }
+
       const result = await ctx.prisma.$transaction(async (tx) => {
         // Mark old member as left
         await tx.teamMember.update({
@@ -720,7 +727,7 @@ export const logisticsRouter = router({
         const newMember = await tx.teamMember.create({
           data: {
             teamId: currentMember.team.id,
-            userId: newUser!.id,
+            userId: newUser.id,
             role: "MEMBER",
           },
           include: {

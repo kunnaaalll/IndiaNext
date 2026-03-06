@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { API_VERSION, getApiVersion, isVersionSupported, getVersionInfo } from '@/lib/api-versioning';
 
 // ═══════════════════════════════════════════════════════════
 // CSRF / Origin Validation Middleware
@@ -64,6 +65,36 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // API Versioning — reject unsupported versions, add version headers
+  // ═══════════════════════════════════════════════════════════
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/api/')) {
+    const requestedVersion = getApiVersion(pathname);
+    if (requestedVersion && !isVersionSupported(requestedVersion)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'BAD_REQUEST',
+          message: `API version "${requestedVersion}" is not supported. Supported versions: v1`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for deprecated versions
+    if (requestedVersion) {
+      const versionInfo = getVersionInfo(requestedVersion);
+      if (versionInfo?.deprecated) {
+        const response = NextResponse.next();
+        response.headers.set('Deprecation', 'true');
+        if (versionInfo.sunsetDate) {
+          response.headers.set('Sunset', versionInfo.sunsetDate);
+        }
+      }
+    }
+  }
+
   // Add security headers to all responses
   const response = NextResponse.next();
 
@@ -72,6 +103,11 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+
+  // API version header on API responses
+  if (pathname.startsWith('/api/')) {
+    response.headers.set('X-API-Version', API_VERSION);
+  }
 
   // Content Security Policy — restrict resources to same origin + known CDNs
   if (process.env.NODE_ENV === 'production') {
@@ -92,6 +128,9 @@ export function middleware(request: NextRequest) {
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
+        // ✅ SECURITY FIX: Block plugin content and restrict workers
+        "object-src 'none'",
+        "worker-src 'self'",
       ].join('; ')
     );
   }

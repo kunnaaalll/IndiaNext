@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { requirePermission, type AdminRole } from '@/lib/rbac';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, getStatusCode, handleGenericError } from '@/lib/error-handler';
 
 const CriterionScoreSchema = z.object({
   criterionId: z.string(),
@@ -23,8 +25,10 @@ async function verifyAdmin(_req: Request) {
     return null;
   }
 
+  // ✅ SECURITY FIX: Hash cookie token before DB lookup
+  const { hashSessionToken } = await import('@/lib/session-security');
   const session = await prisma.adminSession.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { admin: true },
   });
 
@@ -45,26 +49,29 @@ export async function POST(req: Request) {
   try {
     const admin = await verifyAdmin(req);
     if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      const err = createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('UNAUTHORIZED') });
+    }
+
+    // ✅ SECURITY FIX: Rate limit rubric scoring to 20 req/min per admin
+    const rl = await checkRateLimit(`score-rubric:${admin.id}`, 20, 60);
+    if (!rl.success) {
+      const err = createErrorResponse('RATE_LIMIT_EXCEEDED', 'Too many scoring requests. Please slow down.', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } });
     }
 
     // Check if admin has permission to score
     if (!requirePermission(admin.role as AdminRole, 'scoreSubmissions')) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions to score submissions' },
-        { status: 403 }
-      );
+      const err = createErrorResponse('FORBIDDEN', 'Insufficient permissions to score submissions', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('FORBIDDEN') });
     }
 
     const body = await req.json();
     const validation = RubricScoreSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation error',
-        details: validation.error.errors,
-      }, { status: 400 });
+      const err = createErrorResponse('VALIDATION_ERROR', validation.error.errors[0].message, validation.error.errors, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: 400 });
     }
 
     const { teamId, scores } = validation.data;
@@ -95,11 +102,11 @@ export async function POST(req: Request) {
     }
 
     if (!team.submission) {
-      return NextResponse.json(
-        { success: false, error: 'Team has no submission' },
-        { status: 404 }
-      );
+      const err = createErrorResponse('NOT_FOUND', 'Team has no submission', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('NOT_FOUND') });
     }
+
+    const submissionId = team.submission.id;
 
     // Get criteria to validate and calculate weighted score
     const criteria = await prisma.scoringCriterion.findMany({
@@ -169,7 +176,7 @@ export async function POST(req: Request) {
       // Delete existing scores from this judge for this submission
       await tx.criterionScore.deleteMany({
         where: {
-          submissionId: team.submission!.id,
+          submissionId: submissionId,
           judgeId: admin.id,
         },
       });
@@ -179,8 +186,8 @@ export async function POST(req: Request) {
         scores.map((score) =>
           tx.criterionScore.create({
             data: {
-              submissionId: team.submission!.id,
-              criterionId: criterionIdToDbId.get(score.criterionId)!, // Use database ID, not criterionId field
+              submissionId: submissionId,
+              criterionId: criterionIdToDbId.get(score.criterionId) ?? score.criterionId, // Use database ID, validated above
               judgeId: admin.id,
               judgeName: admin.name,
               points: score.points,
@@ -194,7 +201,7 @@ export async function POST(req: Request) {
       // MULTI-JUDGE: Recalculate average score across ALL judges
       // ═══════════════════════════════════════════════════════════
       const allScores = await tx.criterionScore.findMany({
-        where: { submissionId: team.submission!.id },
+        where: { submissionId: submissionId },
         include: { criterion: true },
       });
 
@@ -203,11 +210,12 @@ export async function POST(req: Request) {
       const judgeNames: string[] = [];
 
       for (const cs of allScores) {
-        if (!judgeScores.has(cs.judgeId)) {
-          judgeScores.set(cs.judgeId, { judgeName: cs.judgeName, weightedTotal: 0 });
+        let entry = judgeScores.get(cs.judgeId);
+        if (!entry) {
+          entry = { judgeName: cs.judgeName, weightedTotal: 0 };
+          judgeScores.set(cs.judgeId, entry);
           judgeNames.push(cs.judgeName);
         }
-        const entry = judgeScores.get(cs.judgeId)!;
         const normalizedScore = (cs.points / cs.criterion.maxPoints) * 100;
         const weightedScore = (normalizedScore * cs.criterion.weight) / 100;
         entry.weightedTotal += weightedScore;
@@ -223,7 +231,7 @@ export async function POST(req: Request) {
 
       // Update submission with AVERAGED total score
       const updatedSubmission = await tx.submission.update({
-        where: { id: team.submission!.id },
+        where: { id: submissionId },
         data: {
           judgeScore: averageScore,
           judgeComments: judgeCount > 1
@@ -275,11 +283,7 @@ export async function POST(req: Request) {
         : 'Rubric scores submitted successfully',
     });
   } catch (error) {
-    console.error('[Admin] Error scoring with rubric:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    return handleGenericError(error, '/api/admin/teams/score-rubric');
   }
 }
 
@@ -297,17 +301,16 @@ export async function GET(req: Request) {
   try {
     const admin = await verifyAdmin(req);
     if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      const err = createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('UNAUTHORIZED') });
     }
 
     const { searchParams } = new URL(req.url);
     const teamId = searchParams.get('teamId');
 
     if (!teamId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing teamId parameter' },
-        { status: 400 }
-      );
+      const err = createErrorResponse('BAD_REQUEST', 'Missing teamId parameter', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('BAD_REQUEST') });
     }
 
     const team = await prisma.team.findUnique({
@@ -326,10 +329,8 @@ export async function GET(req: Request) {
     });
 
     if (!team) {
-      return NextResponse.json(
-        { success: false, error: 'Team not found' },
-        { status: 404 }
-      );
+      const err = createErrorResponse('NOT_FOUND', 'Team not found', undefined, '/api/admin/teams/score-rubric');
+      return NextResponse.json(err, { status: getStatusCode('NOT_FOUND') });
     }
 
     // Get criteria for this track
@@ -484,10 +485,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('[Admin] Error fetching rubric scores:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    return handleGenericError(error, '/api/admin/teams/score-rubric');
   }
 }

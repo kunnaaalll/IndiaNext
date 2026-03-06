@@ -83,13 +83,14 @@ export default function AnalyticsPage() {
   );
 
   // Status breakdown for pie chart
-  const statusData = stats
+  const statsData = stats?.data;
+  const statusData = statsData
     ? [
-        { name: "Pending", value: stats.pendingTeams, color: STATUS_COLORS.PENDING },
-        { name: "Under Review", value: stats.underReviewTeams, color: STATUS_COLORS.UNDER_REVIEW },
-        { name: "Approved", value: stats.approvedTeams, color: STATUS_COLORS.APPROVED },
-        { name: "Rejected", value: stats.rejectedTeams, color: STATUS_COLORS.REJECTED },
-        { name: "Waitlisted", value: stats.waitlistedTeams, color: STATUS_COLORS.WAITLISTED },
+        { name: "Pending", value: statsData.pendingTeams, color: STATUS_COLORS.PENDING },
+        { name: "Under Review", value: statsData.underReviewTeams, color: STATUS_COLORS.UNDER_REVIEW },
+        { name: "Approved", value: statsData.approvedTeams, color: STATUS_COLORS.APPROVED },
+        { name: "Rejected", value: statsData.rejectedTeams, color: STATUS_COLORS.REJECTED },
+        { name: "Waitlisted", value: statsData.waitlistedTeams, color: STATUS_COLORS.WAITLISTED },
       ].filter((d) => d.value > 0)
     : [];
 
@@ -134,29 +135,29 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Key Metrics Row */}
-      {stats && (
+      {statsData && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <MetricCard
             label="TOTAL_TEAMS"
-            value={stats.totalTeams}
+            value={statsData.totalTeams}
             icon={<Users className="h-4 w-4" />}
             color="text-cyan-400 bg-cyan-500/10 border-cyan-500/20"
           />
           <MetricCard
             label="APPROVAL_RATE"
-            value={`${stats.approvalRate.toFixed(1)}%`}
+            value={`${statsData.approvalRate.toFixed(1)}%`}
             icon={<TrendingUp className="h-4 w-4" />}
             color="text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
           />
           <MetricCard
             label="AVG_REVIEW_TIME"
-            value={`${stats.avgReviewTime} hrs`}
+            value={`${statsData.avgReviewTime} hrs`}
             icon={<PieChartIcon className="h-4 w-4" />}
             color="text-orange-400 bg-orange-500/10 border-orange-500/20"
           />
           <MetricCard
             label="NEW_THIS_WEEK"
-            value={stats.newTeamsThisWeek}
+            value={statsData.newTeamsThisWeek}
             icon={<Building2 className="h-4 w-4" />}
             color="text-amber-400 bg-amber-500/10 border-amber-500/20"
           />

@@ -1082,6 +1082,7 @@ export default function HackathonForm({
   }, [answers]);
 
   const totalSteps = visibleQuestions.length;
+  const isLastStep = currentStep === totalSteps - 1;
   const currentQuestion = visibleQuestions[currentStep];
 
   // OTP State
@@ -1241,18 +1242,9 @@ export default function HackathonForm({
   }, [assignedProblem]);
 
   // Logic Helpers
-  const getNextValidStep = React.useCallback((current: number, dir: number, currentAnswers: Answers) => {
-    let nextStep = current + dir;
-    while (nextStep >= 0 && nextStep < totalSteps) {
-       const q = QUESTIONS[nextStep];
-       if (q.condition && !q.condition(currentAnswers)) {
-         nextStep += dir;
-       } else {
-         return nextStep;
-       }
-    }
-    return nextStep;
-  }, [totalSteps]);
+  const getNextValidStep = React.useCallback((current: number, dir: number) => {
+    return current + dir;
+  }, []);
 
   const sendOtp = React.useCallback(async () => {
       setLoading(true);
@@ -1375,7 +1367,7 @@ export default function HackathonForm({
         return;
       }
       // Problem assigned — proceed
-      const nextStep = getNextValidStep(currentStep, 1, answers);
+      const nextStep = getNextValidStep(currentStep, 1);
       if (nextStep < totalSteps) {
         setDirection(1);
         setCurrentStep(nextStep);
@@ -1494,7 +1486,7 @@ export default function HackathonForm({
         return;
     }
 
-    const nextStep = getNextValidStep(currentStep, 1, answers);
+    const nextStep = getNextValidStep(currentStep, 1);
     
     if (nextStep < totalSteps) {
       setDirection(1);
@@ -1574,7 +1566,7 @@ export default function HackathonForm({
           setVerifiedEmail(answers.leaderEmail as string); // Store verified email
           setShowOtpInput(false);
           setTimeout(() => {
-             const nextStep = getNextValidStep(currentStep, 1, answers);
+             const nextStep = getNextValidStep(currentStep, 1);
              setDirection(1);
              setCurrentStep(nextStep);
           }, 500);
@@ -1618,7 +1610,7 @@ export default function HackathonForm({
 
   const handlePrev = () => {
     if (showOtpInput) { setShowOtpInput(false); return; }
-    const prevStep = getNextValidStep(currentStep, -1, answers);
+    const prevStep = getNextValidStep(currentStep, -1);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
   const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
@@ -1751,7 +1743,7 @@ export default function HackathonForm({
                                   className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold uppercase tracking-widest px-8 py-3 clip-path-polygon disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                   disabled={loading || isLockedFlag}
                                >
-                                   {loading ? "PROCESSING..." : isLockedFlag ? "LOCKED" : "CONFIRM DATA >>"}
+                                   {loading ? "PROCESSING..." : isLockedFlag ? "LOCKED" : (isLastStep ? "CONFIRM DATA >>" : "NEXT >>")}
                                </button>
                                {currentStep > 0 && (
                                    <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">

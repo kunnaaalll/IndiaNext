@@ -51,13 +51,13 @@ const isDev = () => process.env.NODE_ENV === 'development';
 export const RATE_LIMITS = {
   /** OTP sending — combined IP + email */
   'send-otp': {
-    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 10, window: 60 }),
-    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  3, window: 60 }),
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 50, window: 60 }),
+    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  5, window: 60 }),
   },
   /** OTP verification — combined IP + email (tight to block brute-force) */
   'verify-otp': {
-    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 20, window: 60  }),
-    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  5, window: 300 }),
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 50, window: 60  }),
+    email: (): RateLimitConfig => ({ limit: isDev() ? 20 :  10, window: 300 }),
   },
   /** Registration — IP only */
   'register': {

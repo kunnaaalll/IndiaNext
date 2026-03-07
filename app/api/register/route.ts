@@ -25,7 +25,7 @@ interface IdempotencyResponse {
 // Comprehensive input validation schema
 const RegisterSchema = z.object({
   // Idempotency key
-  idempotencyKey: z.string().uuid('Invalid idempotency key').optional(),
+  idempotencyKey: z.string().max(100).optional(),
   
   // Team Info
   track: z.enum(['IdeaSprint: Build MVP in 24 Hours', 'BuildStorm: Solve Problem Statement in 24 Hours', 'IDEA_SPRINT', 'BUILD_STORM']),

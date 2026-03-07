@@ -61,7 +61,7 @@ export const RATE_LIMITS = {
   },
   /** Registration — IP only */
   'register': {
-    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 :  5, window: 3600 }),
+    ip:    (): RateLimitConfig => ({ limit: isDev() ? 50 : 50, window: 3600 }),
   },
   /** Problem statement fetch — IP only (generous, read-only) */
   'problem-statement': {

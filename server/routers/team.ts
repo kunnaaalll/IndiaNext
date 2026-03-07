@@ -20,7 +20,18 @@ export const teamRouter = router({
       },
       include: {
         members: {
-          include: { user: true },
+          include: {
+            user: {
+              // ✅ SECURITY FIX: Select only safe fields instead of `user: true`
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                college: true,
+                role: true,
+              },
+            },
+          },
         },
         submission: {
           include: {
@@ -40,10 +51,22 @@ export const teamRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const team = await ctx.prisma.team.findUnique({
-        where: { id: input.id },
+        // ✅ BUG FIX: Exclude soft-deleted teams
+        where: { id: input.id, deletedAt: null },
         include: {
           members: {
-            include: { user: true },
+            include: {
+              user: {
+                // ✅ SECURITY FIX: Select only safe fields
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  college: true,
+                  role: true,
+                },
+              },
+            },
           },
           submission: {
             include: { files: true },
@@ -95,7 +118,7 @@ export const teamRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if user is team member
+      // Check if user is team leader
       const team = await ctx.prisma.team.findUnique({
         where: { id: input.teamId },
         include: { members: true },
@@ -105,9 +128,12 @@ export const teamRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
       }
 
-      const isMember = team.members.some((m: { userId: string }) => m.userId === ctx.session.user.id);
-      if (!isMember) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Not a team member" });
+      // ✅ BUG FIX: Only team leader can update submissions
+      const isLeader = team.members.some(
+        (m: { userId: string; role: string }) => m.userId === ctx.session.user.id && m.role === "LEADER"
+      );
+      if (!isLeader) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only team leader can update submission" });
       }
 
       // Don't allow updates if already submitted
@@ -159,6 +185,11 @@ export const teamRouter = router({
       });
 
       if (!team) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
+      }
+
+      // ✅ BUG FIX: Check for soft-deleted team
+      if (team.deletedAt) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Team not found" });
       }
 
@@ -244,10 +275,11 @@ export const teamRouter = router({
         });
       }
 
-      if (team.status === "APPROVED" || team.status === "REJECTED") {
+      // ✅ BUG FIX: Block UNDER_REVIEW as well — only PENDING teams can be withdrawn
+      if (team.status === "APPROVED" || team.status === "REJECTED" || team.status === "UNDER_REVIEW") {
         throw new TRPCError({ 
           code: "BAD_REQUEST", 
-          message: "Cannot withdraw after final decision" 
+          message: "Cannot withdraw after final decision or while under review" 
         });
       }
 

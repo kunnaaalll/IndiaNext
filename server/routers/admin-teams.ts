@@ -1,8 +1,16 @@
-// Admin Teams Management Router
+// ══════════════════════════════════════════════════════════════
+// ⚠️  DEPRECATED — This router is NOT mounted in _app.ts.
+//     All team-management procedures live in admin.ts:
+//       getTeams, getTeamById, updateTeamStatus, bulkUpdateStatus,
+//       deleteTeam, addComment, addTag, removeTag, getTeamActivity,
+//       getActivityLogs, exportTeams.
+//     This file is kept for reference only. Do NOT import it.
+// ══════════════════════════════════════════════════════════════
+//
+// Admin Teams Management Router (UNUSED)
 import { z } from 'zod';
 import { router, adminProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
-import { prisma } from '@/lib/prisma';
 import { 
   hasPermission,
   logAdminAction,
@@ -148,7 +156,7 @@ export const adminTeamsRouter = router({
       
       // Execute queries
       const [teams, totalCount] = await Promise.all([
-        prisma.team.findMany({
+        ctx.prisma.team.findMany({
           where,
           orderBy,
           skip: (page - 1) * pageSize,
@@ -185,7 +193,7 @@ export const adminTeamsRouter = router({
             },
           },
         }),
-        prisma.team.count({ where }),
+        ctx.prisma.team.count({ where }),
       ]);
       
       return {
@@ -227,7 +235,7 @@ export const adminTeamsRouter = router({
     .query(async ({ ctx, input }) => {
       checkPermission(ctx.admin.role, 'VIEW_ALL_TEAMS');
       
-      const team = await prisma.team.findUnique({
+      const team = await ctx.prisma.team.findUnique({
         where: { id: input.teamId },
         include: {
           members: {
@@ -302,7 +310,7 @@ export const adminTeamsRouter = router({
       const adminUser = ctx.admin;
       
       // Get team with leader info
-      const team = await prisma.team.findUnique({
+      const team = await ctx.prisma.team.findUnique({
         where: { id: input.teamId },
         include: {
           members: {
@@ -327,7 +335,7 @@ export const adminTeamsRouter = router({
       }
       
       // Update team status
-      const updatedTeam = await prisma.team.update({
+      const updatedTeam = await ctx.prisma.team.update({
         where: { id: input.teamId },
         data: {
           status: 'APPROVED',
@@ -384,7 +392,7 @@ export const adminTeamsRouter = router({
       const adminUser = ctx.admin;
       
       // Get team with leader info
-      const team = await prisma.team.findUnique({
+      const team = await ctx.prisma.team.findUnique({
         where: { id: input.teamId },
         include: {
           members: {
@@ -409,7 +417,7 @@ export const adminTeamsRouter = router({
       }
       
       // Update team status
-      const updatedTeam = await prisma.team.update({
+      const updatedTeam = await ctx.prisma.team.update({
         where: { id: input.teamId },
         data: {
           status: 'REJECTED',
@@ -456,7 +464,7 @@ export const adminTeamsRouter = router({
   
   bulkApprove: adminProcedure
     .input(z.object({
-      teamIds: z.array(z.string()).min(1),
+      teamIds: z.array(z.string()).min(1).max(100),
       notes: z.string().optional(),
       sendEmail: z.boolean().default(true),
     }))
@@ -465,7 +473,7 @@ export const adminTeamsRouter = router({
       const adminUser = ctx.admin;
       
       // Get teams with leader info
-      const teams = await prisma.team.findMany({
+      const teams = await ctx.prisma.team.findMany({
         where: {
           id: { in: input.teamIds },
         },
@@ -485,7 +493,7 @@ export const adminTeamsRouter = router({
       });
       
       // Update all teams
-      await prisma.team.updateMany({
+      await ctx.prisma.team.updateMany({
         where: {
           id: { in: input.teamIds },
         },
@@ -543,7 +551,7 @@ export const adminTeamsRouter = router({
   
   bulkReject: adminProcedure
     .input(z.object({
-      teamIds: z.array(z.string()).min(1),
+      teamIds: z.array(z.string()).min(1).max(100),
       reason: z.string().min(10),
       sendEmail: z.boolean().default(true),
     }))
@@ -552,7 +560,7 @@ export const adminTeamsRouter = router({
       const adminUser = ctx.admin;
       
       // Get teams with leader info
-      const teams = await prisma.team.findMany({
+      const teams = await ctx.prisma.team.findMany({
         where: {
           id: { in: input.teamIds },
         },
@@ -572,7 +580,7 @@ export const adminTeamsRouter = router({
       });
       
       // Update all teams
-      await prisma.team.updateMany({
+      await ctx.prisma.team.updateMany({
         where: {
           id: { in: input.teamIds },
         },
@@ -631,14 +639,14 @@ export const adminTeamsRouter = router({
   addComment: adminProcedure
     .input(z.object({
       teamId: z.string(),
-      content: z.string().min(1),
+      content: z.string().min(1).max(5000),
       isInternal: z.boolean().default(true),
     }))
     .mutation(async ({ ctx, input }) => {
       checkPermission(ctx.admin.role, 'ADD_COMMENTS');
       const adminUser = ctx.admin;
       
-      const comment = await prisma.comment.create({
+      const comment = await ctx.prisma.comment.create({
         data: {
           teamId: input.teamId,
           authorId: adminUser.id,
@@ -676,7 +684,7 @@ export const adminTeamsRouter = router({
       checkPermission(ctx.admin.role, 'EDIT_TEAMS');
       const adminUser = ctx.admin;
       
-      const tag = await prisma.teamTag.create({
+      const tag = await ctx.prisma.teamTag.create({
         data: {
           teamId: input.teamId,
           tag: input.tag,
@@ -699,7 +707,7 @@ export const adminTeamsRouter = router({
     .mutation(async ({ ctx, input }) => {
       checkPermission(ctx.admin.role, 'EDIT_TEAMS');
       
-      await prisma.teamTag.delete({
+      await ctx.prisma.teamTag.delete({
         where: { id: input.tagId },
       });
       
@@ -717,7 +725,7 @@ export const adminTeamsRouter = router({
     .query(async ({ ctx, input }) => {
       checkPermission(ctx.admin.role, 'VIEW_ALL_TEAMS');
       
-      const activities = await prisma.activityLog.findMany({
+      const activities = await ctx.prisma.activityLog.findMany({
         where: {
           entityId: input.teamId,
           entity: 'Team',

@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { requirePermission, type AdminRole } from '@/lib/rbac';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, getStatusCode, handleGenericError } from '@/lib/error-handler';
 
 const ScoreSchema = z.object({
   teamId: z.string(),
@@ -18,8 +20,10 @@ async function verifyAdmin(_req: Request) {
     return null;
   }
 
+  // ✅ SECURITY FIX: Hash cookie token before DB lookup
+  const { hashSessionToken } = await import('@/lib/session-security');
   const session = await prisma.adminSession.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { admin: true },
   });
 
@@ -40,26 +44,29 @@ export async function POST(req: Request) {
   try {
     const admin = await verifyAdmin(req);
     if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      const err = createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score');
+      return NextResponse.json(err, { status: getStatusCode('UNAUTHORIZED') });
+    }
+
+    // ✅ SECURITY FIX: Rate limit scoring to 20 req/min per admin
+    const rl = await checkRateLimit(`score:${admin.id}`, 20, 60);
+    if (!rl.success) {
+      const err = createErrorResponse('RATE_LIMIT_EXCEEDED', 'Too many scoring requests. Please slow down.', undefined, '/api/admin/teams/score');
+      return NextResponse.json(err, { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } });
     }
 
     // Check if admin has permission to score
     if (!requirePermission(admin.role as AdminRole, 'scoreSubmissions')) {
-      return NextResponse.json(
-        { success: false, error: 'Insufficient permissions to score submissions' },
-        { status: 403 }
-      );
+      const err = createErrorResponse('FORBIDDEN', 'Insufficient permissions to score submissions', undefined, '/api/admin/teams/score');
+      return NextResponse.json(err, { status: getStatusCode('FORBIDDEN') });
     }
 
     const body = await req.json();
     const validation = ScoreSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Validation error',
-        details: validation.error.errors,
-      }, { status: 400 });
+      const err = createErrorResponse('VALIDATION_ERROR', validation.error.errors[0].message, validation.error.errors, '/api/admin/teams/score');
+      return NextResponse.json(err, { status: 400 });
     }
 
     const { teamId, score, comments } = validation.data;
@@ -136,11 +143,7 @@ export async function POST(req: Request) {
       message: 'Score submitted successfully',
     });
   } catch (error) {
-    console.error('[Admin] Error scoring submission:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    return handleGenericError(error, '/api/admin/teams/score');
   }
 }
 
@@ -152,7 +155,8 @@ export async function GET(req: Request) {
   try {
     const admin = await verifyAdmin(req);
     if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      const err = createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score');
+      return NextResponse.json(err, { status: getStatusCode('UNAUTHORIZED') });
     }
 
     const { searchParams } = new URL(req.url);
@@ -197,10 +201,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('[Admin] Error fetching score:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    return handleGenericError(error, '/api/admin/teams/score');
   }
 }

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, type AdminRole } from '@/lib/rbac';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { hashSessionToken } from '@/lib/session-security';
 
 async function verifyAdmin() {
   const cookieStore = await cookies();
@@ -11,7 +12,7 @@ async function verifyAdmin() {
   if (!token) return null;
 
   const session = await prisma.adminSession.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { admin: true },
   });
 
@@ -401,10 +402,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('[Admin] Error fetching scoring analytics:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal error' },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/analytics/scoring');
   }
 }

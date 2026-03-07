@@ -207,13 +207,14 @@ export async function POST(req: Request) {
     // Create session token
     const token = crypto.randomBytes(32).toString('hex');
     // ✅ SECURITY FIX: Use centralized SESSION_CONFIGS instead of hardcoded 30-day lifetime
-    const { SESSION_CONFIGS } = await import('@/lib/session-security');
+    const { SESSION_CONFIGS, hashSessionToken } = await import('@/lib/session-security');
     const expiresAt = new Date(Date.now() + SESSION_CONFIGS.user.maxAge * 1000); // 7 days
 
-    const session = await prisma.session.create({
+    // ✅ SECURITY FIX: Store hashed token in DB; raw token goes only to the cookie
+    const _session = await prisma.session.create({
       data: {
         userId: user.id,
-        token,
+        token: hashSessionToken(token),
         expiresAt,
         ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
         userAgent: req.headers.get('user-agent') || 'unknown',
@@ -244,7 +245,7 @@ export async function POST(req: Request) {
     // Set HttpOnly, Secure, SameSite cookie
     // NOTE: Using 'lax' (not 'strict') so the cookie survives cross-site
     // navigations on mobile (in-app browsers, email links, etc.)
-    response.cookies.set('session_token', session.token, {
+    response.cookies.set('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -254,15 +255,7 @@ export async function POST(req: Request) {
 
     return response;
   } catch (error) {
-    console.error('[OTP Verify] Error:', error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'INTERNAL_ERROR',
-        message: 'An unexpected error occurred. Please try again.',
-      },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/verify-otp');
   }
 }

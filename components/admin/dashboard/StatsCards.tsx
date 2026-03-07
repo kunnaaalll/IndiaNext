@@ -83,7 +83,7 @@ const statCards = [
   },
   {
     key: "totalUsers",
-    label: "TOTAL USERS",
+    label: "PARTICIPANTS",
     icon: UserCheck,
     accent: "text-purple-400",
     glow: "shadow-[0_0_15px_rgba(168,85,247,0.08)]",

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { requirePermission, type AdminRole } from '@/lib/rbac';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { hashSessionToken } from '@/lib/session-security';
 
 const ReorderSchema = z.object({
   problemIds: z.array(z.string()).min(1),
@@ -18,7 +19,7 @@ async function verifyAdmin(_req: Request) {
   }
 
   const session = await prisma.adminSession.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { admin: true },
   });
 
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
       message: 'Problem statements reordered successfully',
     });
   } catch (error) {
-    console.error('[Admin] Error reordering problems:', error);
-    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/problem-statements/reorder');
   }
 }

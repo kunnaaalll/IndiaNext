@@ -1,6 +1,7 @@
 // Authentication Helper Functions
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
+import { hashSessionToken } from "./session-security";
 
 // ── Participant auth (OTP-based, session_token cookie) ──────
 
@@ -12,8 +13,9 @@ export async function getSession() {
     return null;
   }
 
+  // ✅ SECURITY FIX: Hash cookie token before DB lookup
   const session = await prisma.session.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { user: true },
   });
 
@@ -41,8 +43,9 @@ export async function getAdminSession() {
     return null;
   }
 
+  // ✅ SECURITY FIX: Hash cookie token before DB lookup
   const session = await prisma.adminSession.findUnique({
-    where: { token },
+    where: { token: hashSessionToken(token) },
     include: { admin: true },
   });
 

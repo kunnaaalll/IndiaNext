@@ -94,10 +94,31 @@ export async function POST(req: Request) {
     // ✅ SECURITY FIX: Use centralized SESSION_CONFIGS instead of hardcoded 8h
     const expiresAt = new Date(Date.now() + SESSION_CONFIGS.admin.maxAge * 1000);
 
+    // ✅ SECURITY FIX: Store hashed token in DB; raw token goes only to the cookie
+    const { hashSessionToken } = await import('@/lib/session-security');
+
+    // ✅ SECURITY FIX: Limit concurrent admin sessions to 5
+    // Delete expired sessions first, then enforce cap
+    await prisma.adminSession.deleteMany({
+      where: { adminId: admin.id, expiresAt: { lt: new Date() } },
+    });
+    const activeSessions = await prisma.adminSession.findMany({
+      where: { adminId: admin.id },
+      orderBy: { createdAt: "asc" },
+    });
+    const MAX_ADMIN_SESSIONS = 5;
+    if (activeSessions.length >= MAX_ADMIN_SESSIONS) {
+      // Delete oldest sessions to make room
+      const sessionsToDelete = activeSessions.slice(0, activeSessions.length - MAX_ADMIN_SESSIONS + 1);
+      await prisma.adminSession.deleteMany({
+        where: { id: { in: sessionsToDelete.map((s) => s.id) } },
+      });
+    }
+
     await prisma.adminSession.create({
       data: {
         adminId: admin.id,
-        token,
+        token: hashSessionToken(token),
         expiresAt,
         ipAddress: ip,
         userAgent: req.headers.get("user-agent") || undefined,
@@ -139,15 +160,7 @@ export async function POST(req: Request) {
 
     return response;
   } catch (error) {
-    console.error("[Admin Login] Error:", error);
-    const message = error instanceof Error ? error.message : "An unexpected error occurred.";
-    return NextResponse.json(
-      {
-        success: false,
-        error: "INTERNAL_ERROR",
-        message: process.env.NODE_ENV === "development" ? message : "An unexpected error occurred.",
-      },
-      { status: 500 }
-    );
+    const { handleGenericError } = await import('@/lib/error-handler');
+    return handleGenericError(error, '/api/admin/login');
   }
 }

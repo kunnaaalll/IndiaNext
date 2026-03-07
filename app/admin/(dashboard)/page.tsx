@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {stats && <StatsCards stats={stats} />}
+      {stats && <StatsCards stats={stats.data} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {analytics && (

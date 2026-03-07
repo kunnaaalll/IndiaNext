@@ -11,37 +11,25 @@ async function main() {
     {
       email: 'superadmin@indianext.in',
       name: 'Super Admin',
-      password: 'SuperAdmin@IndiaNext2026',
+      password: process.env.SEED_SUPERADMIN_PASSWORD || 'ChangeMe@123',
       role: 'SUPER_ADMIN' as const,
     },
     {
       email: 'admin@indianext.in',
       name: 'Admin',
-      password: 'Admin@IndiaNext2026',
+      password: process.env.SEED_ADMIN_PASSWORD || 'ChangeMe@123',
       role: 'ADMIN' as const,
     },
     {
       email: 'organizer@indianext.in',
       name: 'Organizer',
-      password: 'Organizer@IndiaNext2026',
+      password: process.env.SEED_ORGANIZER_PASSWORD || 'ChangeMe@123',
       role: 'ORGANIZER' as const,
     },
     {
       email: 'judge1@indianext.in',
       name: 'Judge 1',
-      password: 'Judge1@IndiaNext2026',
-      role: 'JUDGE' as const,
-    },
-    {
-      email: 'judge2@indianext.in',
-      name: 'Judge 2',
-      password: 'Judge2@IndiaNext2026',
-      role: 'JUDGE' as const,
-    },
-    {
-      email: 'judge3@indianext.in',
-      name: 'Judge 3',
-      password: 'Judge3@IndiaNext2026',
+      password: process.env.SEED_JUDGE_PASSWORD || 'ChangeMe@123',
       role: 'JUDGE' as const,
     }
   ]

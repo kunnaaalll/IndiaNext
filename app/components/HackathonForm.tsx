@@ -1613,7 +1613,7 @@ export default function HackathonForm({
     const prevStep = getNextValidStep(currentStep, -1);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
-  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [QUESTIONS[currentStep].id]: value })); setErrorMsg(""); };
+  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [currentQuestion.id]: value })); setErrorMsg(""); };
 
 
   // Keys

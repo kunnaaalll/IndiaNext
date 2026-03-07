@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
@@ -308,8 +308,17 @@ const QUESTIONS: Question[] = [
     id: 'docLink',
     type: 'url',
     question: "Supporting Documents (Link)",
-    subtext: "Upload Idea Deck (PDF), Prototype, or Research to Drive/Dropbox and paste public link here. (Max 10 slides)",
+    subtext: "Upload Idea Deck (PDF), Research, or MVP Architecture to Drive/Dropbox and paste public link here. (Max 10 slides)",
     placeholder: "https://drive.google.com/...",
+    required: true,
+    condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
+  },
+  {
+    id: 'githubLinkIdea',
+    type: 'url',
+    question: "GitHub Profile Link (Leader)",
+    subtext: "Kindly provide the GitHub profile link of the Team Leader for verification.",
+    placeholder: "https://github.com/username",
     required: true,
     condition: (answers: Answers) => answers.track === "IdeaSprint: Build MVP in 24 Hours",
   },
@@ -353,9 +362,10 @@ const QUESTIONS: Question[] = [
   {
     id: 'githubLink',
     type: 'url',
-    question: "GitHub Team Repo Link",
-    placeholder: "https://github.com/...",
-    required: false,
+    question: "GitHub Profile Link (Leader)",
+    subtext: "Kindly provide the GitHub profile link of the Team Leader for verification.",
+    placeholder: "https://github.com/username",
+    required: true,
     condition: (answers: Answers) => answers.track === "BuildStorm: Solve Problem Statement in 24 Hours",
   },
   {
@@ -408,7 +418,7 @@ const QUESTIONS: Question[] = [
 
 // Subcomponents
 
-const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
+const WelcomeScreen = ({ onStart, isLocked }: { onStart: () => void; isLocked: boolean }) => (
   <div className="min-h-screen w-full flex flex-col justify-center items-center bg-slate-950 text-white relative overflow-hidden font-mono">
      {/* Grid Background */}
      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
@@ -431,8 +441,13 @@ const WelcomeScreen = ({ onStart }: { onStart: () => void }) => (
           onClick={onStart}
           className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-white transition-all duration-200 bg-orange-600 font-mono tracking-widest border border-orange-500 hover:bg-orange-500 focus:outline-none ring-offset-2 focus:ring-2"
         >
-           [ OPEN_DOSSIER ]
+           {isLocked ? '[ VIEW_DOSSIER_LOCKED ]' : '[ OPEN_DOSSIER ]'}
         </button>
+        {isLocked && (
+          <p className="mt-4 text-[10px] text-red-500 font-bold uppercase tracking-widest animate-pulse">
+             Access Restricted: Single-Edit Protocol Already Exhausted
+          </p>
+        )}
      </div>
   </div>
 );
@@ -483,11 +498,12 @@ const ThankYouScreen = ({ track }: { track: string }) => (
 );
 
 // ── Combobox (searchable dropdown + free text) ──
-const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
+const ComboboxInput = ({ value, onChange, suggestions, placeholder, disabled }: {
   value: string;
   onChange: (val: string) => void;
   suggestions: string[];
   placeholder: string;
+  disabled?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -565,7 +581,8 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
         onKeyDown={handleKeyDown}
         placeholder={placeholder.toUpperCase()}
         autoComplete="off"
-        className="w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide"
+        disabled={disabled}
+        className={`w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide ${disabled ? 'opacity-50 cursor-not-allowed border-slate-800' : ''}`}
       />
 
       {/* Dropdown */}
@@ -605,7 +622,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail, assignedProblem, problemLoading, problemError, fetchAssignedProblem }: { 
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail, assignedProblem, problemLoading, problemError, fetchAssignedProblem, isEditMode }: { 
   question: Question; 
   value: string | string[] | undefined; 
   onChange: (val: string | string[]) => void; 
@@ -621,7 +638,9 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
   problemLoading?: boolean;
   problemError?: string;
   fetchAssignedProblem?: () => void;
+  isEditMode?: boolean;
 }) => {
+  const isInputDisabled = isEditMode && ['track', 'leaderName', 'leaderGender', 'leaderEmail', 'leaderMobile', 'leaderCollege', 'leaderDegree'].includes(question.id);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -698,18 +717,22 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
         ) : (
           <>
             {/* Change Email Button */}
-            <button
-              onClick={onChangeEmailClick}
-              className="text-sm text-orange-500 hover:text-orange-400 font-mono uppercase tracking-wider border border-orange-500/30 hover:border-orange-500/50 px-4 py-2 transition-all flex items-center gap-2 group"
-            >
-              <span>⚠</span>
-              <span>Change Email</span>
-            </button>
+            {!isEditMode && (
+              <button
+                onClick={onChangeEmailClick}
+                className="text-sm text-orange-500 hover:text-orange-400 font-mono uppercase tracking-wider border border-orange-500/30 hover:border-orange-500/50 px-4 py-2 transition-all flex items-center gap-2 group"
+              >
+                <span>⚠</span>
+                <span>Change Email</span>
+              </button>
+            )}
 
             {/* Info Box */}
             <div className="bg-slate-800/50 border border-slate-700 p-3 text-xs text-slate-400 font-mono">
               <div className="text-orange-400 font-bold mb-1">🔒 SECURITY NOTICE</div>
-              Your email has been verified and secured. Changing it will require re-verification.
+              {isEditMode 
+                ? "Your email is tied to your team registration and cannot be changed."
+                : "Your email has been verified and secured. Changing it will require re-verification."}
             </div>
           </>
         )}
@@ -726,6 +749,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
             opt={opt} 
             selected={value === opt} 
             onSelect={() => onChange(opt)} 
+            disabled={isInputDisabled}
           />
         ))}
       </div>
@@ -759,10 +783,12 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
         {allOptions.map((opt: string, idx: number) => (
            <button
              key={idx}
-             onClick={() => onCheckbox(opt)}
+             onClick={() => !isInputDisabled && onCheckbox(opt)}
+             disabled={isInputDisabled}
              className={`text-left px-4 py-3 border text-sm md:text-base font-mono transition-all flex items-start gap-4 w-full
-                ${selected.includes(opt) 
-                    ? 'bg-orange-500/10 border-orange-500 text-white' 
+                ${isInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${selected.includes(opt)
+                    ? 'bg-orange-500/10 border-orange-500 text-white'
                     : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500'}
              `}
            >
@@ -805,6 +831,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
            <textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
               value={value || ''}
+              disabled={isInputDisabled}
               onChange={(e) => onChange(e.target.value)}
               onPaste={(e) => {
                   if (question.noPaste) {
@@ -813,9 +840,9 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
                   }
               }}
               placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
-              className="flex-1 bg-slate-900/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed"
+              className={`flex-1 bg-slate-900/50 border border-slate-700 p-4 text-xl font-mono text-white placeholder-slate-700 focus:outline-none focus:border-orange-500 transition-all resize-none h-48 md:h-64 tracking-tight leading-relaxed ${isInputDisabled ? 'opacity-50 cursor-not-allowed border-slate-800' : ''}`}
            />
-           
+
            {/* Guidance Panel */}
            {(question.guidance || (question.id === 'problemDesc' && assignedProblem)) && (
                <div className="md:w-64 shrink-0 bg-slate-900 border border-slate-800 p-4 rounded text-sm text-slate-400 font-mono hidden md:block">
@@ -847,18 +874,19 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
             <span className="text-xl">🇮🇳</span>
             <span className="text-xl md:text-2xl text-slate-400 font-mono">+91</span>
          </div>
-         <input
-            ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
-            type="tel"
-            value={value || ''}
-            maxLength={10}
-            onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '');
-                onChange(val);
-            }}
-            placeholder="9876543210"
-            className="w-full bg-transparent focus:outline-none text-xl md:text-3xl text-orange-400 font-mono tracking-[0.2em] placeholder-slate-800"
-         />
+          <input
+             ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
+             type="tel"
+             value={value || ''}
+             disabled={isInputDisabled}
+             maxLength={10}
+             onChange={(e) => {
+                 const val = e.target.value.replace(/[^0-9]/g, '');
+                 onChange(val);
+             }}
+             placeholder="9876543210"
+             className={`w-full bg-transparent focus:outline-none text-xl md:text-3xl text-orange-400 font-mono tracking-[0.2em] placeholder-slate-800 ${isInputDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
       </div>
     );
   }
@@ -981,6 +1009,7 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
           <ComboboxInput
             value={(value as string) || ''}
             onChange={onChange}
+            disabled={isInputDisabled}
             suggestions={question.suggestions}
             placeholder={question.placeholder || ''}
           />
@@ -999,19 +1028,21 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
       ref={inputRef as React.RefObject<HTMLTextAreaElement & HTMLInputElement>}
       type={question.type}
       value={value || ''}
+      disabled={isInputDisabled}
       onChange={(e) => onChange(e.target.value)}
       placeholder={question.placeholder ? question.placeholder.toUpperCase() : ''}
-      className={`w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide
-      `}
+      className={`w-full bg-transparent border-b-2 border-slate-700 text-xl md:text-2xl py-2 focus:outline-none focus:border-orange-500 transition-colors placeholder-slate-800 font-mono text-orange-400 tracking-wide ${isInputDisabled ? 'opacity-50 cursor-not-allowed border-slate-800' : ''}`}
     />
   );
 };
 
-const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: boolean; onSelect: () => void }) => {
+const OptionButton = ({ opt, selected, onSelect, disabled }: { opt: string; selected: boolean; onSelect: () => void; disabled?: boolean }) => {
    return (
       <button
-        onClick={onSelect}
+        onClick={() => !disabled && onSelect()}
+        disabled={disabled}
         className={`text-left px-4 py-3 border flex items-center gap-4 w-full transition-all
+           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
            ${selected 
              ? 'bg-orange-500 border-orange-500 text-black' 
              : 'bg-transparent border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'}
@@ -1027,18 +1058,37 @@ const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: bool
    );
 };
 
-export default function HackathonForm() {
-  const [started, setStarted] = useState(false);
+export default function HackathonForm({
+  initialData = {},
+  isEditMode = false,
+  isLocked = false,
+  initialAssignedProblem = null
+}: {
+  initialData?: Answers;
+  isEditMode?: boolean;
+  isLocked?: boolean;
+  initialAssignedProblem?: any;
+}) {
+  const [started, setStarted] = useState(isEditMode);
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<Answers>(initialData);
+  const [isLockedFlag, setIsLockedFlag] = useState(isLocked || !!initialData.isLocked);
   const [isCompleted, setIsCompleted] = useState(false);
   const [direction, setDirection] = useState(0);
+
+  // Derivations
+  const visibleQuestions = useMemo(() => {
+    return QUESTIONS.filter(q => !q.condition || q.condition(answers));
+  }, [answers]);
+
+  const totalSteps = visibleQuestions.length;
+  const currentQuestion = visibleQuestions[currentStep];
 
   // OTP State
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otpValue, setOtpValue] = useState("");
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(isEditMode);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(isEditMode ? String(initialData.leaderEmail || "") : null);
   const [showChangeEmailWarning, setShowChangeEmailWarning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -1050,38 +1100,25 @@ export default function HackathonForm() {
     objective: string;
     description?: string | null;
     extensionsRemaining: number;
-  } | null>(null);
+  } | null>(initialAssignedProblem);
   const [problemLoading, setProblemLoading] = useState(false);
   const [problemError, setProblemError] = useState("");
 
   // ✅ NEW: Generate idempotency key once per form session
   const [idempotencyKey] = useState(() => {
-    // Use crypto.randomUUID() if available
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback for older browsers
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    return `reg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   });
 
-  const totalSteps = QUESTIONS.length;
-
-  // Compute visible step count (questions whose conditions are met)
-  const visibleSteps = React.useMemo(() => {
-    return QUESTIONS.filter(q => !q.condition || q.condition(answers)).length;
-  }, [answers]);
-
   // Compute visible step index (1-based) for current position
-  const visibleStepIndex = React.useMemo(() => {
-    let idx = 0;
-    for (let i = 0; i <= currentStep; i++) {
-      const q = QUESTIONS[i];
-      if (!q.condition || q.condition(answers)) idx++;
+  const visibleStepIndex = useMemo(() => {
+    let idx = 1;
+    for (let i = 0; i < currentStep; i++) {
+        // This is a bit complex since step numbers should only count non-hidden steps
+        // Simplified for this form:
+        idx++;
     }
     return idx;
-  }, [currentStep, answers]);
-
-  const currentQuestion = QUESTIONS[currentStep];
+  }, [currentStep]);
 
   const handleStart = () => setStarted(true);
 
@@ -1282,13 +1319,19 @@ export default function HackathonForm() {
           if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours") finalAnswers.additionalNotes = finalAnswers.ideaAdditionalNotes;
           if (finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") finalAnswers.additionalNotes = finalAnswers.buildAdditionalNotes;
 
+          // Normalise IdeaSprint github link field (uses different id to avoid duplicate-key collision)
+          if (finalAnswers.track === "IdeaSprint: Build MVP in 24 Hours" && finalAnswers.githubLinkIdea) {
+            finalAnswers.githubLink = finalAnswers.githubLinkIdea;
+          }
+
           // Include assigned problem statement ID for BuildStorm track
           if (assignedProblem?.id && finalAnswers.track === "BuildStorm: Solve Problem Statement in 24 Hours") {
             finalAnswers.assignedProblemStatementId = assignedProblem.id;
           }
 
           const res = await fetch('/api/register', {
-              method: 'POST',
+              // eslint-disable-next-line no-undef
+              method: isEditMode ? 'PUT' : 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
@@ -1315,7 +1358,7 @@ export default function HackathonForm() {
       } finally {
           setLoading(false);
       }
-  }, [answers, idempotencyKey, assignedProblem, setIsCompleted]);
+  }, [answers, idempotencyKey, assignedProblem, setIsCompleted, isEditMode]);
 
   const handleNext = React.useCallback(async () => {
     // --- VALIDATIONS ---
@@ -1605,7 +1648,7 @@ export default function HackathonForm() {
   }, [started, isCompleted, currentStep, answers, currentQuestion, showOtpInput, otpValue, loading, handleNext, verifyOtp]);
 
 
-  if (!started) return <WelcomeScreen onStart={handleStart} />;
+  if (!started) return <WelcomeScreen onStart={() => setStarted(true)} isLocked={isLockedFlag} />;
   if (isCompleted) return <ThankYouScreen track={typeof answers.track === 'string' ? answers.track : ''} />;
 
   // FOLDER THEME UI
@@ -1654,7 +1697,7 @@ export default function HackathonForm() {
                        >
                            <div className="flex items-center gap-2 mb-6">
                                <span className="text-orange-500 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                                   STEP {visibleStepIndex} / {visibleSteps}
+                                   STEP {visibleStepIndex} / {totalSteps}
                                </span>
                                {currentQuestion.required && <span className="text-red-500 text-xs uppercase tracking-wider">* Mandatory</span>}
                            </div>
@@ -1662,19 +1705,31 @@ export default function HackathonForm() {
                            <h2 className="text-2xl md:text-4xl font-bold mb-2 uppercase tracking-tight text-slate-100">
                                {currentQuestion.question}
                            </h2>
-                           
-                           {currentQuestion.subtext && (
+                            
+                            {currentQuestion.subtext && (
                                <p className="text-slate-400 text-sm md:text-base mb-8 border-l-2 border-slate-700 pl-4 py-1 italic">
                                    {currentQuestion.subtext}
                                </p>
-                           )}
+                            )}
 
-                           <div className="mt-4 mb-8">
-                               <InputRenderer 
-                                    question={currentQuestion} 
-                                    value={answers[currentQuestion.id]} 
-                                    onChange={handleAnswer} 
-                                    onCheckbox={handleCheckbox}
+                            {isLockedFlag && (
+                               <div className="mb-6 p-3 border border-red-500/30 bg-red-500/5">
+                                  <span className="text-[10px] text-red-500 font-bold uppercase tracking-tighter">🔒 Registration locked — no further edits permitted.</span>
+                               </div>
+                            )}
+
+                            <div className="mt-4 mb-8">
+                               <InputRenderer
+                                    question={currentQuestion}
+                                    value={answers[currentQuestion.id]}
+                                    onChange={handleAnswer}
+                                    onCheckbox={(opt) => {
+                                        const current = (answers[currentQuestion.id] as string[]) || [];
+                                        const updated = current.includes(opt)
+                                          ? current.filter((o) => o !== opt)
+                                          : [...current, opt];
+                                        setAnswers((prev) => ({ ...prev, [currentQuestion.id]: updated }));
+                                    }}
                                     answers={answers}
                                     emailVerified={emailVerified}
                                     verifiedEmail={verifiedEmail}
@@ -1686,8 +1741,10 @@ export default function HackathonForm() {
                                     problemLoading={problemLoading}
                                     problemError={problemError}
                                     fetchAssignedProblem={fetchAssignedProblem}
+                                    isEditMode={isEditMode || isLockedFlag}
                                />
                            </div>
+
                            
                            {errorMsg && (
                                <div className="bg-red-900/20 border-l-2 border-red-500 text-red-400 p-3 mb-6 text-sm font-bold flex items-center gap-2">
@@ -1699,9 +1756,9 @@ export default function HackathonForm() {
                                <button 
                                   onClick={handleNext}
                                   className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold uppercase tracking-widest px-8 py-3 clip-path-polygon disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                  disabled={loading}
+                                  disabled={loading || isLockedFlag}
                                >
-                                  {loading ? "PROCESSING..." : "CONFIRM DATA >>"}
+                                   {loading ? "PROCESSING..." : isLockedFlag ? "LOCKED" : "CONFIRM DATA >>"}
                                </button>
                                {currentStep > 0 && (
                                    <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">

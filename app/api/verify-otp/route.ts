@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const email = rawEmail.toLowerCase().trim();
 
     // Hash the provided OTP to compare with stored hash
-    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
 
     // Find the OTP record
     const record = await prisma.otp.findUnique({
@@ -74,6 +74,7 @@ export async function POST(req: Request) {
     });
 
     if (!record) {
+      console.log(`[VERIFY] No record found for ${email} with purpose ${purpose}`);
       return NextResponse.json(
         {
           success: false,
@@ -87,33 +88,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if OTP has expired
-    if (new Date() > record.expiresAt) {
-      // Clean up expired OTP
-      await prisma.otp.delete({
-        where: {
-          email_purpose: {
-            email,
-            purpose: purpose as OtpPurpose,
-          },
-        },
-      });
+    // ✅ DEV BYPASS: Allow '000000' for demo emails
+    const isDev = process.env.NODE_ENV === 'development';
+    const isDemoEmail = email.includes('demo.idea@example.com') || email.includes('demo.build@example.com');
+    const isMasterOtp = otp === '000000';
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'OTP_EXPIRED',
-          message: 'OTP has expired. Please request a new one.',
-        },
-        { 
-          status: 400,
-          headers: createRateLimitHeaders(rateLimit),
-        }
-      );
+    // Hash the provided OTP to compare with stored hash
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    if (isDev && isDemoEmail && isMasterOtp) {
+       console.log(`[VERIFY] Master OTP used for demo account: ${email}`);
+    } else if (record.otp !== otpHash) {
+       console.log(`[VERIFY] Hash Mismatch for ${email}. Expected: ${record.otp.substring(0,8)}, Received: ${otpHash.substring(0,8)}`);
+    } else {
+       console.log(`[VERIFY] Success for ${email}`);
     }
 
-    // Check if OTP matches (compare hashes)
-    if (record.otp !== otpHash) {
+    // Check if OTP matches (compare hashes) - unless bypass is active
+    if (record.otp !== otpHash && !(isDev && isDemoEmail && isMasterOtp)) {
+      // Check if OTP has expired
+      if (new Date() > record.expiresAt) {
+         return NextResponse.json({ success: false, error: 'OTP_EXPIRED', message: 'OTP has expired.' }, { status: 400 });
+      }
       // Increment attempts
       const newAttempts = record.attempts + 1;
 

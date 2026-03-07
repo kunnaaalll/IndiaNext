@@ -110,6 +110,11 @@ export async function POST(req: Request) {
     });
 
     console.log(`[OTP] Generated for ${email}: hash=${otpHash.substring(0, 8)}... (${purpose})`);
+    
+    // Log plain OTP in development so testing is easy without checking emails
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV OTP] The OTP for ${email} is: ${otp}`);
+    }
 
     // Send email using Resend
     try {

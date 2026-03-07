@@ -71,6 +71,7 @@ const RegisterSchema = z.object({
   // BuildStorm Fields
   problemDesc: z.string().optional(),
   githubLink: z.string().url().optional().or(z.literal('')),
+  githubLinkIdea: z.string().url().optional().or(z.literal('')),
   assignedProblemStatementId: z.string().optional(),
   
   // Meta
@@ -495,9 +496,8 @@ export async function POST(req: Request) {
           expectedImpact: trackEnum === 'IDEA_SPRINT' ? sanitizedData.expectedImpact : null,
           techStack: trackEnum === 'IDEA_SPRINT' ? sanitizedData.techStack : null,
           docLink: trackEnum === 'IDEA_SPRINT' ? sanitizedData.docLink : null,
-          // BuildStorm fields
+          githubLink: sanitizedData.githubLink || sanitizedData.githubLinkIdea || null,
           problemDesc: trackEnum === 'BUILD_STORM' ? sanitizedData.problemDesc : null,
-          githubLink: trackEnum === 'BUILD_STORM' ? sanitizedData.githubLink : null,
           assignedProblemStatementId: trackEnum === 'BUILD_STORM' ? sanitizedData.assignedProblemStatementId : null,
         },
       });
@@ -666,3 +666,200 @@ export async function POST(req: Request) {
     return handleGenericError(error, '/api/register');
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session_token')?.value;
+
+    if (!sessionToken) {
+      return NextResponse.json({ success: false, error: 'UNAUTHORIZED' }, { status: 401 });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { token: hashSessionToken(sessionToken) },
+      include: { 
+        user: { 
+          include: { 
+            teamMemberships: {
+              include: { team: true }
+            } 
+          } 
+        } 
+      },
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return NextResponse.json({ success: false, error: 'SESSION_EXPIRED' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const validation = RegisterSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'VALIDATION_ERROR', message: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedData = sanitizeObject(validation.data, { sanitizeHtml: true, sanitizeUrls: true });
+
+    const trackMap: Record<string, 'IDEA_SPRINT' | 'BUILD_STORM'> = {
+      'IdeaSprint: Build MVP in 24 Hours': 'IDEA_SPRINT',
+      'BuildStorm: Solve Problem Statement in 24 Hours': 'BUILD_STORM',
+      'IDEA_SPRINT': 'IDEA_SPRINT',
+      'BUILD_STORM': 'BUILD_STORM',
+    };
+    const trackEnum = trackMap[sanitizedData.track] || 'IDEA_SPRINT';
+
+    const user = session.user;
+    if (!user.teamMemberships || user.teamMemberships.length === 0) {
+      return NextResponse.json({ success: false, error: 'NO_TEAM_FOUND' }, { status: 404 });
+    }
+
+    // Find the membership for the requested track
+    const targetMembership = user.teamMemberships.find(m => m.team.track === trackEnum);
+    if (!targetMembership) {
+      return NextResponse.json({ success: false, error: 'TEAM_NOT_FOUND_FOR_TRACK', message: `No registration found for track: ${trackEnum}` }, { status: 404 });
+    }
+
+    const teamId = targetMembership.teamId;
+
+    // 🚩 LIMIT EDITS: Check if this team has already been updated once
+    const existingUpdateLog = await prisma.activityLog.findFirst({
+      where: {
+        entityId: teamId,
+        action: 'team.updated'
+      }
+    });
+
+    if (existingUpdateLog) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'ALREADY_EDITED', 
+        message: 'Registration details are locked. You have already edited your form once.' 
+      }, { status: 403 });
+    }
+
+    const membersToUpdate: Array<{ email: string; name: string; gender: string; college: string; degree: string; phone: string }> = [];
+    if (sanitizedData.member2Email && sanitizedData.member2Name) {
+      membersToUpdate.push({ email: sanitizedData.member2Email.toLowerCase().trim(), name: sanitizedData.member2Name, gender: sanitizedData.member2Gender || '', college: sanitizedData.member2College || sanitizedData.leaderCollege, degree: sanitizedData.member2Degree || '', phone: '' });
+    }
+    if (sanitizedData.member3Email && sanitizedData.member3Name) {
+      membersToUpdate.push({ email: sanitizedData.member3Email.toLowerCase().trim(), name: sanitizedData.member3Name, gender: sanitizedData.member3Gender || '', college: sanitizedData.member3College || sanitizedData.leaderCollege, degree: sanitizedData.member3Degree || '', phone: '' });
+    }
+    if (sanitizedData.member4Email && sanitizedData.member4Name) {
+      membersToUpdate.push({ email: sanitizedData.member4Email.toLowerCase().trim(), name: sanitizedData.member4Name, gender: sanitizedData.member4Gender || '', college: sanitizedData.member4College || sanitizedData.leaderCollege, degree: sanitizedData.member4Degree || '', phone: '' });
+    }
+
+    const allEmails = membersToUpdate.map(m => m.email);
+    if (allEmails.length > 0) {
+      const existingMembers = await prisma.teamMember.findMany({
+        where: {
+          user: { email: { in: allEmails } },
+          team: { deletedAt: null, id: { not: teamId } }, 
+        },
+      });
+      if (existingMembers.length > 0) {
+        return NextResponse.json({ success: false, error: 'DUPLICATE_EMAIL', message: 'One or more member email addresses are already registered in another team.' }, { status: 409 });
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 🚩 LOCK CHECK: Ensure no update has been logged yet for this team
+      const existingUpdateLog = await tx.activityLog.findFirst({
+        where: {
+          entityId: teamId,
+          action: 'team.updated'
+        }
+      });
+
+      if (existingUpdateLog) {
+        throw new Error('ALREADY_EDITED');
+      }
+
+      await tx.team.update({
+        where: { id: teamId },
+        data: {
+          name: sanitizedData.teamName,
+          college: sanitizedData.leaderCollege,
+          hearAbout: sanitizedData.hearAbout,
+          additionalNotes: sanitizedData.additionalNotes,
+          size: membersToUpdate.length + 1, // +1 for leader
+        }
+      });
+
+      await tx.submission.update({
+        where: { teamId: teamId },
+        data: {
+          ideaTitle: trackEnum === 'IDEA_SPRINT' ? sanitizedData.ideaTitle : null,
+          problemStatement: trackEnum === 'IDEA_SPRINT' ? sanitizedData.problemStatement : null,
+          proposedSolution: trackEnum === 'IDEA_SPRINT' ? sanitizedData.proposedSolution : null,
+          targetUsers: trackEnum === 'IDEA_SPRINT' ? sanitizedData.targetUsers : null,
+          expectedImpact: trackEnum === 'IDEA_SPRINT' ? sanitizedData.expectedImpact : null,
+          techStack: trackEnum === 'IDEA_SPRINT' ? sanitizedData.techStack : null,
+          docLink: trackEnum === 'IDEA_SPRINT' ? sanitizedData.docLink : null,
+          githubLink: sanitizedData.githubLink || sanitizedData.githubLinkIdea || null,
+          problemDesc: trackEnum === 'BUILD_STORM' ? sanitizedData.problemDesc : null,
+        }
+      });
+
+      // Completely replace MEMBER level TeamMembers
+      await tx.teamMember.deleteMany({
+        where: { teamId: teamId, role: 'MEMBER' }
+      });
+
+      for (const member of membersToUpdate) {
+        let user = await tx.user.findUnique({ where: { email: member.email } });
+        if (user) {
+          user = await tx.user.update({
+            where: { email: member.email },
+            data: { name: member.name, gender: member.gender, college: member.college, degree: member.degree }
+          });
+        } else {
+          user = await tx.user.create({
+            data: { email: member.email, name: member.name, gender: member.gender, college: member.college, degree: member.degree, role: 'PARTICIPANT' }
+          });
+        }
+        await tx.teamMember.create({
+          data: { userId: user.id, teamId: teamId, role: 'MEMBER' }
+        });
+      }
+
+      // 📝 LOG CHANGE: Record the edit in activity logs
+      await tx.activityLog.create({
+        data: {
+          userId: user.id,
+          action: 'team.updated',
+          entity: 'Team',
+          entityId: teamId,
+          metadata: {
+            updatedAt: new Date().toISOString(),
+            teamName: sanitizedData.teamName,
+            track: trackEnum,
+            memberCount: membersToUpdate.length + 1,
+            userAgent: req.headers.get('user-agent') || 'unknown',
+            registrationUpdate: true
+          },
+          ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+          userAgent: req.headers.get('user-agent') || 'unknown',
+        }
+      });
+    });
+
+    return NextResponse.json({ success: true, message: 'Registration updated successfully!' });
+
+  } catch (error) {
+    if (error instanceof Error && error.message === 'ALREADY_EDITED') {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'ALREADY_EDITED', 
+        message: 'Registration details are locked. You have already edited your form once.' 
+      }, { status: 403 });
+    }
+    console.error('[Register Update] Error:', error);
+    return NextResponse.json({ success: false, error: 'UPDATE_FAILED' }, { status: 500 });
+  }
+}
+

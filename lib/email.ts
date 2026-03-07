@@ -526,7 +526,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                     <li>Our team will review your registration details</li>
                     <li>You will receive an email once your status is approved</li>
                     <li>Save your <strong style="color: #FF6600;">Team ID</strong> for all future communication</li>
-                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and prototype submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
+                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and MVP Architecture submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
                     <li>Follow updates on the official website</li>
                   </ol>
                 </div>
@@ -684,10 +684,10 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                     <li>Connect with your team leader and discuss your project plan</li>
                     <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
                     <li>Finalize your problem statement and task distribution</li>
-                    <li>Prepare your prototype / tech stack planning</li>
+                    <li>Prepare your MVP Architecture / tech stack planning</li>
                     ${
                       data.track.includes('Idea')
-                        ? `<li>Start working on your Idea Deck + Pitch Video + Prototype Mockup</li>`
+                        ? `<li>Start working on your Idea Deck + Pitch Video + MVP Architecture Mockup</li>`
                         : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
                     }
                   </ul>
@@ -1466,7 +1466,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
                     <li>Our team will review your registration details</li>
                     <li>You will receive an email once your status is approved</li>
                     <li>Save your <strong style="color: #FF6600;">Team ID</strong> for all future communication</li>
-                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and prototype submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
+                    ${data.track.includes('Idea') ? '<li>Start preparing your pitch deck and MVP Architecture submission</li>' : '<li>Start planning your MVP and finalize your problem statement approach</li>'}
                     <li>Follow updates on the official website</li>
                   </ol>
                 </div>
@@ -1601,9 +1601,9 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                     <li>Connect with your team leader and discuss your project plan</li>
                     <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
                     <li>Finalize your problem statement and task distribution</li>
-                    <li>Prepare your prototype / tech stack planning</li>
+                    <li>Prepare your MVP Architecture / tech stack planning</li>
                     ${data.track.includes('Idea')
-                      ? `<li>Start working on your Idea Deck + Pitch Video + Prototype Mockup</li>`
+                      ? `<li>Start working on your Idea Deck + Pitch Video + MVP Architecture Mockup</li>`
                       : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
                     }
                   </ul>

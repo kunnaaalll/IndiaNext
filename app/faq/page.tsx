@@ -25,6 +25,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 import { fadeInUp, staggerContainer } from "@/lib/animations/variants";
 
@@ -322,8 +323,8 @@ const FAQContent = () => {
         <div>
           <p className="mb-2">No. Each team can register for <strong className="text-white">only one track</strong>:</p>
           <ul className="list-none space-y-1 ml-2">
-            <li>💡 IdeaSprint — Concept + Prototype Track</li>
-            <li>⚡ BuildStorm — 24-Hour MVP Development Track</li>
+            <li>💡 IdeaSprint — The Builders Track (Problem → Software Solution)</li>
+            <li>⚡ BuildStorm — The Solvers Track (Assigned Problem Statements)</li>
           </ul>
         </div>
       ),
@@ -387,8 +388,8 @@ const FAQContent = () => {
         <ul className="list-none space-y-2">
           <li className="flex items-center gap-2"><FileText size={14} className="text-green-400" /> Idea Deck (Max 10 slides)</li>
           <li className="flex items-center gap-2"><Video size={14} className="text-green-400" /> 3-minute Pitch Video</li>
-          <li className="flex items-center gap-2"><Layout size={14} className="text-green-400" /> Prototype / Mockup / Proof-of-Concept</li>
-          <li className="flex items-center gap-2"><Code size={14} className="text-green-400" /> Optional GitHub Repository</li>
+          <li className="flex items-center gap-2"><Layout size={14} className="text-green-400" /> MVP Architecture / Mockup / wireframes</li>
+          <li className="flex items-center gap-2"><Code size={14} className="text-green-400" /> GitHub Repository (Initialized at T-00:00)</li>
         </ul>
       ),
     },
@@ -396,11 +397,10 @@ const FAQContent = () => {
       question: "What do BuildStorm participants need to submit?",
       answer: (
         <ul className="list-none space-y-2">
-          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> Working MVP</li>
-          <li className="flex items-center gap-2"><Globe size={14} className="text-orange-400" /> Live Demo Link (if applicable)</li>
-          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> GitHub Repository with proper README</li>
-          <li className="flex items-center gap-2"><FileText size={14} className="text-orange-400" /> Technical Documentation</li>
-          <li className="flex items-center gap-2"><Presentation size={14} className="text-orange-400" /> Final Pitch Presentation</li>
+          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> Functional MVP (Built from scratch)</li>
+          <li className="flex items-center gap-2"><Video size={14} className="text-orange-400" /> 3-minute Tech Walkthrough Video</li>
+          <li className="flex items-center gap-2"><Code size={14} className="text-orange-400" /> GitHub Repository (Public)</li>
+          <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-orange-400" /> Fully 'Run-Ready' Project for Jury</li>
         </ul>
       ),
     },
@@ -498,10 +498,9 @@ const FAQContent = () => {
       question: "Can we modify our team after registration?",
       answer: (
         <p>
-          Team modifications may be allowed <strong className="text-white">before the deadline</strong>. Contact support at{" "}
-          <a href="mailto:hackathon@kessc.edu.in" className="text-orange-400 hover:text-white transition-colors underline decoration-orange-400/30">
-            hackathon@kessc.edu.in
-          </a>.
+          You can modify your team <strong className="text-white">once</strong> through the dashboard after your initial registration. 
+          Changes are logged and once updated, the form will be <strong className="text-amber-400">locked</strong>. 
+          For any critical errors after locking, contact support.
         </p>
       ),
     },

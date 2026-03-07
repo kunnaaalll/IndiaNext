@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import DevfolioButton from "@/components/DevfolioButton";
+
 import {
   motion,
   useScroll,
@@ -369,18 +369,18 @@ const EvalCard = ({ icon, title, accent, index }: EvalCardProps) => (
 // ─────────────────────────────────────────────────────────────
 const IdeaSprintSection = () => {
   const rules = [
-    "This is an open innovation track — teams may choose any real-world problem aligned with the hackathon domains.",
-    "The idea must be original and not a previously built or commercially deployed project.",
-    "Previously created concepts are allowed only if significant improvements and new implementation are demonstrated.",
-    "A prototype, mockup, or proof-of-concept must be submitted along with the pitch.",
-    "Plagiarism or copied content will lead to immediate disqualification.",
-    "The organizing committee's decision will be final in case of disputes.",
+    "Fresh Start: Teams must initialize a brand new GitHub/GitLab repository at the start of the event (T-00:00).",
+    "Pre-work Protocols: UI mockups, wireframes, and architecture diagrams prepared beforehand are fully permitted.",
+    "No Legacy Code: Zero functional code from previous projects or repositories can be utilized during the sprint.",
+    "Open Tech Stack: No restrictions — participants can use any tools (React, Python, Flutter, AI models, etc.) that fit their vision.",
+    "Plagiarism Check: Any copied functional content or project impersonation will lead to immediate disqualification.",
+    "Final Outcome: A functional Minimum Viable Product (MVP) must be developed within the 24-hour window.",
   ];
 
   const submissions = [
     { icon: <FileText size={20} />, label: "Idea Deck", detail: "Max 10 slides" },
     { icon: <Video size={20} />, label: "Pitch Video", detail: "3 minutes max" },
-    { icon: <Layout size={20} />, label: "Prototype", detail: "Figma / Wireframe / Demo / POC Code" },
+    { icon: <Layout size={20} />, label: "MVP Architecture", detail: "Figma / Wireframe / Demo / POC Code" },
   ];
 
   const evalCriteria = [
@@ -388,7 +388,7 @@ const IdeaSprintSection = () => {
     { icon: <Target size={24} />, title: "Problem Relevance" },
     { icon: <Globe size={24} />, title: "Social Impact" },
     { icon: <Brain size={24} />, title: "Feasibility & Scalability" },
-    { icon: <Code size={24} />, title: "Prototype Quality" },
+    { icon: <Code size={24} />, title: "MVP / POC Quality" },
     { icon: <Presentation size={24} />, title: "Presentation" },
   ];
 
@@ -415,8 +415,9 @@ const IdeaSprintSection = () => {
              MISSION_OBJECTIVE
           </h3>
           <p className="text-gray-300 leading-relaxed text-base">
-            Participants must conceptualize, design, and present an innovative solution addressing a real-world problem.
-            Teams are expected to submit a prototype or proof-of-concept that demonstrates the feasibility of their idea.
+            IdeaSprint is targeted at innovators who have a specific problem they want to solve through software. 
+            Participants must conceptualize, design, and implement a solution from scratch during the 24-hour sprint.
+            A functional MVP is the final requirement.
           </p>
         </motion.div>
 
@@ -479,14 +480,13 @@ const IdeaSprintSection = () => {
 // ─────────────────────────────────────────────────────────────
 const BuildStormSection = () => {
   const rules = [
-    "This is a category-based track (TrustTech, HealthTech, EdTech, ClimateTech, Digital Inclusion).",
-    "Teams must select ONE category and build strictly within that domain.",
-    "The solution must directly address the chosen problem statement.",
-    "The MVP must be developed during the official 24-hour hackathon period.",
-    "Use of APIs, frameworks, SDKs, and libraries is permitted.",
-    "Pre-built UI templates are allowed; however, core logic and implementation must be completed during the event.",
-    "A fully working demo is mandatory for evaluation.",
-    "Incomplete, non-functional, or copied projects will be disqualified.",
+    "The Reveal: Problem statements are released exactly at the start of the event with no prior hints or previews.",
+    "Selection Window: Teams have exactly 60 minutes to review the provided problems and lock in their choice.",
+    "Commitment: Once a problem statement is selected and committed, no switching or track changes are permitted.",
+    "Constraint Driven: Scoring is heavily weighted on how accurately the specific technical constraints of the problem are met.",
+    "Precision Over Polish: Meeting the core functionality and edge-case requirements of the problem is prioritized over aesthetic polish.",
+    "Code Ethics: Usage of open-source libraries and public APIs is fully permitted, but project logic must be built live.",
+    "Fully Functional: A working demo is mandatory; projects must be 'run-ready' for live pitching to the jury.",
   ];
 
   const evalCriteria = [
@@ -522,8 +522,9 @@ const BuildStormSection = () => {
              MISSION_OBJECTIVE
           </h3>
           <p className="text-gray-300 leading-relaxed text-base">
-            Participants must design and develop a working Minimum Viable Product (MVP) within 24 hours
-            based on a selected or assigned problem statement.
+            BuildStorm teams solve specific, complex problems provided by the organizers. 
+            Success is measured by how accurately and technically the team implements the specific solution 
+            parameters within the 24-hour limit.
           </p>
         </motion.div>
 
@@ -684,10 +685,10 @@ const CodeOfConductSection = () => {
   const mustDo = [
     "Maintain respectful communication at all times.",
     "Avoid harassment, discrimination, or offensive behavior.",
-    "Follow instructions provided by the organizing committee.",
-    "Refrain from cheating, plagiarism, or unethical practices.",
-    "Respect intellectual property rights.",
-    "Avoid disruptive or malicious technical activities.",
+    "Bring your own gear: Laptops, chargers, and extension cords (power outlets provided).",
+    "Adhere to the submission window: 15 minutes before the 24-hour clock ends.",
+    "Follow instructions provided by the session mentors and organizing committee.",
+    "Respect intellectual property rights of other teams and open-source licenses.",
   ];
 
   const prohibited = [
@@ -884,8 +885,7 @@ const FooterCTA = () => (
             </Link>
           </div>
 
-          {/* Apply with Devfolio */}
-          <DevfolioButton />
+
         </div>
       </motion.div>
 

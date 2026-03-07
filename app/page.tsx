@@ -901,11 +901,12 @@ const SponsorsSection = () => (
         <div className="max-w-7xl mx-auto px-4 md:px-6 text-center">
             <p className="text-gray-300 font-mono text-xs sm:text-sm tracking-[0.4em] sm:tracking-[1em] mb-12 md:mb-20 uppercase font-black italic select-none">{"// STRATEGIC_BACKING_INITIATIVE"}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-                {([
-                    { name: "Sponsor Alpha", status: "LINK_ACTIVE" },
-                    { name: "Partner Bravo", status: "LINK_ACTIVE" },
-                    { name: "Node Delta", status: "LINK_ACTIVE" }
-                ] as { name: string; status: string; image?: string }[]).map((brand, i) => (
+                {[
+                    { name: "Sponsor Gamma", status: "LINK_ACTIVE", image: undefined as string | undefined },
+                    { name: "Sponsor Alpha", status: "LINK_ACTIVE", image: undefined as string | undefined },
+                    { name: "Partner Bravo", status: "LINK_ACTIVE", image: undefined as string | undefined },
+                    { name: "Node Delta", status: "LINK_ACTIVE", image: undefined as string | undefined }
+                ].map((brand, i) => (
                     <motion.div 
                         key={i}
                         whileHover={{ y: -5, borderColor: "rgba(255,102,0,0.5)", backgroundColor: "rgba(255,102,0,0.05)" }}

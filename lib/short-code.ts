@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { Track } from '@prisma/client/edge';
+import type { Track } from '@prisma/client';
 import crypto from 'crypto';
 
 // ═══════════════════════════════════════════════════════════
@@ -68,7 +68,7 @@ export async function generateShortCode(track: Track): Promise<string> {
  * Use this when creating teams within $transaction.
  */
 export async function generateShortCodeTx(
-  tx: { team: { findUnique: (args: { where: { shortCode: string }; select: { id: true } }) => Promise<{ id: string } | null> } },
+  tx: any,
   track: Track
 ): Promise<string> {
   const prefix = TRACK_PREFIX[track];

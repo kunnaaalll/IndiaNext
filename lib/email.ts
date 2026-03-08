@@ -222,6 +222,15 @@ function isRetryableError(error: EmailError): boolean {
   return false;
 }
 
+function isQuotaExceededError(error: EmailError): boolean {
+  // Check if error is due to daily quota exceeded
+  if (error.statusCode === 429) return true; // Rate limit
+  if (error.code === 'rate_limit_exceeded') return true;
+  if (error.message?.toLowerCase().includes('quota')) return true;
+  if (error.message?.toLowerCase().includes('rate limit')) return true;
+  return false;
+}
+
 async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResult> {
   const { to, subject, html, type, maxRetries = EMAIL_CONFIG.maxRetries } = options;
   const from = EMAIL_CONFIG.from;

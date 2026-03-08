@@ -2099,3 +2099,163 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
           </body>
         </html>`;
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// EMAIL QUEUE PROCESSING
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Process queued emails that failed due to quota limits
+ * Call this function when quota resets (typically daily)
+ */
+export async function processEmailQueue(options?: {
+  batchSize?: number;
+  maxAge?: number;
+}): Promise<{
+  processed: number;
+  sent: number;
+  failed: number;
+  errors: string[];
+}> {
+  const batchSize = options?.batchSize || 50;
+  const maxAge = options?.maxAge || 48;
+  const maxAgeDate = new Date(Date.now() - maxAge * 60 * 60 * 1000);
+
+  console.log(`[Email Queue] Starting queue processing (batch size: ${batchSize})`);
+
+  try {
+    const pendingEmails = await prisma.emailLog.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { gte: maxAgeDate },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: batchSize,
+    });
+
+    if (pendingEmails.length === 0) {
+      console.log('[Email Queue] No pending emails to process');
+      return { processed: 0, sent: 0, failed: 0, errors: [] };
+    }
+
+    console.log(`[Email Queue] Found ${pendingEmails.length} pending emails`);
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const email of pendingEmails) {
+      try {
+        console.log(`[Email Queue] Retrying email to ${email.to.replace(/(.{3}).*@/, '$1***@')}`);
+
+        const result = await getResend().emails.send({
+          from: email.from,
+          to: email.to,
+          subject: email.subject,
+          html: '', // Note: HTML not stored in EmailLog
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message || 'Unknown Resend error');
+        }
+
+        await prisma.emailLog.update({
+          where: { id: email.id },
+          data: {
+            status: 'SENT',
+            messageId: result.data?.id,
+            sentAt: new Date(),
+            error: null,
+            attempts: email.attempts + 1,
+            lastAttempt: new Date(),
+          },
+        });
+
+        sent++;
+        console.log(`[Email Queue] ✓ Successfully sent queued email`);
+      } catch (error) {
+        const err = error as EmailError;
+        const errorMsg = err.message || 'Unknown error';
+
+        if (isQuotaExceededError(err)) {
+          console.log(`[Email Queue] Quota still exceeded, stopping`);
+          errors.push('Quota still exceeded');
+          break;
+        }
+
+        await prisma.emailLog.update({
+          where: { id: email.id },
+          data: {
+            status: 'FAILED',
+            error: errorMsg,
+            attempts: email.attempts + 1,
+            lastAttempt: new Date(),
+          },
+        });
+
+        failed++;
+        errors.push(`Failed: ${errorMsg}`);
+      }
+
+      await sleep(100);
+    }
+
+    console.log(`[Email Queue] Complete: ${sent} sent, ${failed} failed`);
+    return { processed: pendingEmails.length, sent, failed, errors };
+  } catch (error) {
+    console.error('[Email Queue] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get queue statistics
+ */
+export async function getEmailQueueStats(): Promise<{
+  pending: number;
+  oldestPending: Date | null;
+  failedLast24h: number;
+  sentLast24h: number;
+}> {
+  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [pending, oldestPending, failedLast24h, sentLast24h] = await Promise.all([
+    prisma.emailLog.count({ where: { status: 'PENDING' } }),
+    prisma.emailLog.findFirst({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    }),
+    prisma.emailLog.count({
+      where: { status: 'FAILED', createdAt: { gte: last24h } },
+    }),
+    prisma.emailLog.count({
+      where: { status: 'SENT', sentAt: { gte: last24h } },
+    }),
+  ]);
+
+  return {
+    pending,
+    oldestPending: oldestPending?.createdAt || null,
+    failedLast24h,
+    sentLast24h,
+  };
+}
+
+/**
+ * Clear old failed emails from the queue
+ */
+export async function cleanupOldQueuedEmails(olderThanHours = 72): Promise<number> {
+  const cutoffDate = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+
+  const result = await prisma.emailLog.deleteMany({
+    where: {
+      status: 'PENDING',
+      createdAt: { lt: cutoffDate },
+    },
+  });
+
+  console.log(`[Email Queue] Cleaned up ${result.count} old queued emails`);
+  return result.count;
+}

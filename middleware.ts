@@ -148,15 +148,13 @@ export function middleware(request: NextRequest) {
     // ✅ SECURITY: CSP with Next.js compatibility
     // Next.js requires 'unsafe-inline' and 'unsafe-eval' for its runtime
     // This is a known limitation: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
-    const nonce = crypto.getRandomValues(new Uint8Array(16));
-    const nonceBase64 = Buffer.from(nonce).toString('base64');
-    
+    // Note: Do NOT include nonce - it disables 'unsafe-inline' which Next.js needs
     response.headers.set(
       'Content-Security-Policy',
       [
         "default-src 'self'",
         // Next.js requires unsafe-inline and unsafe-eval for its runtime
-        `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonceBase64}'`,
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
         "style-src 'self' 'unsafe-inline'", // Tailwind/inline styles
         "img-src 'self' res.cloudinary.com data: blob:", // Cloudinary images
         "font-src 'self'",
@@ -168,9 +166,6 @@ export function middleware(request: NextRequest) {
         "worker-src 'self' blob:",
       ].join('; ')
     );
-
-    // Store nonce in header for potential future use
-    response.headers.set('X-Nonce', nonceBase64);
   }
 
   return response;

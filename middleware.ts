@@ -145,20 +145,19 @@ export function middleware(request: NextRequest) {
       'max-age=63072000; includeSubDomains; preload'
     );
 
-    // ✅ SECURITY FIX: Remove unsafe-inline for scripts, use nonce-based CSP
-    // Note: Next.js requires 'unsafe-eval' for development, but we remove it in production
-    // For inline scripts, use nonce attribute: <script nonce={nonce}>
-    // Use Web Crypto API (available in Edge Runtime)
-    const nonceArray = new Uint8Array(16);
-    crypto.getRandomValues(nonceArray);
-    const nonce = Buffer.from(nonceArray).toString('base64');
+    // ✅ SECURITY: CSP with Next.js compatibility
+    // Next.js requires 'unsafe-inline' and 'unsafe-eval' for its runtime
+    // This is a known limitation: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
+    const nonce = crypto.getRandomValues(new Uint8Array(16));
+    const nonceBase64 = Buffer.from(nonce).toString('base64');
+    
     response.headers.set(
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        // ✅ SECURITY FIX: Removed 'unsafe-inline' - use nonce for inline scripts
-        `script-src 'self' 'nonce-${nonce}'`,
-        "style-src 'self' 'unsafe-inline'", // Tailwind/inline styles still need this
+        // Next.js requires unsafe-inline and unsafe-eval for its runtime
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonceBase64}'`,
+        "style-src 'self' 'unsafe-inline'", // Tailwind/inline styles
         "img-src 'self' res.cloudinary.com data: blob:", // Cloudinary images
         "font-src 'self'",
         "connect-src 'self'",
@@ -166,12 +165,12 @@ export function middleware(request: NextRequest) {
         "base-uri 'self'",
         "form-action 'self'",
         "object-src 'none'",
-        "worker-src 'self'",
+        "worker-src 'self' blob:",
       ].join('; ')
     );
 
-    // Store nonce in header for Next.js to use
-    response.headers.set('X-Nonce', nonce);
+    // Store nonce in header for potential future use
+    response.headers.set('X-Nonce', nonceBase64);
   }
 
   return response;

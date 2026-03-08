@@ -1,13 +1,14 @@
 // Email Campaign tRPC Router
 //
 // Provides CRUD + send + retry for bulk email campaigns.
-// Permission: bulkActions (SUPER_ADMIN, ADMIN, ORGANIZER).
+// Permission: SEND_EMAILS (SUPER_ADMIN, ADMIN, ORGANIZER).
 // JUDGEs and LOGISTICS are blocked from all operations.
 //
 import { z } from "zod";
 import { router, adminProcedure, rateLimitedAdminProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { getPermissions } from "@/lib/rbac";
+import { hasPermission } from "@/lib/rbac-permissions";
+import type { UserRole } from "@prisma/client";
 import {
   resolveRecipients,
   dispatchCampaign,
@@ -20,9 +21,8 @@ import {
 // HELPERS
 // ═══════════════════════════════════════════════════════════
 
-function requireBulkActions(role: string) {
-  const perms = getPermissions(role as Parameters<typeof getPermissions>[0]);
-  if (!perms.bulkActions) {
+function requireBulkActions(role: UserRole) {
+  if (!hasPermission(role, 'SEND_EMAILS')) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to manage email campaigns",

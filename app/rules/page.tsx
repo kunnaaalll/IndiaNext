@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import DevfolioButton from "@/components/DevfolioButton";
 import {
   motion,
   useScroll,
@@ -938,9 +937,6 @@ const FooterCTA = () => (
               ← BACK TO HOME
             </Link>
           </div>
-
-          {/* Apply with Devfolio */}
-          <DevfolioButton />
         </div>
       </motion.div>
 

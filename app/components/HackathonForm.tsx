@@ -482,6 +482,86 @@ const ThankYouScreen = ({ track }: { track: string }) => (
    </div>
 );
 
+// ── Team Member Manager (for selective removal) ──
+const TeamMemberManager = ({ 
+  currentSize, 
+  newSize, 
+  answers, 
+  onRemoveMember,
+  onCancel 
+}: { 
+  currentSize: number;
+  newSize: number;
+  answers: Answers;
+  onRemoveMember: (memberIndex: number) => void;
+  onCancel?: () => void;
+}) => {
+  const members = [];
+  
+  // Build list of current members (excluding leader)
+  for (let i = 2; i <= currentSize; i++) {
+    const name = answers[`member${i}Name`] as string;
+    const email = answers[`member${i}Email`] as string;
+    if (name || email) {
+      members.push({ index: i, name, email });
+    }
+  }
+
+  const membersToRemove = currentSize - newSize;
+
+  return (
+    <div className="w-full space-y-4 mb-6">
+      <div className="bg-yellow-950/40 border border-yellow-500/30 p-4 rounded">
+        <p className="text-yellow-400 text-xs font-mono uppercase tracking-wider font-bold mb-2">
+          ⚠ Team Size Reduction
+        </p>
+        <p className="text-yellow-300/80 text-sm font-mono leading-relaxed">
+          You&apos;re reducing team size from {currentSize} to {newSize} members. 
+          Please select which {membersToRemove} member{membersToRemove > 1 ? 's' : ''} to remove:
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {members.map((member) => (
+          <div
+            key={member.index}
+            className="flex items-center justify-between gap-4 bg-slate-900 border border-slate-700 p-4 rounded hover:border-slate-600 transition-colors"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-mono text-slate-400 uppercase tracking-wider mb-1">
+                Member {member.index}
+              </div>
+              <div className="text-lg font-mono text-white truncate">
+                {member.name || 'No name'}
+              </div>
+              <div className="text-xs font-mono text-slate-500 truncate">
+                {member.email || 'No email'}
+              </div>
+            </div>
+            <button
+              onClick={() => onRemoveMember(member.index)}
+              className="px-4 py-2 border border-red-500/50 text-red-400 text-xs font-mono uppercase tracking-wider hover:bg-red-500/10 transition-colors shrink-0"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {onCancel && (
+        <div className="flex justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border border-slate-600 text-slate-400 text-xs font-mono uppercase tracking-wider hover:bg-slate-800 transition-colors"
+          >
+            Cancel Size Change
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Combobox (searchable dropdown + free text) ──
 const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   value: string;
@@ -605,7 +685,7 @@ const ComboboxInput = ({ value, onChange, suggestions, placeholder }: {
   );
 };
 
-const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail, assignedProblem, problemLoading, problemError, fetchAssignedProblem }: { 
+const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVerified, verifiedEmail, onResetVerification, showChangeEmailWarning, onChangeEmailClick, onCancelChangeEmail, assignedProblem, problemLoading, problemError, fetchAssignedProblem, isEditMode, initialData }: { 
   question: Question; 
   value: string | string[] | undefined; 
   onChange: (val: string | string[]) => void; 
@@ -621,6 +701,8 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
   problemLoading?: boolean;
   problemError?: string;
   fetchAssignedProblem?: () => void;
+  isEditMode?: boolean;
+  initialData?: Record<string, any>;
 }) => {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
@@ -631,8 +713,39 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
     return () => clearTimeout(timer);
   }, [question]);
 
-  // Special handling for verified email field
-  if (question.id === 'leaderEmail' && emailVerified && verifiedEmail) {
+  // Lock leader email in edit mode
+  if (question.id === 'leaderEmail' && isEditMode) {
+    return (
+      <div className="w-full space-y-4">
+        {/* Locked Email Display */}
+        <div className="border-2 border-slate-700 bg-slate-900/50 rounded p-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+              Team Leader Email
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+              <span>🔒</span>
+              <span>LOCKED</span>
+            </div>
+          </div>
+          <div className="text-xl md:text-2xl font-mono text-slate-300 tracking-wide">
+            {value || initialData?.leaderEmail}
+          </div>
+        </div>
+        
+        <div className="bg-slate-800/50 border border-slate-700 rounded p-4">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            <strong className="text-orange-400">Security Notice:</strong> The team leader email 
+            cannot be changed after registration. This ensures account security and prevents 
+            unauthorized access. If you need to transfer team leadership, please contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Special handling for verified email field (only in new registration mode)
+  if (question.id === 'leaderEmail' && emailVerified && verifiedEmail && !isEditMode) {
     return (
       <div className="w-full space-y-4">
         {/* Locked Email Display */}
@@ -718,6 +831,36 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
   }
 
   if (question.type === 'choice') {
+    // Lock track selection in edit mode
+    if (question.id === 'track' && isEditMode) {
+      return (
+        <div className="w-full max-w-lg">
+          <div className="border-2 border-slate-700 bg-slate-900/50 rounded p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+                Competition Track
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+                <span>🔒</span>
+                <span>LOCKED</span>
+              </div>
+            </div>
+            <div className="text-xl md:text-2xl font-bold text-orange-400 uppercase tracking-tight">
+              {value}
+            </div>
+          </div>
+          
+          <div className="mt-4 bg-slate-800/50 border border-slate-700 rounded p-4">
+            <p className="text-xs text-slate-400 leading-relaxed">
+              The competition track cannot be changed after registration. 
+              Each track has different requirements and judging criteria.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Normal choice rendering
     return (
       <div className="flex flex-col gap-2 max-w-lg w-full">
         {question.options?.map((opt: string, _idx: number) => (
@@ -728,6 +871,17 @@ const InputRenderer = ({ question, value, onChange, onCheckbox, answers, emailVe
             onSelect={() => onChange(opt)} 
           />
         ))}
+        {question.id === 'track' && !isEditMode && (
+          <div className="mt-4 text-xs text-slate-500 font-mono border-t border-slate-800 pt-3">
+            <p className="mb-2">Need to edit your registration?</p>
+            <Link 
+              href="/login"
+              className="text-orange-500 hover:text-orange-400 underline transition-colors"
+            >
+              Login to edit your form
+            </Link>
+          </div>
+        )}
       </div>
     );
   }
@@ -1027,18 +1181,39 @@ const OptionButton = ({ opt, selected, onSelect }: { opt: string; selected: bool
    );
 };
 
-export default function HackathonForm() {
-  const [started, setStarted] = useState(false);
+// ── Component Props ───────────────────────────────────────
+interface HackathonFormProps {
+  initialData?: Record<string, any>;
+  isEditMode?: boolean;
+  isLocked?: boolean;
+  initialAssignedProblem?: {
+    id: string;
+    title: string;
+    objective: string;
+    description?: string | null;
+    extensionsRemaining: number;
+  } | null;
+}
+
+export default function HackathonForm({ 
+  initialData, 
+  isEditMode = false, 
+  isLocked = false,
+  initialAssignedProblem 
+}: HackathonFormProps = {}) {
+  const [started, setStarted] = useState(isEditMode); // Skip welcome in edit mode
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({});
+  const [answers, setAnswers] = useState<Answers>(initialData || {}); // Pre-fill with initial data
   const [isCompleted, setIsCompleted] = useState(false);
   const [direction, setDirection] = useState(0);
 
-  // OTP State
+  // OTP State - Pre-verified in edit mode
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otpValue, setOtpValue] = useState("");
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = useState(isEditMode); // Auto-verified in edit mode
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(
+    isEditMode ? (initialData?.leaderEmail as string) : null
+  );
   const [showChangeEmailWarning, setShowChangeEmailWarning] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -1050,9 +1225,20 @@ export default function HackathonForm() {
     objective: string;
     description?: string | null;
     extensionsRemaining: number;
-  } | null>(null);
+  } | null>(initialAssignedProblem || null); // Use initial problem in edit mode
   const [problemLoading, setProblemLoading] = useState(false);
   const [problemError, setProblemError] = useState("");
+
+  // Track changed fields for diff view
+  const [changedFields, setChangedFields] = useState<Set<string>>(new Set());
+  
+  // Session expiry warning
+  const [sessionWarning, setSessionWarning] = useState(false);
+
+  // Team size management state
+  const [showMemberManager, setShowMemberManager] = useState(false);
+  const [previousTeamSize, setPreviousTeamSize] = useState<number | null>(null);
+  const [pendingTeamSize, setPendingTeamSize] = useState<string | null>(null);
 
   // ✅ NEW: Generate idempotency key once per form session
   const [idempotencyKey] = useState(() => {
@@ -1097,6 +1283,31 @@ export default function HackathonForm() {
         localStorage.setItem('anonymous_id', anonymousId);
       }
 
+      // FIRST: Check if there's already an assigned problem (from previous reservation or registration)
+      // This prevents creating duplicate reservations after OTP verification
+      const checkParams = new URLSearchParams();
+      if (anonymousId) checkParams.set('anonymousId', anonymousId);
+      
+      const checkRes = await fetch(`/api/my-problem?${checkParams.toString()}`, {
+        credentials: 'include',
+      });
+      const checkResponse = await checkRes.json();
+
+      if (checkResponse.success && checkResponse.data) {
+        // Found existing assignment - use it instead of creating new reservation
+        setAssignedProblem({
+          id: checkResponse.data.id,
+          title: checkResponse.data.title,
+          objective: checkResponse.data.objective,
+          description: checkResponse.data.description || null,
+          extensionsRemaining: 0,
+        });
+        console.log(`[fetchAssignedProblem] Using existing problem assignment: "${checkResponse.data.title}" (source: ${checkResponse.data.source})`);
+        setProblemLoading(false);
+        return;
+      }
+
+      // No existing assignment found - create new reservation
       const res = await fetch('/api/reserve-problem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1126,6 +1337,7 @@ export default function HackathonForm() {
           description: response.data.description || null,
           extensionsRemaining: response.data.extensionsRemaining ?? 0,
         });
+        console.log(`[fetchAssignedProblem] Created new problem reservation: "${response.data.title}"`);
       }
     } catch (err) {
       setProblemError(err instanceof Error ? err.message : "Network error. Please try again.");
@@ -1134,17 +1346,18 @@ export default function HackathonForm() {
     }
   }, []);
 
-  // Auto-fetch problem when reaching buildBrief step
+  // Auto-fetch problem when reaching buildBrief step (only in new registration mode)
   useEffect(() => {
     if (
       currentQuestion?.id === 'buildBrief' &&
       currentQuestion?.type === 'dynamic-problem' &&
       !assignedProblem &&
-      !problemLoading
+      !problemLoading &&
+      !isEditMode // Don't re-fetch in edit mode
     ) {
       fetchAssignedProblem();
     }
-  }, [currentQuestion, assignedProblem, problemLoading, fetchAssignedProblem]);
+  }, [currentQuestion, assignedProblem, problemLoading, fetchAssignedProblem, isEditMode]);
 
   // ✅ AUTO-RESTORE: Check for existing problem assignment on mount
   // Industry standard — returning users see their previously assigned problem
@@ -1203,6 +1416,80 @@ export default function HackathonForm() {
     return () => clearInterval(heartbeat);
   }, [assignedProblem]);
 
+  // L-1: Restore draft if session expired during edit
+  useEffect(() => {
+    if (isEditMode) {
+      const draft = localStorage.getItem('draft_edit');
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft);
+          // Only restore if it's for the same team and less than 1 hour old
+          if (parsed.teamId === initialData?.teamId && 
+              Date.now() - parsed.timestamp < 3600000) {
+            const shouldRestore = window.confirm(
+              "We found unsaved changes from a previous session. " +
+              "Would you like to restore them?"
+            );
+            if (shouldRestore) {
+              setAnswers(parsed.answers);
+            }
+          }
+          // Clean up draft
+          localStorage.removeItem('draft_edit');
+        } catch (err) {
+          console.error('Failed to restore draft:', err);
+          localStorage.removeItem('draft_edit');
+        }
+      }
+    }
+  }, [isEditMode, initialData]);
+
+  // L-1: Periodic session check in edit mode (every 2 minutes)
+  useEffect(() => {
+    if (!isEditMode) return;
+    
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/user/me', { credentials: 'include' });
+        if (!res.ok) {
+          setSessionWarning(true);
+        } else {
+          setSessionWarning(false);
+        }
+      } catch (err) {
+        console.error('Session check failed:', err);
+      }
+    };
+    
+    // Check immediately
+    checkSession();
+    
+    // Then check every 2 minutes
+    const interval = setInterval(checkSession, 2 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [isEditMode]);
+
+  // L-1: Auto-save draft in edit mode (debounced)
+  useEffect(() => {
+    if (!isEditMode || changedFields.size === 0) return;
+    
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem('draft_edit', JSON.stringify({
+          answers,
+          teamId: initialData?.teamId,
+          timestamp: Date.now()
+        }));
+        console.log('[Auto-save] Draft saved to localStorage');
+      } catch (err) {
+        console.error('[Auto-save] Failed to save draft:', err);
+      }
+    }, 2000); // Save 2 seconds after last change
+    
+    return () => clearTimeout(timeoutId);
+  }, [answers, isEditMode, changedFields, initialData]);
+
   // Logic Helpers
   const getNextValidStep = React.useCallback((current: number, dir: number, currentAnswers: Answers) => {
     let nextStep = current + dir;
@@ -1257,6 +1544,33 @@ export default function HackathonForm() {
   const submitForm = React.useCallback(async () => {
       setLoading(true);
 
+      // L-1: Check session validity before submission (especially important in edit mode)
+      if (isEditMode) {
+        try {
+          const sessionCheck = await fetch('/api/user/me', { credentials: 'include' });
+          if (!sessionCheck.ok) {
+            // Session expired - save draft and redirect to login
+            localStorage.setItem('draft_edit', JSON.stringify({
+              answers,
+              teamId: initialData?.teamId,
+              timestamp: Date.now()
+            }));
+            setErrorMsg(
+              "Your session has expired. Your changes have been saved. " +
+              "Please log in again to continue."
+            );
+            setLoading(false);
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 3000);
+            return;
+          }
+        } catch (err) {
+          console.error('Session check failed:', err);
+          // Continue anyway - let the register API handle it
+        }
+      }
+
       // Client-side duplicate email check
       const emailFields = [
         answers.leaderEmail,
@@ -1288,7 +1602,7 @@ export default function HackathonForm() {
           }
 
           const res = await fetch('/api/register', {
-              method: 'POST',
+              method: isEditMode ? 'PUT' : 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
@@ -1309,6 +1623,12 @@ export default function HackathonForm() {
           }
           
           console.log('Registration successful:', response.data);
+          
+          // Clear draft on successful submission
+          if (isEditMode) {
+            localStorage.removeItem('draft_edit');
+          }
+          
           setIsCompleted(true);
       } catch (err: unknown) {
           setErrorMsg(err instanceof Error ? err.message : 'Network error. Please try again.');
@@ -1339,6 +1659,26 @@ export default function HackathonForm() {
         setCurrentStep(nextStep);
         setErrorMsg("");
       } else {
+        // Check if locked before final submission
+        if (isLocked) {
+          setErrorMsg(
+            "This registration is locked and cannot be modified. " +
+            "You have already used your one-time edit."
+          );
+          return;
+        }
+        
+        // Show confirmation in edit mode
+        if (isEditMode) {
+          const confirmed = window.confirm(
+            "⚠️ FINAL WARNING\n\n" +
+            "After submitting these changes, your registration will be PERMANENTLY LOCKED.\n" +
+            "You will NOT be able to edit it again.\n\n" +
+            "Are you absolutely sure you want to proceed?"
+          );
+          if (!confirmed) return;
+        }
+        
         await submitForm();
       }
       return;
@@ -1459,9 +1799,29 @@ export default function HackathonForm() {
       setCurrentStep(nextStep);
       setErrorMsg(""); 
     } else {
+      // Check if locked before final submission
+      if (isLocked) {
+        setErrorMsg(
+          "This registration is locked and cannot be modified. " +
+          "You have already used your one-time edit."
+        );
+        return;
+      }
+      
+      // Show confirmation in edit mode
+      if (isEditMode) {
+        const confirmed = window.confirm(
+          "⚠️ FINAL WARNING\n\n" +
+          "After submitting these changes, your registration will be PERMANENTLY LOCKED.\n" +
+          "You will NOT be able to edit it again.\n\n" +
+          "Are you absolutely sure you want to proceed?"
+        );
+        if (!confirmed) return;
+      }
+      
       await submitForm();
     }
-  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep, assignedProblem, problemLoading]);
+  }, [currentQuestion, answers, emailVerified, currentStep, totalSteps, sendOtp, submitForm, getNextValidStep, assignedProblem, problemLoading, isLocked, isEditMode]);
 
   const verifyOtp = React.useCallback(async () => {
       setLoading(true);
@@ -1579,7 +1939,146 @@ export default function HackathonForm() {
     const prevStep = getNextValidStep(currentStep, -1, answers);
     if (prevStep >= 0) { setDirection(-1); setCurrentStep(prevStep); setErrorMsg(""); }
   };
-  const handleAnswer = (value: string | string[]) => { setAnswers((prev: Answers) => ({ ...prev, [currentQuestion.id]: value })); setErrorMsg(""); };
+
+  // Helper to get current team size as number
+  const getCurrentTeamSize = (teamSizeStr: string): number => {
+    if (teamSizeStr === "2 Members") return 2;
+    if (teamSizeStr === "3 Members") return 3;
+    if (teamSizeStr === "4 Members") return 4;
+    return 0;
+  };
+
+  // Handle team member removal
+  const handleRemoveMember = (memberIndex: number) => {
+    setAnswers((prev: Answers) => {
+      const updated = { ...prev };
+      
+      // Clear the removed member's data
+      delete updated[`member${memberIndex}Name`];
+      delete updated[`member${memberIndex}Gender`];
+      delete updated[`member${memberIndex}Email`];
+      delete updated[`member${memberIndex}College`];
+      delete updated[`member${memberIndex}Degree`];
+      
+      // Shift remaining members down
+      const currentSize = previousTeamSize || 4;
+      for (let i = memberIndex + 1; i <= currentSize; i++) {
+        if (updated[`member${i}Name`]) {
+          updated[`member${i-1}Name`] = updated[`member${i}Name`];
+          updated[`member${i-1}Gender`] = updated[`member${i}Gender`];
+          updated[`member${i-1}Email`] = updated[`member${i}Email`];
+          updated[`member${i-1}College`] = updated[`member${i}College`];
+          updated[`member${i-1}Degree`] = updated[`member${i}Degree`];
+          
+          // Clear the old position
+          delete updated[`member${i}Name`];
+          delete updated[`member${i}Gender`];
+          delete updated[`member${i}Email`];
+          delete updated[`member${i}College`];
+          delete updated[`member${i}Degree`];
+        }
+      }
+      
+      return updated;
+    });
+
+    // Check if we've removed enough members
+    if (pendingTeamSize) {
+      const newSize = getCurrentTeamSize(pendingTeamSize);
+      const _currentSize = previousTeamSize || 4;
+      const remainingMembers = Object.keys(answers).filter(k => 
+        k.match(/^member\d+Name$/) && answers[k]
+      ).length - 1; // -1 because we just removed one
+      
+      if (remainingMembers <= newSize - 1) { // -1 for leader
+        // Apply the team size change
+        setAnswers((prev: Answers) => ({ ...prev, teamSize: pendingTeamSize }));
+        setShowMemberManager(false);
+        setPendingTeamSize(null);
+        setPreviousTeamSize(null);
+      }
+    }
+  };
+
+  // Handle canceling team size change
+  const handleCancelSizeChange = () => {
+    setShowMemberManager(false);
+    setPendingTeamSize(null);
+    setPreviousTeamSize(null);
+  };
+  
+  const handleAnswer = (value: string | string[]) => {
+    // Special handling for team size changes (ONLY in edit mode)
+    if (currentQuestion.id === 'teamSize' && typeof value === 'string' && isEditMode) {
+      const currentSize = answers.teamSize ? getCurrentTeamSize(answers.teamSize as string) : 0;
+      const newSize = getCurrentTeamSize(value);
+      
+      // Check if we're reducing team size and have existing member data
+      if (currentSize > newSize && currentSize > 0) {
+        const hasExistingMembers = Object.keys(answers).some(k => 
+          k.match(/^member[2-4]Name$/) && answers[k]
+        );
+        
+        if (hasExistingMembers) {
+          // Show member manager instead of directly applying change
+          setPreviousTeamSize(currentSize);
+          setPendingTeamSize(value);
+          setShowMemberManager(true);
+          setErrorMsg("");
+          return; // Don't apply the change yet
+        }
+      }
+    }
+    
+    setAnswers((prev: Answers) => ({ 
+      ...prev, 
+      [currentQuestion.id]: value 
+    })); 
+    
+    // Track changes in edit mode
+    if (isEditMode && initialData) {
+      const isChanged = JSON.stringify(initialData[currentQuestion.id]) !== JSON.stringify(value);
+      setChangedFields(prev => {
+        const updated = new Set(prev);
+        if (isChanged) {
+          updated.add(currentQuestion.id);
+        } else {
+          updated.delete(currentQuestion.id);
+        }
+        return updated;
+      });
+    }
+    
+    setErrorMsg(""); 
+  };
+  
+  const handleCheckbox = (opt: string) => {
+    const current = answers[currentQuestion.id] as string[] || [];
+    const updated = current.includes(opt) 
+      ? current.filter((item: string) => item !== opt)
+      : [...current, opt];
+    
+    setAnswers((prev: Answers) => ({ 
+      ...prev, 
+      [currentQuestion.id]: updated 
+    }));
+    
+    // Track changes in edit mode
+    if (isEditMode && initialData) {
+      const isChanged = JSON.stringify(initialData[currentQuestion.id]) !== JSON.stringify(updated);
+      setChangedFields(prev => {
+        const updated = new Set(prev);
+        if (isChanged) {
+          updated.add(currentQuestion.id);
+        } else {
+          updated.delete(currentQuestion.id);
+        }
+        return updated;
+      });
+    }
+    
+    setErrorMsg("");
+  };
 
 
   // Keys
@@ -1611,11 +2110,37 @@ export default function HackathonForm() {
       {/* Main Folder Container */}
       <div className="w-full max-w-6xl relative z-10 flex flex-col">
           
+          {/* Logout Button (Edit Mode Only) */}
+          {isEditMode && (
+            <div className="absolute top-0 right-0 z-50">
+              <button
+                onClick={async () => {
+                  if (confirm("Are you sure you want to logout? Any unsaved changes will be lost.")) {
+                    try {
+                      await fetch('/api/logout', { 
+                        method: 'POST',
+                        credentials: 'include'
+                      });
+                      window.location.href = '/';
+                    } catch (err) {
+                      console.error('Logout failed:', err);
+                      window.location.href = '/';
+                    }
+                  }
+                }}
+                className="flex items-center gap-2 text-xs text-slate-500 hover:text-orange-400 font-mono uppercase tracking-wider border border-slate-700 hover:border-orange-500 bg-slate-900 px-4 py-2 transition-all rounded"
+              >
+                <span>🚪</span>
+                <span>[ LOGOUT ]</span>
+              </button>
+            </div>
+          )}
+          
           {/* Tabs */}
           <div className="flex pl-8">
               <div className="bg-slate-800 text-orange-500 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-l border-r border-slate-700 tracking-widest uppercase flex items-center gap-2">
                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                 Registration Protocol
+                 {isEditMode ? 'Edit Registration' : 'Registration Protocol'}
               </div>
               <div className="bg-slate-900/50 text-slate-600 text-xs font-bold px-6 py-2 rounded-t-lg border-t border-r border-slate-800 tracking-widest uppercase ml-[-1px] z-[-1]">
                  Classified // V.2.0
@@ -1626,6 +2151,62 @@ export default function HackathonForm() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-b-lg rounded-tr-lg p-1 shadow-2xl relative min-h-[500px] md:min-h-[600px] flex flex-col">
               {/* Inner 'Paper' or Interface */}
               <div className="bg-slate-900 flex-1 rounded border border-slate-700/50 p-6 md:p-12 relative overflow-hidden flex flex-col">
+                 
+                 {/* Edit Mode Banner */}
+                 {isEditMode && (
+                   <motion.div
+                     initial={{ opacity: 0, y: -20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     className="mb-6 bg-orange-900/20 border-2 border-orange-500 rounded p-6"
+                   >
+                     <div className="flex items-center gap-3 mb-3">
+                       <span className="text-3xl">✏️</span>
+                       <h3 className="text-xl md:text-2xl font-bold text-orange-400 uppercase tracking-tight">
+                         Edit Mode - Updating Registration
+                       </h3>
+                     </div>
+                     
+                     <div className="space-y-2 text-sm">
+                       <p className="text-slate-300">
+                         You are editing your existing registration for team: 
+                         <strong className="text-white ml-2">{answers.teamName}</strong>
+                       </p>
+                       
+                       {!isLocked ? (
+                         <div className="bg-yellow-900/30 border border-yellow-500/50 rounded p-4 mt-4">
+                           <div className="flex items-start gap-3">
+                             <span className="text-2xl">⚠️</span>
+                             <div>
+                               <p className="text-yellow-300 font-bold mb-1 uppercase text-xs tracking-wider">
+                                 One-Time Edit Warning
+                               </p>
+                               <p className="text-yellow-200 text-xs leading-relaxed">
+                                 You can only edit your registration <strong>ONCE</strong>. 
+                                 After submitting these changes, your form will be permanently locked. 
+                                 Make sure all information is correct before proceeding.
+                               </p>
+                             </div>
+                           </div>
+                         </div>
+                       ) : (
+                         <div className="bg-red-900/30 border border-red-500/50 rounded p-4 mt-4">
+                           <div className="flex items-start gap-3">
+                             <span className="text-2xl">🔒</span>
+                             <div>
+                               <p className="text-red-300 font-bold mb-1 uppercase text-xs tracking-wider">
+                                 Registration Locked
+                               </p>
+                               <p className="text-red-200 text-xs leading-relaxed">
+                                 This registration has already been edited once and is now permanently locked. 
+                                 No further changes can be made. If you need to make changes, please contact support.
+                               </p>
+                             </div>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   </motion.div>
+                 )}
                  
                  {/* Decor elements */}
                  <div className="absolute top-4 right-4 text-[10px] text-slate-600 font-mono tracking-widest">
@@ -1664,12 +2245,25 @@ export default function HackathonForm() {
                            )}
 
                            <div className="mt-4 mb-8">
+                               {/* Team Member Manager for selective removal */}
+                               {showMemberManager && previousTeamSize && pendingTeamSize && (
+                                 <TeamMemberManager
+                                   currentSize={previousTeamSize}
+                                   newSize={getCurrentTeamSize(pendingTeamSize)}
+                                   answers={answers}
+                                   onRemoveMember={handleRemoveMember}
+                                   onCancel={handleCancelSizeChange}
+                                 />
+                               )}
+                               
                                <InputRenderer 
                                     question={currentQuestion} 
                                     value={answers[currentQuestion.id]} 
                                     onChange={handleAnswer} 
                                     onCheckbox={handleCheckbox}
                                     answers={answers}
+                                    isEditMode={isEditMode}
+                                    initialData={initialData}
                                     emailVerified={emailVerified}
                                     verifiedEmail={verifiedEmail}
                                     onResetVerification={resetVerification}
@@ -1683,6 +2277,51 @@ export default function HackathonForm() {
                                />
                            </div>
                            
+                           {/* Change Summary in Edit Mode */}
+                           {isEditMode && changedFields.size > 0 && (
+                             <div className="bg-blue-900/20 border border-blue-500/50 rounded p-4 mb-6">
+                               <div className="flex items-center gap-2 mb-3">
+                                 <span className="text-blue-400 text-lg">📝</span>
+                                 <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">
+                                   Changes Detected ({changedFields.size})
+                                 </h4>
+                               </div>
+                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                 {Array.from(changedFields).map(fieldId => {
+                                   const question = QUESTIONS.find(q => q.id === fieldId);
+                                   return question ? (
+                                     <div key={fieldId} className="text-xs text-blue-300 bg-blue-900/30 px-2 py-1 rounded">
+                                       • {question.question}
+                                     </div>
+                                   ) : null;
+                                 })}
+                               </div>
+                             </div>
+                           )}
+                           
+                           {/* Session Expiry Warning */}
+                           {sessionWarning && (
+                             <div className="bg-yellow-900/20 border border-yellow-500/50 rounded p-4 mb-6">
+                               <div className="flex items-center gap-3">
+                                 <span className="text-yellow-400 text-2xl">⏰</span>
+                                 <div>
+                                   <h4 className="text-sm font-bold text-yellow-400 uppercase tracking-wider mb-1">
+                                     Session Expiring Soon
+                                   </h4>
+                                   <p className="text-yellow-200 text-xs leading-relaxed">
+                                     Your session may have expired. Please save your changes soon or 
+                                     <button 
+                                       onClick={() => window.location.reload()}
+                                       className="underline ml-1 hover:text-yellow-100"
+                                     >
+                                       refresh to re-authenticate
+                                     </button>.
+                                   </p>
+                                 </div>
+                               </div>
+                             </div>
+                           )}
+                           
                            {errorMsg && (
                                <div className="bg-red-900/20 border-l-2 border-red-500 text-red-400 p-3 mb-6 text-sm font-bold flex items-center gap-2">
                                    <span>[ERROR]</span> {errorMsg}
@@ -1695,11 +2334,27 @@ export default function HackathonForm() {
                                   className="bg-orange-600 hover:bg-orange-500 text-white text-sm font-bold uppercase tracking-widest px-8 py-3 clip-path-polygon disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                   disabled={loading}
                                >
-                                  {loading ? "PROCESSING..." : "CONFIRM DATA >>"}
+                                  {loading ? "PROCESSING..." : (isEditMode ? "SAVE CHANGES >>" : "CONFIRM DATA >>")}
                                </button>
                                {currentStep > 0 && (
                                    <button onClick={handlePrev} className="text-slate-500 hover:text-slate-300 text-sm uppercase tracking-wider">
                                        [ BACK ]
+                                   </button>
+                               )}
+                               {isEditMode && (
+                                   <button 
+                                     onClick={() => {
+                                       if (changedFields.size > 0) {
+                                         const confirmed = window.confirm(
+                                           "You have unsaved changes. Are you sure you want to discard them and return to dashboard?"
+                                         );
+                                         if (!confirmed) return;
+                                       }
+                                       window.location.href = '/dashboard';
+                                     }}
+                                     className="text-slate-500 hover:text-orange-400 text-sm uppercase tracking-wider border border-slate-700 hover:border-orange-500 px-4 py-2 transition-all"
+                                   >
+                                       [ CANCEL & RETURN ]
                                    </button>
                                )}
                            </div>

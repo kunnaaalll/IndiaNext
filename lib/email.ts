@@ -356,7 +356,7 @@ export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT
               <!-- Header with theme colors -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
                 ${trackInfo ? `
                   <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(${trackInfo.color === '#00CC44' ? '0, 204, 68' : '34, 102, 255'}, 0.1); border: 1px solid ${trackInfo.color}; border-radius: 8px; display: inline-block;">
                     <span style="font-size: 14px; margin-right: 6px; color: ${trackInfo.color}; font-weight: bold;">[${trackInfo.icon}]</span>
@@ -453,7 +453,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
                   <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
@@ -466,7 +466,7 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 24px 0; font-size: 15px; line-height: 1.7;">
                   Congratulations! Your team has been successfully registered for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
 
@@ -611,7 +611,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
                 </h1>
 
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">
-                  HACKATHON 2025
+                  HACKATHON 2026
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
@@ -631,7 +631,7 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Great news!  You have been officially added to a registered team for the 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
 
@@ -1401,7 +1401,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
                   <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
@@ -1414,7 +1414,7 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                    Congratulations! Your team has been successfully registered for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
 
@@ -1528,7 +1528,7 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                 </h1>
 
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">
-                  HACKATHON 2025
+                  HACKATHON 2026
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
@@ -1548,7 +1548,7 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Great news!  You have been officially added to a registered team for the 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
 
@@ -1792,7 +1792,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(34, 102, 255, 0.08); border: 1px solid rgba(34, 102, 255, 0.5); border-radius: 8px; display: inline-block;">
                   <span style="color: #2266FF; font-size: 16px; margin-right: 6px;">[INFO]</span>
@@ -1806,7 +1806,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Hi <strong style="color: #ededed;">${escapeHtml(data.leaderName)}</strong>,
                   here is a complete record of your registration for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
                   Save this email for your reference.
                 </p>
 

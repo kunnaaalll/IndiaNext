@@ -145,17 +145,20 @@ export function middleware(request: NextRequest) {
       'max-age=63072000; includeSubDomains; preload'
     );
 
-    // ✅ SECURITY: CSP with Next.js compatibility
-    // Next.js requires 'unsafe-inline' and 'unsafe-eval' for its runtime
-    // This is a known limitation: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
-    // Note: Do NOT include nonce - it disables 'unsafe-inline' which Next.js needs
+    // ✅ SECURITY FIX: Remove unsafe-inline for scripts, use nonce-based CSP
+    // Note: Next.js requires 'unsafe-eval' for development, but we remove it in production
+    // For inline scripts, use nonce attribute: <script nonce={nonce}>
+    // Use Web Crypto API (available in Edge Runtime)
+    const nonceArray = new Uint8Array(16);
+    crypto.getRandomValues(nonceArray);
+    const nonce = Buffer.from(nonceArray).toString('base64');
     response.headers.set(
       'Content-Security-Policy',
       [
         "default-src 'self'",
-        // Next.js requires unsafe-inline and unsafe-eval for its runtime
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-        "style-src 'self' 'unsafe-inline'", // Tailwind/inline styles
+        // ✅ SECURITY FIX: Removed 'unsafe-inline' - use nonce for inline scripts
+        `script-src 'self' 'nonce-${nonce}'`,
+        "style-src 'self' 'unsafe-inline'", // Tailwind/inline styles still need this
         "img-src 'self' res.cloudinary.com data: blob:", // Cloudinary images
         "font-src 'self'",
         "connect-src 'self'",
@@ -163,9 +166,12 @@ export function middleware(request: NextRequest) {
         "base-uri 'self'",
         "form-action 'self'",
         "object-src 'none'",
-        "worker-src 'self' blob:",
+        "worker-src 'self'",
       ].join('; ')
     );
+
+    // Store nonce in header for Next.js to use
+    response.headers.set('X-Nonce', nonce);
   }
 
   return response;

@@ -1,6 +1,6 @@
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // Production-Ready Email Service using Resend
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // [CONFIRMED] Fixes ALL 7 critical production issues:
 // 1. [CONFIRMED] Retry logic with exponential backoff
 // 2. [CONFIRMED] Consistent from address (process.env.EMAIL_FROM)
@@ -9,15 +9,15 @@
 // 5. [CONFIRMED] Email validation before sending
 // 6. [CONFIRMED] Structured logging with error tracking
 // 7. [CONFIRMED] Rate limit handling and error recovery
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 import { Resend } from 'resend';
 import { prisma } from './prisma';
 import type { EmailType, EmailStatus } from '@prisma/client/edge';
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // TYPES
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 interface EmailError extends Error {
   statusCode?: number;
@@ -38,16 +38,16 @@ interface EmailResult {
   error?: string;
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // CONFIGURATION
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 const EMAIL_CONFIG = {
   from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
   maxRetries: 2,
-  retryDelays: [500, 1500], // Fast retries for serverless � 0.5s, 1.5s
+  retryDelays: [500, 1500], // Fast retries for serverless — 0.5s, 1.5s
   timeout: 10000, // 10 seconds
-  otpExpiryMinutes: 10, // Shared constant � used in OTP HTML template AND send-otp route
+  otpExpiryMinutes: 10, // Shared constant — used in OTP HTML template AND send-otp route
 } as const;
 
 export const OTP_EXPIRY_MINUTES = EMAIL_CONFIG.otpExpiryMinutes;
@@ -61,9 +61,9 @@ function getResend(): Resend {
   return _resend;
 }
 
-// -----------------------------------------------------------
-// HTML ESCAPING  � prevents XSS in email templates
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
+// HTML ESCAPING  — prevents XSS in email templates
+// ═══════════════════════════════════════════════════════════
 
 function escapeHtml(unsafe: string): string {
   return unsafe
@@ -74,9 +74,9 @@ function escapeHtml(unsafe: string): string {
     .replace(/'/g, '&#039;');
 }
 
-// -----------------------------------------------------------
-// RESPONSIVE EMAIL STYLES  � @media for mobile clients
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
+// RESPONSIVE EMAIL STYLES  — @media for mobile clients
+// ═══════════════════════════════════════════════════════════
 
 function getResponsiveEmailStyles(): string {
   return `<style type="text/css">
@@ -117,9 +117,9 @@ function getResponsiveEmailStyles(): string {
   </style>`;
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // EMAIL VALIDATION
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 const DISPOSABLE_DOMAINS = [
   'tempmail.com',
@@ -148,9 +148,9 @@ function validateEmail(email: string): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // EMAIL LOGGING
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 async function logEmail(data: {
   to: string;
@@ -206,9 +206,9 @@ async function _updateEmailLog(
   }
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // RETRY LOGIC WITH EXPONENTIAL BACKOFF
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -219,15 +219,6 @@ function isRetryableError(error: EmailError): boolean {
   if (!error.statusCode) return true; // Network error
   if (error.statusCode === 429) return true; // Rate limit
   if (error.statusCode >= 500) return true; // Server error
-  return false;
-}
-
-function isQuotaExceededError(error: EmailError): boolean {
-  // Check if error is due to daily quota exceeded
-  if (error.statusCode === 429) return true; // Rate limit
-  if (error.code === 'rate_limit_exceeded') return true;
-  if (error.message?.toLowerCase().includes('quota')) return true;
-  if (error.message?.toLowerCase().includes('rate limit')) return true;
   return false;
 }
 
@@ -284,7 +275,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
         `[Email] [CONFIRMED] Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`
       );
 
-      // Non-blocking log � don't wait for DB write
+      // Non-blocking log — don't wait for DB write
       logEmail({
         to,
         from,
@@ -300,7 +291,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
       lastError = error as EmailError;
       const errorMsg = lastError.message || 'Unknown error';
 
-      console.error(`[Email] ? Attempt ${attempt + 1} failed:`, {
+      console.error(`[Email] ❌ Attempt ${attempt + 1} failed:`, {
         type,
         to: to.replace(/(.{3}).*@/, '$1***@'),
         error: errorMsg,
@@ -311,24 +302,9 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
       // Check if we should retry
       if (attempt < maxRetries - 1 && isRetryableError(lastError)) {
         const delay = EMAIL_CONFIG.retryDelays[attempt] || 9000;
-        console.log(`[Email] ? Retrying in ${delay}ms...`);
+        console.log(`[Email] ⏳ Retrying in ${delay}ms...`);
         await sleep(delay);
       } else {
-        // Final failure - check if it's a quota error
-        if (isQuotaExceededError(lastError)) {
-          console.log(`[Email] [QUEUE] Quota exceeded - queuing email for later retry`);
-          // Queue the email by logging it as PENDING
-          await logEmail({
-            to,
-            from,
-            subject,
-            type,
-            status: 'PENDING',
-            error: 'Queued: Daily quota exceeded',
-            attempts: attempt + 1,
-          });
-          return { success: false, error: 'Email queued due to quota limit. Will retry automatically.' };
-        }
         // Final failure
         break;
       }
@@ -357,9 +333,9 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
   return { success: false, error: finalError };
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // PUBLIC EMAIL FUNCTIONS
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 export async function sendOtpEmail(
   to: string,
@@ -398,7 +374,7 @@ export async function sendOtpEmail(
               <!-- Header with theme colors -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 ${
                   trackInfo
                     ? `
@@ -434,7 +410,7 @@ export async function sendOtpEmail(
                 <!-- Footer -->
                 <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #222;">
                   <p style="color: #666; margin: 0; font-size: 12px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
                     Powered by <span style="color: #FF6600;">KESSC</span>
@@ -454,9 +430,9 @@ export async function sendOtpEmail(
   });
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // REGISTRATION CONFIRMATION EMAIL
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 interface ConfirmationEmailData {
   teamId: string;
@@ -477,7 +453,7 @@ export async function sendConfirmationEmail(
           <td class="mbr-cell" style="padding: 10px 14px; border-bottom: 1px solid #222; color: #ccc; font-size: 14px;">${i + 1}</td>
           <td class="mbr-cell" style="padding: 10px 14px; border-bottom: 1px solid #222; color: #ededed; font-size: 14px; font-weight: 500;">${escapeHtml(m.name)}</td>
           <td class="mbr-cell hide-mob" style="padding: 10px 14px; border-bottom: 1px solid #222; color: #999; font-size: 14px;">${escapeHtml(m.email)}</td>
-          <td class="mbr-cell" style="padding: 10px 14px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 14px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '? Leader' : 'Member'}</td>
+          <td class="mbr-cell" style="padding: 10px 14px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 14px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '★ Leader' : 'Member'}</td>
         </tr>`
     )
     .join('');
@@ -485,7 +461,7 @@ export async function sendConfirmationEmail(
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
-  const subject = `Registration Confirmed � IndiaNext Hackathon`;
+  const subject = `Registration Confirmed — IndiaNext Hackathon`;
 
   const html = `
         <!DOCTYPE html>
@@ -501,7 +477,7 @@ export async function sendConfirmationEmail(
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
                   <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
@@ -514,7 +490,7 @@ export async function sendConfirmationEmail(
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 24px 0; font-size: 15px; line-height: 1.7;">
                   Congratulations! Your team has been successfully registered for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
 
@@ -544,7 +520,7 @@ export async function sendConfirmationEmail(
                     </tr>
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Status</td>
-                      <td style="padding: 8px 0; color: #f59e0b; font-size: 13px; font-weight: bold;">? PENDING REVIEW</td>
+                      <td style="padding: 8px 0; color: #f59e0b; font-size: 13px; font-weight: bold;">⏳ PENDING REVIEW</td>
                     </tr>
                   </table>
                 </div>
@@ -602,7 +578,7 @@ export async function sendConfirmationEmail(
                     <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
                   </p>
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
                   <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
                     Powered by <span style="color: #FF6600;">KESSC</span>
@@ -622,9 +598,9 @@ export async function sendConfirmationEmail(
   });
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // TEAM MEMBER NOTIFICATION EMAIL
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 interface MemberNotificationData {
   memberName: string;
@@ -641,7 +617,7 @@ export async function sendTeamMemberNotification(
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
-  const subject = `[CONFIRMED] You're Added to Team ${escapeHtml(data.teamName)} � IndiaNext Hackathon`;
+  const subject = `[CONFIRMED] You're Added to Team ${escapeHtml(data.teamName)} — IndiaNext Hackathon`;
   const html = `
         <!DOCTYPE html>
         <html>
@@ -661,7 +637,7 @@ export async function sendTeamMemberNotification(
                 </h1>
 
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">
-                  HACKATHON 2026
+                  HACKATHON 2025
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
@@ -681,7 +657,7 @@ export async function sendTeamMemberNotification(
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Great news!  You have been officially added to a registered team for the 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
 
@@ -732,7 +708,7 @@ export async function sendTeamMemberNotification(
 
                   <ul class="sm-text" style="color: #ccc; margin: 0; padding-left: 18px; font-size: 13px; line-height: 2;">
                     <li>Connect with your team leader and discuss your project plan</li>
-                    <li>Join your team�s GitHub / WhatsApp / Discord group (if created)</li>
+                    <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
                     <li>Finalize your problem statement and task distribution</li>
                     <li>Prepare your MVP Architecture / tech stack planning</li>
                     ${
@@ -774,7 +750,7 @@ export async function sendTeamMemberNotification(
                   </p>
 
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
 
                   <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
@@ -796,9 +772,9 @@ export async function sendTeamMemberNotification(
   });
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // STATUS UPDATE EMAIL
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 export async function sendStatusUpdateEmail(
   to: string,
@@ -826,7 +802,7 @@ export async function sendStatusUpdateEmail(
     return sendApprovalEmail(to, teamName, notes, shortCode);
   }
 
-  const subject = `Team Status Update � ${escapeHtml(teamName)} | IndiaNext Hackathon`;
+  const subject = `Team Status Update — ${escapeHtml(teamName)} | IndiaNext Hackathon`;
   const html = `
         <!DOCTYPE html>
         <html>
@@ -875,7 +851,7 @@ export async function sendStatusUpdateEmail(
                     <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
                   </p>
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
                 </div>
               </div>
@@ -892,9 +868,9 @@ export async function sendStatusUpdateEmail(
   });
 }
 
-// -----------------------------------------------------------
-// APPROVAL EMAIL � Rich email with hackathon details, schedule, rules
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
+// APPROVAL EMAIL — Rich email with hackathon details, schedule, rules
+// ═══════════════════════════════════════════════════════════
 
 async function sendApprovalEmail(
   to: string,
@@ -902,7 +878,7 @@ async function sendApprovalEmail(
   notes?: string,
   shortCode?: string
 ): Promise<EmailResult> {
-  const subject = ` You're IN! Team "${escapeHtml(teamName)}" Approved � IndiaNext Hackathon 2026`;
+  const subject = ` You're IN! Team "${escapeHtml(teamName)}" Approved — IndiaNext Hackathon 2026`;
 
   const html = `
     <!DOCTYPE html>
@@ -933,7 +909,7 @@ async function sendApprovalEmail(
               Dear Team Leader,<br><br>
               Congratulations!  Your team <strong style="color: #FF6600;">${escapeHtml(teamName)}</strong> has been 
               <strong style="color: #10b981;">officially approved</strong> for the <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>. 
-              We�re thrilled to have you on board!
+              We’re thrilled to have you on board!
             </p>
 
             ${
@@ -953,7 +929,7 @@ async function sendApprovalEmail(
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 10px 0; color: #666; font-size: 12px; width: 100px; vertical-align: top;">[DATE] Date</td>
-                  <td style="padding: 10px 0; color: #ededed; font-size: 13px; font-weight: 600;">March 15 � 16, 2026</td>
+                  <td style="padding: 10px 0; color: #ededed; font-size: 13px; font-weight: 600;">March 15 – 16, 2026</td>
                 </tr>
                 <tr>
                   <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[TIME] Duration</td>
@@ -978,7 +954,7 @@ async function sendApprovalEmail(
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
               <h2 style="color: #00CCFF; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[SCHEDULE] Event Schedule</h2>
               
-              <p style="color: #FF6600; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 1 � MARCH 15, 2026</p>
+              <p style="color: #FF6600; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 1 — MARCH 15, 2026</p>
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; width: 90px; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">Morning</td>
@@ -1006,17 +982,17 @@ async function sendApprovalEmail(
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
-                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">�</td>
+                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">—</td>
                   <td class="sch-desc" style="padding: 7px 10px; color: #ededed; font-size: 12px; background: rgba(255,102,0,0.03); border-radius: 0 4px 4px 0;">Mentorship Round 1 (during development)</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
-                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">�</td>
+                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">—</td>
                   <td class="sch-desc" style="padding: 7px 10px; color: #ededed; font-size: 12px; background: rgba(255,102,0,0.03); border-radius: 0 4px 4px 0;">Dinner (during development)</td>
                 </tr>
               </table>
 
-              <p style="color: #00CCFF; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 2 � MARCH 16, 2026</p>
+              <p style="color: #00CCFF; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 2 — MARCH 16, 2026</p>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #00CCFF; font-size: 12px; font-weight: bold; width: 90px; background: rgba(0,204,255,0.06); border-radius: 4px 0 0 4px;">08:00 AM</td>
@@ -1030,7 +1006,7 @@ async function sendApprovalEmail(
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #00CCFF; font-size: 12px; font-weight: bold; background: rgba(0,204,255,0.06); border-radius: 4px 0 0 4px;">11:00 AM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #ef4444; font-size: 12px; font-weight: bold; background: rgba(239,68,68,0.06); border-radius: 0 4px 4px 0;">[TIME] Development Stops � Code Freeze!</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #ef4444; font-size: 12px; font-weight: bold; background: rgba(239,68,68,0.06); border-radius: 0 4px 4px 0;">[TIME] Development Stops — Code Freeze!</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
@@ -1074,7 +1050,7 @@ async function sendApprovalEmail(
                 </tr>
                 <tr>
                   <td style="padding: 8px 10px; color: #f59e0b; font-size: 14px; vertical-align: top;">8.</td>
-                  <td class="rule-txt" style="padding: 8px 10px; color: #ccc; font-size: 12px; line-height: 1.5;">The organizers� decision on all matters is <strong style="color: #ededed;">final and binding</strong>.</td>
+                  <td class="rule-txt" style="padding: 8px 10px; color: #ccc; font-size: 12px; line-height: 1.5;">The organizers’ decision on all matters is <strong style="color: #ededed;">final and binding</strong>.</td>
                 </tr>
               </table>
             </div>
@@ -1084,23 +1060,23 @@ async function sendApprovalEmail(
               <h2 style="color: #10b981; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[CHECKLIST] What to Bring</h2>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px; width: 28px;">?</td>
+                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px; width: 28px;">✓</td>
                   <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Laptop with charger & necessary software installed</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">?</td>
+                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">✓</td>
                   <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Valid College ID Card (mandatory for check-in)</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">?</td>
+                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">✓</td>
                   <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Extension cord / power strip (if possible)</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">?</td>
+                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">✓</td>
                   <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Personal essentials for an overnight stay</td>
                 </tr>
                 <tr>
-                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">?</td>
+                  <td style="padding: 6px 10px; color: #10b981; font-size: 14px;">✓</td>
                   <td class="sm-text" style="padding: 6px 10px; color: #ccc; font-size: 12px;">Enthusiasm and a winning attitude! </td>
                 </tr>
               </table>
@@ -1170,7 +1146,7 @@ async function sendApprovalEmail(
               <p class="cta-name" style="color: #FF6600; margin: 0 0 12px 0; font-size: 22px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 2px; word-break: break-all;">${escapeHtml(teamName)}</p>
               <p class="sm-text" style="color: #ccc; margin: 0; font-size: 12px; line-height: 1.5;">
                 Share this news with your team members and start preparing!<br>
-                We can�t wait to see what you build. 
+                We can’t wait to see what you build. 
               </p>
             </div>
 
@@ -1191,7 +1167,7 @@ async function sendApprovalEmail(
                 <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
               </p>
               <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
               </p>
               <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
                 Powered by <span style="color: #FF6600;">KESSC</span>
@@ -1211,9 +1187,9 @@ async function sendApprovalEmail(
   });
 }
 
-// -----------------------------------------------------------
-// BATCH EMAIL SENDING (Resend Batch API � up to 100 emails in 1 call)
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
+// BATCH EMAIL SENDING (Resend Batch API — up to 100 emails in 1 call)
+// ═══════════════════════════════════════════════════════════
 
 interface BatchEmailItem {
   to: string;
@@ -1225,12 +1201,12 @@ interface BatchEmailItem {
 /**
  * Send multiple emails in a single Resend API call.
  * Falls back to individual sends if the batch API fails.
- * Uses Resend `batch.send()` � up to 100 emails per call.
+ * Uses Resend `batch.send()` — up to 100 emails per call.
  */
 export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailResult[]> {
   if (emails.length === 0) return [];
   if (emails.length > 100) {
-    console.warn(`[Email] Batch size ${emails.length} exceeds 100 � splitting`);
+    console.warn(`[Email] Batch size ${emails.length} exceeds 100 — splitting`);
     const results: EmailResult[] = [];
     for (let i = 0; i < emails.length; i += 100) {
       const chunk = emails.slice(i, i + 100);
@@ -1267,7 +1243,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
       results.push({ success: false, error: validation.error });
     } else {
       validEmails.push(email);
-      results.push({ success: true }); // placeholder � updated below
+      results.push({ success: true }); // placeholder — updated below
     }
   }
 
@@ -1299,7 +1275,7 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   for (attempt = 0; attempt < maxRetries; attempt++) {
     try {
       console.log(
-        `[Email] Batch send attempt ${attempt + 1}/${maxRetries} � ${validEmails.length} emails`
+        `[Email] Batch send attempt ${attempt + 1}/${maxRetries} — ${validEmails.length} emails`
       );
 
       const batchPayload = validEmails.map((e) => ({
@@ -1356,30 +1332,30 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
         }
       }
 
-      // Bulk insert logs � don't block the return
+      // Bulk insert logs — don't block the return
       prisma.emailLog
         .createMany({ data: logEntries })
         .catch((err: unknown) => console.error('[Email] Failed to bulk-log sent emails:', err));
 
       console.log(
-        `[Email] [CONFIRMED] Batch complete � ${validEmails.length} emails sent in 1 API call`
+        `[Email] [CONFIRMED] Batch complete — ${validEmails.length} emails sent in 1 API call`
       );
       return results;
     } catch (error) {
       const emailError = error as EmailError;
-      console.error(`[Email] ? Batch attempt ${attempt + 1} failed:`, emailError.message);
+      console.error(`[Email] ❌ Batch attempt ${attempt + 1} failed:`, emailError.message);
 
       if (attempt < maxRetries - 1 && isRetryableError(emailError)) {
         const delay = EMAIL_CONFIG.retryDelays[attempt] || 9000;
-        console.log(`[Email] ? Retrying batch in ${delay}ms...`);
+        console.log(`[Email] ⏳ Retrying batch in ${delay}ms...`);
         await sleep(delay);
       }
     }
   }
 
-  // Batch failed � fallback to individual sends
+  // Batch failed — fallback to individual sends
   console.warn(
-    `[Email] Batch API failed after ${attempt} attempts � falling back to individual sends`
+    `[Email] Batch API failed after ${attempt} attempts — falling back to individual sends`
   );
   let validIdx = 0;
   for (let i = 0; i < results.length; i++) {
@@ -1398,9 +1374,9 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   return results;
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // REGISTRATION BATCH: All registration emails in 1 API call
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 interface RegistrationBatchData {
   leaderEmail: string;
@@ -1448,7 +1424,7 @@ export async function sendRegistrationBatchEmails(
   const confirmationHtml = buildConfirmationHtml(data);
   emails.push({
     to: data.leaderEmail,
-    subject: `[CONFIRMED] Registration Confirmed � IndiaNext Hackathon`,
+    subject: `[CONFIRMED] Registration Confirmed — IndiaNext Hackathon`,
     html: confirmationHtml,
     type: 'CONFIRMATION' as EmailType,
   });
@@ -1467,7 +1443,7 @@ export async function sendRegistrationBatchEmails(
     });
     emails.push({
       to: member.email,
-      subject: `You've been added to Team ${data.teamName} � IndiaNext Hackathon`,
+      subject: `You've been added to Team ${data.teamName} — IndiaNext Hackathon`,
       html: notificationHtml,
       type: 'MEMBER_NOTIFICATION' as EmailType,
     });
@@ -1477,7 +1453,7 @@ export async function sendRegistrationBatchEmails(
   const submissionHtml = buildSubmissionDetailsHtml(data);
   emails.push({
     to: data.leaderEmail,
-    subject: `[INFO] Your Submission Details � ${data.teamName} | IndiaNext Hackathon`,
+    subject: `[INFO] Your Submission Details — ${data.teamName} | IndiaNext Hackathon`,
     html: submissionHtml,
     type: 'CONFIRMATION' as EmailType,
   });
@@ -1486,7 +1462,7 @@ export async function sendRegistrationBatchEmails(
   return sendBatchEmails(emails);
 }
 
-// --- HTML Builders (extracted for batch use) ------------
+// ─── HTML Builders (extracted for batch use) ────────────
 
 function buildConfirmationHtml(data: {
   teamId: string;
@@ -1501,7 +1477,7 @@ function buildConfirmationHtml(data: {
           <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #ccc; font-size: 13px;">${i + 1}</td>
           <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #ededed; font-size: 13px; font-weight: 500;">${escapeHtml(m.name)}</td>
           <td class="mbr-cell hide-mob" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #999; font-size: 13px;">${escapeHtml(m.email)}</td>
-          <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 13px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '? Leader' : 'Member'}</td>
+          <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 13px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '★ Leader' : 'Member'}</td>
         </tr>`
     )
     .join('');
@@ -1522,7 +1498,7 @@ function buildConfirmationHtml(data: {
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
                 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; display: inline-block;">
                   <span style="color: #10b981; font-size: 18px; margin-right: 6px;">[CONFIRMED]</span>
@@ -1535,7 +1511,7 @@ function buildConfirmationHtml(data: {
                 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                    Congratulations! Your team has been successfully registered for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please keep your Team ID safe for future communication.
                 </p>
 
@@ -1557,7 +1533,7 @@ function buildConfirmationHtml(data: {
                     </tr>
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Status</td>
-                      <td style="padding: 8px 0; color: #f59e0b; font-size: 13px; font-weight: bold;">? PENDING REVIEW</td>
+                      <td style="padding: 8px 0; color: #f59e0b; font-size: 13px; font-weight: bold;">⏳ PENDING REVIEW</td>
                     </tr>
                   </table>
                 </div>
@@ -1615,7 +1591,7 @@ function buildConfirmationHtml(data: {
                     <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
                   </p>
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
                   <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
                     Powered by <span style="color: #FF6600;">KESSC</span>
@@ -1655,7 +1631,7 @@ function buildMemberNotificationHtml(data: {
                 </h1>
 
                 <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">
-                  HACKATHON 2026
+                  HACKATHON 2025
                 </p>
 
                 <div class="badge-wrap" style="margin-top: 18px; padding: 10px 20px; background: rgba(255, 102, 0, 0.08); border: 1px solid rgba(255, 102, 0, 0.6); border-radius: 8px; display: inline-block;">
@@ -1675,7 +1651,7 @@ function buildMemberNotificationHtml(data: {
 
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Great news!  You have been officially added to a registered team for the 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Please review your team details below and stay connected with your team leader.
                 </p>
 
@@ -1726,7 +1702,7 @@ function buildMemberNotificationHtml(data: {
 
                   <ul class="sm-text" style="color: #ccc; margin: 0; padding-left: 18px; font-size: 13px; line-height: 2;">
                     <li>Connect with your team leader and discuss your project plan</li>
-                    <li>Join your team�s GitHub / WhatsApp / Discord group (if created)</li>
+                    <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
                     <li>Finalize your problem statement and task distribution</li>
                     <li>Prepare your MVP Architecture / tech stack planning</li>
                     ${
@@ -1768,7 +1744,7 @@ function buildMemberNotificationHtml(data: {
                   </p>
 
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
 
                   <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
@@ -1782,9 +1758,9 @@ function buildMemberNotificationHtml(data: {
         </html>`;
 }
 
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 // SUBMISSION DETAILS EMAIL (Complete registration data record)
-// -----------------------------------------------------------
+// ═══════════════════════════════════════════════════════════
 
 interface SubmissionDetailsData {
   teamId: string;
@@ -1827,7 +1803,7 @@ export async function sendSubmissionDetailsEmail(
   to: string,
   data: SubmissionDetailsData
 ): Promise<EmailResult> {
-  const subject = `[INFO] Your Submission Details � ${escapeHtml(data.teamName)} | IndiaNext Hackathon`;
+  const subject = `[INFO] Your Submission Details — ${escapeHtml(data.teamName)} | IndiaNext Hackathon`;
   const html = buildSubmissionDetailsHtml(data);
 
   return sendEmailWithRetry({
@@ -1854,8 +1830,8 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
           <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #ccc; font-size: 13px;">${i + 1}</td>
           <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #ededed; font-size: 13px; font-weight: 500;">${escapeHtml(m.name)}</td>
           <td class="mbr-cell hide-mob" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #999; font-size: 13px; word-break: break-all;">${escapeHtml(m.email)}</td>
-          <td class="mbr-cell hide-mob" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #999; font-size: 13px;">${escapeHtml(m.college || '�')}</td>
-          <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 13px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '? Leader' : 'Member'}</td>
+          <td class="mbr-cell hide-mob" style="padding: 8px 10px; border-bottom: 1px solid #222; color: #999; font-size: 13px;">${escapeHtml(m.college || '—')}</td>
+          <td class="mbr-cell" style="padding: 8px 10px; border-bottom: 1px solid #222; color: ${m.role === 'LEADER' ? '#FF6600' : '#999'}; font-size: 13px; font-weight: ${m.role === 'LEADER' ? 'bold' : 'normal'};">${m.role === 'LEADER' ? '★ Leader' : 'Member'}</td>
         </tr>`
     )
     .join('');
@@ -1931,7 +1907,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
               <!-- Header -->
               <div class="email-hdr" style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); padding: 32px 20px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #222; border-bottom: none;">
                 <h1 style="color: #FF6600; margin: 0; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px rgba(255, 102, 0, 0.5);">IndiaNext</h1>
-                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2026</p>
+                <p style="color: #ededed; margin: 10px 0 0 0; font-size: 14px; letter-spacing: 2px;">HACKATHON 2025</p>
 
                 <div class="badge-wrap" style="margin-top: 20px; padding: 10px 20px; background: rgba(34, 102, 255, 0.08); border: 1px solid rgba(34, 102, 255, 0.5); border-radius: 8px; display: inline-block;">
                   <span style="color: #2266FF; font-size: 16px; margin-right: 6px;">[INFO]</span>
@@ -1945,7 +1921,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                 <p class="body-text" style="color: #ccc; margin: 0 0 20px 0; font-size: 14px; line-height: 1.7;">
                   Hi <strong style="color: #ededed;">${escapeHtml(data.leaderName)}</strong>,
                   here is a complete record of your registration for 
-                  <strong style="color: #FF6600;">IndiaNext Hackathon 2026</strong>.
+                  <strong style="color: #FF6600;">IndiaNext Hackathon 2025</strong>.
                   Save this email for your reference.
                 </p>
 
@@ -1982,7 +1958,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
 
                 <!-- Leader Details -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">?? Team Leader</h2>
+                  <h2 style="color: #ededed; margin: 0 0 14px 0; font-size: 18px;">👑 Team Leader</h2>
                   <table style="width: 100%; border-collapse: collapse;">
                     <tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px; width: 100px;">Name</td>
@@ -2048,7 +2024,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                     <div class="mob-member-card" style="display: none; background: #111; border: 1px solid #2a2a2a; border-radius: 6px; padding: 12px; margin-top: ${i === 0 ? '14px' : '8px'};">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <span style="color: #ededed; font-size: 13px; font-weight: 600;">${escapeHtml(m.name)}</span>
-                        <span style="color: ${m.role === 'LEADER' ? '#FF6600' : '#666'}; font-size: 11px; font-weight: bold;">${m.role === 'LEADER' ? '? Leader' : 'Member'}</span>
+                        <span style="color: ${m.role === 'LEADER' ? '#FF6600' : '#666'}; font-size: 11px; font-weight: bold;">${m.role === 'LEADER' ? '★ Leader' : 'Member'}</span>
                       </div>
                       <p style="color: #999; margin: 0; font-size: 12px; word-break: break-all;">${escapeHtml(m.email)}</p>
                       ${m.college ? `<p style="color: #777; margin: 4px 0 0 0; font-size: 11px;">${escapeHtml(m.college)}</p>` : ''}
@@ -2074,7 +2050,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                     ? `
                 <!-- Additional Notes -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-                  <h2 style="color: #ededed; margin: 0 0 12px 0; font-size: 18px;">?? Additional Notes</h2>
+                  <h2 style="color: #ededed; margin: 0 0 12px 0; font-size: 18px;">📝 Additional Notes</h2>
                   <p class="body-text" style="color: #ccc; margin: 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap;">${escapeHtml(data.additionalNotes)}</p>
                 </div>`
                     : ''
@@ -2111,7 +2087,7 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                     <a href="mailto:hackathon@kessc.edu.in" style="color: #FF6600;">hackathon@kessc.edu.in</a>
                   </p>
                   <p style="color: #666; margin: 8px 0 0 0; font-size: 11px; text-align: center;">
-                    � ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
+                    © ${new Date().getFullYear()} IndiaNext Hackathon. All rights reserved.
                   </p>
                   <p style="color: #666; margin: 4px 0 0 0; font-size: 11px; text-align: center;">
                     Powered by <span style="color: #FF6600;">KESSC</span>
@@ -2122,197 +2098,4 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
             </div>
           </body>
         </html>`;
-}
-
-
-
-// ═══════════════════════════════════════════════════════════
-// EMAIL QUEUE PROCESSING
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Process queued emails that failed due to quota limits
- * Call this function when quota resets (typically daily)
- * Can be triggered by:
- * - Cron job (recommended)
- * - Manual admin action
- * - Webhook from Resend when quota resets
- */
-export async function processEmailQueue(options?: {
-  batchSize?: number;
-  maxAge?: number; // Max age in hours, default 48
-}): Promise<{
-  processed: number;
-  sent: number;
-  failed: number;
-  errors: string[];
-}> {
-  const batchSize = options?.batchSize || 50;
-  const maxAge = options?.maxAge || 48;
-  const maxAgeDate = new Date(Date.now() - maxAge * 60 * 60 * 1000);
-
-  console.log(`[Email Queue] Starting queue processing (batch size: ${batchSize})`);
-
-  try {
-    // Fetch pending emails from the queue
-    const pendingEmails = await prisma.emailLog.findMany({
-      where: {
-        status: 'PENDING',
-        createdAt: {
-          gte: maxAgeDate, // Don't retry emails older than maxAge hours
-        },
-      },
-      orderBy: {
-        createdAt: 'asc', // FIFO - oldest first
-      },
-      take: batchSize,
-    });
-
-    if (pendingEmails.length === 0) {
-      console.log('[Email Queue] No pending emails to process');
-      return { processed: 0, sent: 0, failed: 0, errors: [] };
-    }
-
-    console.log(`[Email Queue] Found ${pendingEmails.length} pending emails`);
-
-    let sent = 0;
-    let failed = 0;
-    const errors: string[] = [];
-
-    // Process each email
-    for (const email of pendingEmails) {
-      try {
-        console.log(`[Email Queue] Retrying email to ${email.to.replace(/(.{3}).*@/, '$1***@')}`);
-
-        // Attempt to send the email
-        const result = await getResend().emails.send({
-          from: email.from,
-          to: email.to,
-          subject: email.subject,
-          html: '', // Note: We don't store HTML in EmailLog, so this is a limitation
-        });
-
-        if (result.error) {
-          throw new Error(result.error.message || 'Unknown Resend error');
-        }
-
-        // Success - update status
-        await prisma.emailLog.update({
-          where: { id: email.id },
-          data: {
-            status: 'SENT',
-            messageId: result.data?.id,
-            sentAt: new Date(),
-            error: null,
-            attempts: email.attempts + 1,
-            lastAttempt: new Date(),
-          },
-        });
-
-        sent++;
-        console.log(`[Email Queue] ✓ Successfully sent queued email to ${email.to.replace(/(.{3}).*@/, '$1***@')}`);
-      } catch (error) {
-        const err = error as EmailError;
-        const errorMsg = err.message || 'Unknown error';
-
-        // Check if still quota exceeded
-        if (isQuotaExceededError(err)) {
-          console.log(`[Email Queue] Quota still exceeded, stopping queue processing`);
-          errors.push('Quota still exceeded - stopping processing');
-          break; // Stop processing if quota is still exceeded
-        }
-
-        // Other error - mark as failed
-        await prisma.emailLog.update({
-          where: { id: email.id },
-          data: {
-            status: 'FAILED',
-            error: errorMsg,
-            attempts: email.attempts + 1,
-            lastAttempt: new Date(),
-          },
-        });
-
-        failed++;
-        errors.push(`Failed to send to ${email.to}: ${errorMsg}`);
-        console.error(`[Email Queue] ✗ Failed to send queued email to ${email.to.replace(/(.{3}).*@/, '$1***@')}: ${errorMsg}`);
-      }
-
-      // Small delay between emails to avoid rate limiting
-      await sleep(100);
-    }
-
-    console.log(`[Email Queue] Processing complete: ${sent} sent, ${failed} failed`);
-
-    return {
-      processed: pendingEmails.length,
-      sent,
-      failed,
-      errors,
-    };
-  } catch (error) {
-    console.error('[Email Queue] Error processing queue:', error);
-    throw error;
-  }
-}
-
-/**
- * Get queue statistics
- */
-export async function getEmailQueueStats(): Promise<{
-  pending: number;
-  oldestPending: Date | null;
-  failedLast24h: number;
-  sentLast24h: number;
-}> {
-  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-  const [pending, oldestPending, failedLast24h, sentLast24h] = await Promise.all([
-    prisma.emailLog.count({
-      where: { status: 'PENDING' },
-    }),
-    prisma.emailLog.findFirst({
-      where: { status: 'PENDING' },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    }),
-    prisma.emailLog.count({
-      where: {
-        status: 'FAILED',
-        createdAt: { gte: last24h },
-      },
-    }),
-    prisma.emailLog.count({
-      where: {
-        status: 'SENT',
-        sentAt: { gte: last24h },
-      },
-    }),
-  ]);
-
-  return {
-    pending,
-    oldestPending: oldestPending?.createdAt || null,
-    failedLast24h,
-    sentLast24h,
-  };
-}
-
-/**
- * Clear old failed emails from the queue (cleanup)
- */
-export async function cleanupOldQueuedEmails(olderThanHours = 72): Promise<number> {
-  const cutoffDate = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
-
-  const result = await prisma.emailLog.deleteMany({
-    where: {
-      status: 'PENDING',
-      createdAt: {
-        lt: cutoffDate,
-      },
-    },
-  });
-
-  console.log(`[Email Queue] Cleaned up ${result.count} old queued emails`);
-  return result.count;
 }

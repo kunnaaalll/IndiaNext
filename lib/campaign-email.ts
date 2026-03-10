@@ -157,10 +157,25 @@ export function renderCampaignEmail(
   let html = bodyHtml;
   let subject = subjectTemplate;
 
+  // Track which placeholders were found and replaced
+  const replacedPlaceholders: string[] = [];
+  const unreplacedPlaceholders: string[] = [];
+
   for (const [key, value] of Object.entries(variables)) {
     const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    const beforeReplace = html;
     html = html.replace(pattern, escapeHtml(value));
     subject = subject.replace(pattern, value);
+    
+    if (beforeReplace !== html || subjectTemplate.includes(`{{${key}}}`)) {
+      replacedPlaceholders.push(`{{${key}}} → ${value}`);
+    }
+  }
+
+  // Check for any remaining unreplaced placeholders
+  const remainingPlaceholders = html.match(/\{\{[^}]+\}\}/g) || [];
+  if (remainingPlaceholders.length > 0) {
+    console.warn('[renderCampaignEmail] Unreplaced placeholders found:', remainingPlaceholders);
   }
 
   return { html, subject };

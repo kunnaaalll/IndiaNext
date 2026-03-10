@@ -93,7 +93,7 @@ export default function ComposeEmailPage() {
   const editor = useEditor({
     extensions: [StarterKit],
     content: "",
-    onUpdate: ({ editor }) => setBody(editor.getHTML()),
+    onUpdate: ({ editor }: { editor: any }) => setBody(editor.getHTML()),
     immediatelyRender: false,
   });
 

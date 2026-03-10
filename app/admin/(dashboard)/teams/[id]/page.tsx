@@ -657,7 +657,6 @@ interface SubmissionData {
   techStackUsed: string | null;
   challenges: string | null;
   futureScope: string | null;
-  assignedProblemStatement?: { title: string } | null;
   submittedAt: Date | string | null;
   assignedProblemStatement: {
     id: string;

@@ -938,7 +938,7 @@ async function sendApprovalEmail(
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 10px 0; color: #666; font-size: 12px; width: 100px; vertical-align: top;">[DATE] Date</td>
-                  <td style="padding: 10px 0; color: #ededed; font-size: 13px; font-weight: 600;">March 15 – 16, 2026</td>
+                  <td style="padding: 10px 0; color: #ededed; font-size: 13px; font-weight: 600;">March 16 – 17, 2026</td>
                 </tr>
                 <tr>
                   <td style="padding: 10px 0; color: #666; font-size: 12px; border-top: 1px solid #222; vertical-align: top;">[TIME] Duration</td>
@@ -963,7 +963,7 @@ async function sendApprovalEmail(
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
               <h2 style="color: #00CCFF; margin: 0 0 16px 0; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;">[SCHEDULE] Event Schedule</h2>
               
-              <p style="color: #FF6600; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 1 — MARCH 15, 2026</p>
+              <p style="color: #FF6600; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 1 — MARCH 16, 2026</p>
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; width: 90px; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">Morning</td>
@@ -1001,7 +1001,7 @@ async function sendApprovalEmail(
                 </tr>
               </table>
 
-              <p style="color: #00CCFF; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 2 — MARCH 16, 2026</p>
+              <p style="color: #00CCFF; margin: 0 0 10px 0; font-size: 12px; font-weight: bold; letter-spacing: 1px;">DAY 2 — MARCH 17, 2026</p>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #00CCFF; font-size: 12px; font-weight: bold; width: 90px; background: rgba(0,204,255,0.06); border-radius: 4px 0 0 4px;">08:00 AM</td>

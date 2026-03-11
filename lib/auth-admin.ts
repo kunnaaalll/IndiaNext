@@ -28,7 +28,7 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   PARTICIPANT: 0,
   ORGANIZER: 1,
   JUDGE: 2,
-  LOGISTICS: 2,  // Same level as JUDGE — event-day role
+  LOGISTICS: 2, // Same level as JUDGE — event-day role
   ADMIN: 3,
   SUPER_ADMIN: 4,
 };
@@ -269,5 +269,53 @@ export function canPerformAction(
       return hasMinimumRole(userRole, 'ADMIN');
     default:
       return false;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// API ROUTE AUTHENTICATION
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Verify admin authentication for API routes
+ * Returns authentication status and admin user if authenticated
+ */
+export async function verifyAdminAuth(_request: Request): Promise<{
+  authenticated: boolean;
+  admin: AdminUser | null;
+  error?: string;
+}> {
+  try {
+    const session = await getAdminSessionFull();
+
+    if (!session) {
+      return {
+        authenticated: false,
+        admin: null,
+        error: 'Not authenticated',
+      };
+    }
+
+    // Check if session is expired
+    if (session.expiresAt < new Date()) {
+      return {
+        authenticated: false,
+        admin: null,
+        error: 'Session expired',
+      };
+    }
+
+    return {
+      authenticated: true,
+      admin: session.user,
+    };
+  } catch (error) {
+    console.error('[Auth] Error verifying admin auth:', error);
+    return {
+      authenticated: false,
+      admin: null,
+      error: 'Authentication error',
+    };
   }
 }

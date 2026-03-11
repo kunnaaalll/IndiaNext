@@ -10,7 +10,9 @@ type OtpPurpose = 'REGISTRATION' | 'LOGIN' | 'PASSWORD_RESET' | 'EMAIL_VERIFICAT
 // Input validation schema
 const SendOtpSchema = z.object({
   email: z.string().email('Invalid email format'),
-  purpose: z.enum(['REGISTRATION', 'LOGIN', 'PASSWORD_RESET', 'EMAIL_VERIFICATION']).default('REGISTRATION'),
+  purpose: z
+    .enum(['REGISTRATION', 'LOGIN', 'PASSWORD_RESET', 'EMAIL_VERIFICATION'])
+    .default('REGISTRATION'),
   track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']).optional(),
 });
 
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     const { email: rawEmail, purpose, track } = validation.data;
-    
+
     // Normalize email to lowercase and trim
     const email = rawEmail.toLowerCase().trim();
 
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
           message: 'Too many OTP requests. Please wait before trying again.',
           retryAfter: Math.ceil((rateLimit.reset - Date.now()) / 1000),
         },
-        { 
+        {
           status: 429,
           headers: createRateLimitHeaders(rateLimit),
         }
@@ -63,6 +65,16 @@ export async function POST(req: Request) {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
     if (purpose === 'REGISTRATION') {
+      // ✅ REGISTRATION CLOSED - Block registration OTPs
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'REGISTRATION_CLOSED',
+          message: 'Registration for IndiaNext 2026 has been closed. Thank you for your interest.',
+        },
+        { status: 403, headers: createRateLimitHeaders(rateLimit) }
+      );
+
       const existingMembership = await prisma.teamMember.findFirst({
         where: {
           user: { email },
@@ -78,7 +90,8 @@ export async function POST(req: Request) {
           {
             success: false,
             error: 'ALREADY_REGISTERED',
-            message: 'This email is already associated with a team. Each person can only be in one team.',
+            message:
+              'This email is already associated with a team. Each person can only be in one team.',
           },
           { status: 409, headers: createRateLimitHeaders(rateLimit) }
         );
@@ -90,7 +103,7 @@ export async function POST(req: Request) {
         select: { emailVerified: true },
       });
 
-      if (existingUser && existingUser.emailVerified) {
+      if (existingUser?.emailVerified) {
         return NextResponse.json(
           {
             success: false,
@@ -111,7 +124,7 @@ export async function POST(req: Request) {
         },
       });
 
-      if (existingOtp && existingOtp.verified) {
+      if (existingOtp?.verified) {
         return NextResponse.json(
           {
             success: false,
@@ -148,7 +161,7 @@ export async function POST(req: Request) {
     });
 
     console.log(`[OTP] Generated for ${email}: hash=${otpHash.substring(0, 8)}... (${purpose})`);
-    
+
     // Log plain OTP in development so testing is easy without checking emails
     if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV OTP] The OTP for ${email} is: ${otp}`);
@@ -157,7 +170,7 @@ export async function POST(req: Request) {
     // Send email using Resend
     try {
       await sendOtpEmail(email, otp, track);
-      
+
       return NextResponse.json(
         {
           success: true,

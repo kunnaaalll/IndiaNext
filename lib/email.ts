@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 // Production-Ready Email Service using Resend
 // ═══════════════════════════════════════════════════════════
 // [CONFIRMED] Fixes ALL 7 critical production issues:
@@ -11,9 +11,9 @@
 // 7. [CONFIRMED] Rate limit handling and error recovery
 // ═══════════════════════════════════════════════════════════
 
-import { Resend } from "resend";
-import { prisma } from "./prisma";
-import type { EmailType, EmailStatus } from "@prisma/client/edge";
+import { Resend } from 'resend';
+import { prisma } from './prisma';
+import type { EmailType, EmailStatus } from '@prisma/client/edge';
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -43,7 +43,7 @@ interface EmailResult {
 // ═══════════════════════════════════════════════════════════
 
 const EMAIL_CONFIG = {
-  from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+  from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
   maxRetries: 2,
   retryDelays: [500, 1500], // Fast retries for serverless — 0.5s, 1.5s
   timeout: 10000, // 10 seconds
@@ -122,8 +122,14 @@ function getResponsiveEmailStyles(): string {
 // ═══════════════════════════════════════════════════════════
 
 const DISPOSABLE_DOMAINS = [
-  'tempmail.com', 'guerrillamail.com', '10minutemail.com', 'throwaway.email',
-  'mailinator.com', 'trashmail.com', 'yopmail.com', 'maildrop.cc',
+  'tempmail.com',
+  'guerrillamail.com',
+  '10minutemail.com',
+  'throwaway.email',
+  'mailinator.com',
+  'trashmail.com',
+  'yopmail.com',
+  'maildrop.cc',
 ];
 
 function validateEmail(email: string): { valid: boolean; error?: string } {
@@ -178,11 +184,14 @@ async function logEmail(data: {
   }
 }
 
-async function _updateEmailLog(messageId: string, updates: {
-  status?: EmailStatus;
-  error?: string;
-  attempts?: number;
-}): Promise<void> {
+async function _updateEmailLog(
+  messageId: string,
+  updates: {
+    status?: EmailStatus;
+    error?: string;
+    attempts?: number;
+  }
+): Promise<void> {
   try {
     await prisma.emailLog.update({
       where: { messageId },
@@ -202,7 +211,7 @@ async function _updateEmailLog(messageId: string, updates: {
 // ═══════════════════════════════════════════════════════════
 
 async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isRetryableError(error: EmailError): boolean {
@@ -210,6 +219,15 @@ function isRetryableError(error: EmailError): boolean {
   if (!error.statusCode) return true; // Network error
   if (error.statusCode === 429) return true; // Rate limit
   if (error.statusCode >= 500) return true; // Server error
+  return false;
+}
+
+function isQuotaExceededError(error: EmailError): boolean {
+  // Check if error is due to daily quota exceeded
+  if (error.statusCode === 429) return true; // Rate limit
+  if (error.code === 'rate_limit_exceeded') return true;
+  if (error.message?.toLowerCase().includes('quota')) return true;
+  if (error.message?.toLowerCase().includes('rate limit')) return true;
   return false;
 }
 
@@ -222,7 +240,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
   if (!validation.valid) {
     const errorMsg = validation.error || 'Invalid email';
     console.error(`[Email] Validation failed for ${to}: ${errorMsg}`);
-    
+
     await logEmail({
       to,
       from,
@@ -241,7 +259,9 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
 
   for (attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      console.log(`[Email] Attempt ${attempt + 1}/${maxRetries} - Sending ${type} to ${to.replace(/(.{3}).*@/, '$1***@')}`);
+      console.log(
+        `[Email] Attempt ${attempt + 1}/${maxRetries} - Sending ${type} to ${to.replace(/(.{3}).*@/, '$1***@')}`
+      );
 
       const result = await getResend().emails.send({
         from,
@@ -260,7 +280,9 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
 
       // Success!
       const messageId = result.data?.id;
-      console.log(`[Email] [CONFIRMED] Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`);
+      console.log(
+        `[Email] [CONFIRMED] Successfully sent ${type} to ${to.replace(/(.{3}).*@/, '$1***@')} (messageId: ${messageId})`
+      );
 
       // Non-blocking log — don't wait for DB write
       logEmail({
@@ -271,14 +293,13 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
         status: 'SENT',
         messageId,
         attempts: attempt + 1,
-      }).catch(err => console.error('[Email] Log write failed:', err));
+      }).catch((err) => console.error('[Email] Log write failed:', err));
 
       return { success: true, messageId };
-
     } catch (error) {
       lastError = error as EmailError;
       const errorMsg = lastError.message || 'Unknown error';
-      
+
       console.error(`[Email] ❌ Attempt ${attempt + 1} failed:`, {
         type,
         to: to.replace(/(.{3}).*@/, '$1***@'),
@@ -316,7 +337,7 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
     status: 'FAILED',
     error: finalError,
     attempts: attempt,
-  }).catch(err => console.error('[Email] Log write failed:', err));
+  }).catch((err) => console.error('[Email] Log write failed:', err));
 
   return { success: false, error: finalError };
 }
@@ -325,22 +346,28 @@ async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResul
 // PUBLIC EMAIL FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 
-export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT' | 'BUILD_STORM'): Promise<EmailResult> {
+export async function sendOtpEmail(
+  to: string,
+  otp: string,
+  track?: 'IDEA_SPRINT' | 'BUILD_STORM'
+): Promise<EmailResult> {
   // Track-specific colors and labels
-  const trackInfo = track ? {
-    'IDEA_SPRINT': {
-      color: '#00CC44',
-      label: 'Idea Sprint Track',
-      icon: 'IS',
-      description: 'Transform your innovative ideas into reality'
-    },
-    'BUILD_STORM': {
-      color: '#2266FF',
-      label: 'Build Storm Track',
-      icon: 'BS',
-      description: 'Build and showcase your technical prowess'
-    }
-  }[track] : null;
+  const trackInfo = track
+    ? {
+        IDEA_SPRINT: {
+          color: '#00CC44',
+          label: 'Idea Sprint Track',
+          icon: 'IS',
+          description: 'Transform your innovative ideas into reality',
+        },
+        BUILD_STORM: {
+          color: '#2266FF',
+          label: 'Build Storm Track',
+          icon: 'BS',
+          description: 'Build and showcase your technical prowess',
+        },
+      }[track]
+    : null;
 
   const subject = `Your Verification Code - IndiaNext${track ? ` (${trackInfo?.label})` : ''}`;
   const html = `
@@ -363,7 +390,9 @@ export async function sendOtpEmail(to: string, otp: string, track?: 'IDEA_SPRINT
                     <span class="badge-txt" style="color: ${trackInfo.color}; font-weight: bold; font-size: 13px; letter-spacing: 1px;">${trackInfo.label.toUpperCase()}</span>
                   </div>
                   <p class="sm-text" style="color: #999; margin: 10px 0 0 0; font-size: 13px;">${trackInfo.description}</p>
-                ` : ''}
+                `
+                    : ''
+                }
               </div>
               
               <!-- Main content -->
@@ -418,10 +447,12 @@ interface ConfirmationEmailData {
   track: string;
   members: Array<{ name: string; email: string; role: string }>;
   domain?: string;
-
 }
 
-export async function sendConfirmationEmail(to: string, data: ConfirmationEmailData): Promise<EmailResult> {
+export async function sendConfirmationEmail(
+  to: string,
+  data: ConfirmationEmailData
+): Promise<EmailResult> {
   const memberRows = data.members
     .map(
       (m, i) =>
@@ -574,7 +605,6 @@ export async function sendConfirmationEmail(to: string, data: ConfirmationEmailD
   });
 }
 
-
 // ═══════════════════════════════════════════════════════════
 // TEAM MEMBER NOTIFICATION EMAIL
 // ═══════════════════════════════════════════════════════════
@@ -587,7 +617,10 @@ interface MemberNotificationData {
   track: string;
 }
 
-export async function sendTeamMemberNotification(to: string, data: MemberNotificationData): Promise<EmailResult> {
+export async function sendTeamMemberNotification(
+  to: string,
+  data: MemberNotificationData
+): Promise<EmailResult> {
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
@@ -746,7 +779,6 @@ export async function sendTeamMemberNotification(to: string, data: MemberNotific
   });
 }
 
-
 // ═══════════════════════════════════════════════════════════
 // STATUS UPDATE EMAIL
 // ═══════════════════════════════════════════════════════════
@@ -759,21 +791,21 @@ export async function sendStatusUpdateEmail(
   shortCode?: string
 ): Promise<EmailResult> {
   const statusColors: Record<string, string> = {
-    APPROVED: "#10b981",
-    REJECTED: "#ef4444",
-    WAITLISTED: "#f59e0b",
-    UNDER_REVIEW: "#3b82f6",
+    APPROVED: '#10b981',
+    REJECTED: '#ef4444',
+    WAITLISTED: '#f59e0b',
+    UNDER_REVIEW: '#3b82f6',
   };
 
   const statusMessages: Record<string, string> = {
-    APPROVED: "Congratulations! Your team has been approved.",
-    REJECTED: "Unfortunately, your team was not selected this time.",
-    WAITLISTED: "Your team has been placed on the waitlist.",
-    UNDER_REVIEW: "Your team is currently under review.",
+    APPROVED: 'Congratulations! Your team has been approved.',
+    REJECTED: 'Unfortunately, your team was not selected this time.',
+    WAITLISTED: 'Your team has been placed on the waitlist.',
+    UNDER_REVIEW: 'Your team is currently under review.',
   };
 
   // For APPROVED status, send a detailed hackathon info email
-  if (status === "APPROVED") {
+  if (status === 'APPROVED') {
     return sendApprovalEmail(to, teamName, notes, shortCode);
   }
 
@@ -799,7 +831,7 @@ export async function sendStatusUpdateEmail(
               <div class="email-bd" style="background: #1a1a1a; padding: 28px 20px; border-radius: 0 0 12px 12px; border: 2px solid #222; border-top: none;">
 
                 <!-- Status Badge -->
-                <div class="stat-badge" style="background: ${statusColors[status] || "#6b7280"}; padding: 18px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                <div class="stat-badge" style="background: ${statusColors[status] || '#6b7280'}; padding: 18px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
                   <h2 style="margin: 0 0 6px 0; font-size: 18px; color: white;">Status Update</h2>
                   <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.9);">${escapeHtml(teamName)}</p>
                 </div>
@@ -808,12 +840,16 @@ export async function sendStatusUpdateEmail(
                   ${statusMessages[status] || `Your team status has been updated to ${status}.`}
                 </p>
                 
-                ${notes ? `
+                ${
+                  notes
+                    ? `
                   <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 18px; margin-bottom: 20px;">
                     <h3 style="margin: 0 0 8px 0; color: #ededed; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">Review Notes</h3>
                     <p class="sm-text" style="margin: 0; color: #999; line-height: 1.6; font-size: 13px;">${escapeHtml(notes)}</p>
                   </div>
-                ` : ""}
+                `
+                    : ''
+                }
                 
                 <!-- Footer -->
                 <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #222;">
@@ -883,12 +919,16 @@ async function sendApprovalEmail(
               We’re thrilled to have you on board!
             </p>
 
-            ${notes ? `
+            ${
+              notes
+                ? `
               <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 14px; margin-bottom: 20px;">
                 <p style="margin: 0 0 6px 0; color: #10b981; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Admin Note</p>
                 <p class="sm-text" style="margin: 0; color: #ccc; font-size: 13px; line-height: 1.5;">${escapeHtml(notes)}</p>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <!-- Hackathon Details -->
             <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 10px; padding: 22px; margin-bottom: 20px;">
@@ -1049,7 +1089,9 @@ async function sendApprovalEmail(
               </table>
             </div>
 
-            ${shortCode ? `
+            ${
+              shortCode
+                ? `
             <!-- QR Code Check-in Pass -->
             <div class="qr-section sec-card" style="background: linear-gradient(135deg, #0a0a0a 0%, #111 100%); border: 2px solid #FF6600; border-radius: 12px; padding: 24px; margin-bottom: 20px; text-align: center;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width: 100%; border-collapse: collapse;">
@@ -1101,7 +1143,9 @@ async function sendApprovalEmail(
                 </tr>
               </table>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
 
             <!-- CTA -->
             <div class="cta-wrap" style="background: rgba(255, 102, 0, 0.06); border: 2px solid #FF6600; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">
@@ -1184,13 +1228,25 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   // Validate all emails first
   const validEmails: BatchEmailItem[] = [];
   const results: EmailResult[] = [];
-  const failedValidations: { to: string; from: string; subject: string; type: EmailType; error: string }[] = [];
+  const failedValidations: {
+    to: string;
+    from: string;
+    subject: string;
+    type: EmailType;
+    error: string;
+  }[] = [];
 
   for (const email of emails) {
     const validation = validateEmail(email.to);
     if (!validation.valid) {
       console.error(`[Email] Batch validation failed for ${email.to}: ${validation.error}`);
-      failedValidations.push({ to: email.to, from, subject: email.subject, type: email.type, error: validation.error || 'Invalid email' });
+      failedValidations.push({
+        to: email.to,
+        from,
+        subject: email.subject,
+        type: email.type,
+        error: validation.error || 'Invalid email',
+      });
       results.push({ success: false, error: validation.error });
     } else {
       validEmails.push(email);
@@ -1200,13 +1256,21 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
 
   // Log validation failures in bulk (non-blocking)
   if (failedValidations.length > 0) {
-    prisma.emailLog.createMany({
-      data: failedValidations.map(f => ({
-        to: f.to, from: f.from, subject: f.subject, type: f.type,
-        status: 'FAILED' as const, provider: 'resend', error: f.error,
-        attempts: 0, lastAttempt: new Date(),
-      })),
-    }).catch((err: unknown) => console.error('[Email] Failed to log validation failures:', err));
+    prisma.emailLog
+      .createMany({
+        data: failedValidations.map((f) => ({
+          to: f.to,
+          from: f.from,
+          subject: f.subject,
+          type: f.type,
+          status: 'FAILED' as const,
+          provider: 'resend',
+          error: f.error,
+          attempts: 0,
+          lastAttempt: new Date(),
+        })),
+      })
+      .catch((err: unknown) => console.error('[Email] Failed to log validation failures:', err));
   }
 
   if (validEmails.length === 0) return results;
@@ -1217,9 +1281,11 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
 
   for (attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      console.log(`[Email] Batch send attempt ${attempt + 1}/${maxRetries} — ${validEmails.length} emails`);
+      console.log(
+        `[Email] Batch send attempt ${attempt + 1}/${maxRetries} — ${validEmails.length} emails`
+      );
 
-      const batchPayload = validEmails.map(e => ({
+      const batchPayload = validEmails.map((e) => ({
         from,
         to: [e.to],
         subject: e.subject,
@@ -1237,31 +1303,51 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
 
       // Log all successful sends in a single DB call
       const batchData = batchResult.data?.data || [];
-      const logEntries: { to: string; from: string; subject: string; type: EmailType; status: 'SENT'; provider: string; messageId: string | undefined; attempts: number; lastAttempt: Date; sentAt: Date }[] = [];
+      const logEntries: {
+        to: string;
+        from: string;
+        subject: string;
+        type: EmailType;
+        status: 'SENT';
+        provider: string;
+        messageId: string | undefined;
+        attempts: number;
+        lastAttempt: Date;
+        sentAt: Date;
+      }[] = [];
       let validIdx = 0;
       for (let i = 0; i < results.length; i++) {
         if (results[i].success && validIdx < validEmails.length) {
           const messageId = batchData[validIdx]?.id;
           results[i] = { success: true, messageId };
           logEntries.push({
-            to: validEmails[validIdx].to, from,
+            to: validEmails[validIdx].to,
+            from,
             subject: validEmails[validIdx].subject,
             type: validEmails[validIdx].type,
-            status: 'SENT', provider: 'resend', messageId,
-            attempts: attempt + 1, lastAttempt: new Date(), sentAt: new Date(),
+            status: 'SENT',
+            provider: 'resend',
+            messageId,
+            attempts: attempt + 1,
+            lastAttempt: new Date(),
+            sentAt: new Date(),
           });
-          console.log(`[Email] [CONFIRMED] ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`);
+          console.log(
+            `[Email] [CONFIRMED] ${validEmails[validIdx].type} to ${validEmails[validIdx].to.replace(/(.{3}).*@/, '$1***@')} sent (batch)`
+          );
           validIdx++;
         }
       }
 
       // Bulk insert logs — don't block the return
-      prisma.emailLog.createMany({ data: logEntries })
+      prisma.emailLog
+        .createMany({ data: logEntries })
         .catch((err: unknown) => console.error('[Email] Failed to bulk-log sent emails:', err));
 
-      console.log(`[Email] [CONFIRMED] Batch complete — ${validEmails.length} emails sent in 1 API call`);
+      console.log(
+        `[Email] [CONFIRMED] Batch complete — ${validEmails.length} emails sent in 1 API call`
+      );
       return results;
-
     } catch (error) {
       const emailError = error as EmailError;
       console.error(`[Email] ❌ Batch attempt ${attempt + 1} failed:`, emailError.message);
@@ -1275,7 +1361,9 @@ export async function sendBatchEmails(emails: BatchEmailItem[]): Promise<EmailRe
   }
 
   // Batch failed — fallback to individual sends
-  console.warn(`[Email] Batch API failed after ${attempt} attempts — falling back to individual sends`);
+  console.warn(
+    `[Email] Batch API failed after ${attempt} attempts — falling back to individual sends`
+  );
   let validIdx = 0;
   for (let i = 0; i < results.length; i++) {
     if (results[i].success && validIdx < validEmails.length) {
@@ -1302,7 +1390,14 @@ interface RegistrationBatchData {
   teamId: string;
   teamName: string;
   track: string;
-  members: Array<{ name: string; email: string; role: string; college?: string; degree?: string; phone?: string }>;
+  members: Array<{
+    name: string;
+    email: string;
+    role: string;
+    college?: string;
+    degree?: string;
+    phone?: string;
+  }>;
   leaderName: string;
   leaderMobile?: string;
   leaderCollege?: string;
@@ -1327,7 +1422,9 @@ interface RegistrationBatchData {
  * Sends all registration emails (leader confirmation + member notifications)
  * in a single Resend batch API call instead of N separate calls.
  */
-export async function sendRegistrationBatchEmails(data: RegistrationBatchData): Promise<EmailResult[]> {
+export async function sendRegistrationBatchEmails(
+  data: RegistrationBatchData
+): Promise<EmailResult[]> {
   const emails: BatchEmailItem[] = [];
 
   // 1. Build leader confirmation email HTML
@@ -1340,7 +1437,9 @@ export async function sendRegistrationBatchEmails(data: RegistrationBatchData): 
   });
 
   // 2. Build member notification emails
-  const otherMembers = data.members.filter(m => m.email.toLowerCase() !== data.leaderEmail.toLowerCase());
+  const otherMembers = data.members.filter(
+    (m) => m.email.toLowerCase() !== data.leaderEmail.toLowerCase()
+  );
   for (const member of otherMembers) {
     const notificationHtml = buildMemberNotificationHtml({
       memberName: member.name,
@@ -1372,7 +1471,12 @@ export async function sendRegistrationBatchEmails(data: RegistrationBatchData): 
 
 // ─── HTML Builders (extracted for batch use) ────────────
 
-function buildConfirmationHtml(data: { teamId: string; teamName: string; track: string; members: Array<{ name: string; email: string; role: string }> }): string {
+function buildConfirmationHtml(data: {
+  teamId: string;
+  teamName: string;
+  track: string;
+  members: Array<{ name: string; email: string; role: string }>;
+}): string {
   const memberRows = data.members
     .map(
       (m, i) =>
@@ -1506,7 +1610,13 @@ function buildConfirmationHtml(data: { teamId: string; teamName: string; track: 
         </html>`;
 }
 
-function buildMemberNotificationHtml(data: { memberName: string; teamName: string; leaderName: string; leaderEmail: string; track: string }): string {
+function buildMemberNotificationHtml(data: {
+  memberName: string;
+  teamName: string;
+  leaderName: string;
+  leaderEmail: string;
+  track: string;
+}): string {
   const trackColor = data.track.includes('Idea') ? '#00CC44' : '#2266FF';
   const trackIcon = data.track.includes('Idea') ? '[IS]' : '[BS]';
 
@@ -1602,9 +1712,10 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
                     <li>Join your team’s GitHub / WhatsApp / Discord group (if created)</li>
                     <li>Finalize your problem statement and task distribution</li>
                     <li>Prepare your MVP Architecture / tech stack planning</li>
-                    ${data.track.includes('Idea')
-                      ? `<li>Start working on your Idea Deck + Pitch Video + MVP Architecture Mockup</li>`
-                      : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
+                    ${
+                      data.track.includes('Idea')
+                        ? `<li>Start working on your Idea Deck + Pitch Video + MVP Architecture Mockup</li>`
+                        : `<li>Start planning your MVP features for the 24-hour BuildStorm challenge</li>`
                     }
                   </ul>
                 </div>
@@ -1654,7 +1765,6 @@ function buildMemberNotificationHtml(data: { memberName: string; teamName: strin
         </html>`;
 }
 
-
 // ═══════════════════════════════════════════════════════════
 // SUBMISSION DETAILS EMAIL (Complete registration data record)
 // ═══════════════════════════════════════════════════════════
@@ -1668,7 +1778,14 @@ interface SubmissionDetailsData {
   leaderMobile?: string;
   leaderCollege?: string;
   leaderDegree?: string;
-  members: Array<{ name: string; email: string; role: string; college?: string; degree?: string; phone?: string }>;
+  members: Array<{
+    name: string;
+    email: string;
+    role: string;
+    college?: string;
+    degree?: string;
+    phone?: string;
+  }>;
   // IdeaSprint
   ideaTitle?: string;
   problemStatement?: string;
@@ -1689,7 +1806,10 @@ interface SubmissionDetailsData {
  * Sends a complete record of all submitted registration details to the team leader.
  * This serves as a receipt/backup of everything they entered in the form.
  */
-export async function sendSubmissionDetailsEmail(to: string, data: SubmissionDetailsData): Promise<EmailResult> {
+export async function sendSubmissionDetailsEmail(
+  to: string,
+  data: SubmissionDetailsData
+): Promise<EmailResult> {
   const subject = `[INFO] Your Submission Details — ${escapeHtml(data.teamName)} | IndiaNext Hackathon`;
   const html = buildSubmissionDetailsHtml(data);
 
@@ -1705,7 +1825,9 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
   const isIdeaSprint = data.track.includes('Idea') || data.track === 'IDEA_SPRINT';
   const trackColor = isIdeaSprint ? '#00CC44' : '#2266FF';
   const trackIcon = isIdeaSprint ? '[IS]' : '[BS]';
-  const trackLabel = isIdeaSprint ? 'IdeaSprint: Build MVP in 24 Hours' : 'BuildStorm: Solve Problem Statement in 24 Hours';
+  const trackLabel = isIdeaSprint
+    ? 'IdeaSprint: Build MVP in 24 Hours'
+    : 'BuildStorm: Solve Problem Statement in 24 Hours';
 
   // Build member rows with college & degree
   const memberRows = data.members
@@ -1735,8 +1857,8 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
     ];
 
     submissionSection = fields
-      .filter(f => f.value)
-      .map(f => {
+      .filter((f) => f.value)
+      .map((f) => {
         if (f.isLink) {
           return `<div style="margin-bottom: 16px;">
               <p style="color: #999; margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">${f.label}</p>
@@ -1763,8 +1885,8 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
     ];
 
     submissionSection = fields
-      .filter(f => f.value)
-      .map(f => {
+      .filter((f) => f.value)
+      .map((f) => {
         if (f.isLink) {
           return `<div style="margin-bottom: 16px;">
               <p style="color: #999; margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">${f.label}</p>
@@ -1830,10 +1952,14 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Team Size</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 13px;">${data.members.length} member${data.members.length > 1 ? 's' : ''}</td>
                     </tr>
-                    ${data.hearAbout ? `<tr>
+                    ${
+                      data.hearAbout
+                        ? `<tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Heard Via</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 13px;">${escapeHtml(data.hearAbout)}</td>
-                    </tr>` : ''}
+                    </tr>`
+                        : ''
+                    }
                   </table>
                 </div>
 
@@ -1851,18 +1977,30 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                         <a href="mailto:${escapeHtml(data.leaderEmail)}" style="color: #FF6600; text-decoration: none;">${escapeHtml(data.leaderEmail)}</a>
                       </td>
                     </tr>
-                    ${data.leaderMobile ? `<tr>
+                    ${
+                      data.leaderMobile
+                        ? `<tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Mobile</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 13px;">${escapeHtml(data.leaderMobile)}</td>
-                    </tr>` : ''}
-                    ${data.leaderCollege ? `<tr>
+                    </tr>`
+                        : ''
+                    }
+                    ${
+                      data.leaderCollege
+                        ? `<tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">College</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 13px;">${escapeHtml(data.leaderCollege)}</td>
-                    </tr>` : ''}
-                    ${data.leaderDegree ? `<tr>
+                    </tr>`
+                        : ''
+                    }
+                    ${
+                      data.leaderDegree
+                        ? `<tr>
                       <td style="padding: 8px 0; color: #999; font-size: 13px;">Degree</td>
                       <td style="padding: 8px 0; color: #ededed; font-size: 13px;">${escapeHtml(data.leaderDegree)}</td>
-                    </tr>` : ''}
+                    </tr>`
+                        : ''
+                    }
                   </table>
                 </div>
 
@@ -1887,7 +2025,9 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                   </div>
 
                   <!-- Mobile: show full member details as cards -->
-                  ${data.members.map((m, i) => `
+                  ${data.members
+                    .map(
+                      (m, i) => `
                     <div class="mob-member-card" style="display: none; background: #111; border: 1px solid #2a2a2a; border-radius: 6px; padding: 12px; margin-top: ${i === 0 ? '14px' : '8px'};">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <span style="color: #ededed; font-size: 13px; font-weight: 600;">${escapeHtml(m.name)}</span>
@@ -1897,7 +2037,9 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                       ${m.college ? `<p style="color: #777; margin: 4px 0 0 0; font-size: 11px;">${escapeHtml(m.college)}</p>` : ''}
                       ${m.degree ? `<p style="color: #777; margin: 2px 0 0 0; font-size: 11px;">${escapeHtml(m.degree)}</p>` : ''}
                     </div>
-                  `).join('')}
+                  `
+                    )
+                    .join('')}
                 </div>
 
                 <!-- Submission Details -->
@@ -1910,12 +2052,16 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
                   </div>
                 </div>
 
-                ${data.additionalNotes ? `
+                ${
+                  data.additionalNotes
+                    ? `
                 <!-- Additional Notes -->
                 <div class="sec-card" style="background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                   <h2 style="color: #ededed; margin: 0 0 12px 0; font-size: 18px;">📝 Additional Notes</h2>
                   <p class="body-text" style="color: #ccc; margin: 0; font-size: 13px; line-height: 1.7; white-space: pre-wrap;">${escapeHtml(data.additionalNotes)}</p>
-                </div>` : ''}
+                </div>`
+                    : ''
+                }
 
                 <!-- Important Notice -->
                 <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 8px; padding: 14px; margin-bottom: 20px;">
@@ -1961,3 +2107,162 @@ function buildSubmissionDetailsHtml(data: SubmissionDetailsData): string {
         </html>`;
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// EMAIL QUEUE PROCESSING
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Process queued emails that failed due to quota limits
+ * Call this function when quota resets (typically daily)
+ */
+export async function processEmailQueue(options?: {
+  batchSize?: number;
+  maxAge?: number;
+}): Promise<{
+  processed: number;
+  sent: number;
+  failed: number;
+  errors: string[];
+}> {
+  const batchSize = options?.batchSize || 50;
+  const maxAge = options?.maxAge || 48;
+  const maxAgeDate = new Date(Date.now() - maxAge * 60 * 60 * 1000);
+
+  console.log(`[Email Queue] Starting queue processing (batch size: ${batchSize})`);
+
+  try {
+    const pendingEmails = await prisma.emailLog.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { gte: maxAgeDate },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: batchSize,
+    });
+
+    if (pendingEmails.length === 0) {
+      console.log('[Email Queue] No pending emails to process');
+      return { processed: 0, sent: 0, failed: 0, errors: [] };
+    }
+
+    console.log(`[Email Queue] Found ${pendingEmails.length} pending emails`);
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const email of pendingEmails) {
+      try {
+        console.log(`[Email Queue] Retrying email to ${email.to.replace(/(.{3}).*@/, '$1***@')}`);
+
+        const result = await getResend().emails.send({
+          from: email.from,
+          to: email.to,
+          subject: email.subject,
+          html: '', // Note: HTML not stored in EmailLog
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message || 'Unknown Resend error');
+        }
+
+        await prisma.emailLog.update({
+          where: { id: email.id },
+          data: {
+            status: 'SENT',
+            messageId: result.data?.id,
+            sentAt: new Date(),
+            error: null,
+            attempts: email.attempts + 1,
+            lastAttempt: new Date(),
+          },
+        });
+
+        sent++;
+        console.log(`[Email Queue] ✓ Successfully sent queued email`);
+      } catch (error) {
+        const err = error as EmailError;
+        const errorMsg = err.message || 'Unknown error';
+
+        if (isQuotaExceededError(err)) {
+          console.log(`[Email Queue] Quota still exceeded, stopping`);
+          errors.push('Quota still exceeded');
+          break;
+        }
+
+        await prisma.emailLog.update({
+          where: { id: email.id },
+          data: {
+            status: 'FAILED',
+            error: errorMsg,
+            attempts: email.attempts + 1,
+            lastAttempt: new Date(),
+          },
+        });
+
+        failed++;
+        errors.push(`Failed: ${errorMsg}`);
+      }
+
+      await sleep(100);
+    }
+
+    console.log(`[Email Queue] Complete: ${sent} sent, ${failed} failed`);
+    return { processed: pendingEmails.length, sent, failed, errors };
+  } catch (error) {
+    console.error('[Email Queue] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get queue statistics
+ */
+export async function getEmailQueueStats(): Promise<{
+  pending: number;
+  oldestPending: Date | null;
+  failedLast24h: number;
+  sentLast24h: number;
+}> {
+  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [pending, oldestPending, failedLast24h, sentLast24h] = await Promise.all([
+    prisma.emailLog.count({ where: { status: 'PENDING' } }),
+    prisma.emailLog.findFirst({
+      where: { status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    }),
+    prisma.emailLog.count({
+      where: { status: 'FAILED', createdAt: { gte: last24h } },
+    }),
+    prisma.emailLog.count({
+      where: { status: 'SENT', sentAt: { gte: last24h } },
+    }),
+  ]);
+
+  return {
+    pending,
+    oldestPending: oldestPending?.createdAt || null,
+    failedLast24h,
+    sentLast24h,
+  };
+}
+
+/**
+ * Clear old failed emails from the queue
+ */
+export async function cleanupOldQueuedEmails(olderThanHours = 72): Promise<number> {
+  const cutoffDate = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+
+  const result = await prisma.emailLog.deleteMany({
+    where: {
+      status: 'PENDING',
+      createdAt: { lt: cutoffDate },
+    },
+  });
+
+  console.log(`[Email Queue] Cleaned up ${result.count} old queued emails`);
+  return result.count;
+}

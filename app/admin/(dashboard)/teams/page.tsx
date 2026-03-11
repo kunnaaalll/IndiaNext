@@ -194,6 +194,7 @@ interface ExportTeam {
     id: string;
     ideaTitle?: string | null;
     problemStatement?: string | null;
+    assignedProblemStatement?: { title: string } | null;
     proposedSolution?: string | null;
     targetUsers?: string | null;
     expectedImpact?: string | null;

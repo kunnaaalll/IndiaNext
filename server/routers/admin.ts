@@ -207,6 +207,9 @@ export const adminRouter = router({
                 id: true,
                 submittedAt: true,
                 ideaTitle: true,
+                assignedProblemStatement: {
+                  select: { title: true },
+                },
                 _count: {
                   select: { files: true },
                 },
@@ -847,6 +850,9 @@ export const adminRouter = router({
               id: true,
               ideaTitle: true,
               problemStatement: true,
+              assignedProblemStatement: {
+                select: { title: true },
+              },
               proposedSolution: true,
               targetUsers: true,
               expectedImpact: true,

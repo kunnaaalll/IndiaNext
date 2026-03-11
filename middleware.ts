@@ -128,9 +128,10 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Allow camera for QR scanner on admin logistics pages
   response.headers.set(
     'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=(), payment=()'
+    'camera=(self), microphone=(), geolocation=(), payment=()'
   );
 
   // API version header on API responses

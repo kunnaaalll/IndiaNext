@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { headers } from 'next/headers';
 import './globals.css';
 import { AnimationProvider } from '@/lib/animations/context/AnimationProvider';
 
@@ -51,13 +52,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headersList = await headers();
+  const nonce = headersList.get('X-Nonce') || undefined;
+
   return (
     <html lang="en">
+      <head>
+        {nonce && <meta property="csp-nonce" content={nonce} />}
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AnimationProvider>{children}</AnimationProvider>
       </body>

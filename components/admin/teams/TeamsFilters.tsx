@@ -24,6 +24,7 @@ const statusOptions = [
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'WAITLISTED', label: 'Waitlisted' },
+  { value: 'SHORTLISTED', label: 'Shortlisted' },
 ];
 
 const trackOptions = [

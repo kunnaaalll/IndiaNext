@@ -60,6 +60,8 @@ export default function DesktopDashboard() {
     if (!deskId) return;
 
     const pusher = getPusherClient();
+    if (!pusher) return;
+
     const channelName = `admin-checkin-${deskId}`;
     const channel = pusher.subscribe(channelName);
 

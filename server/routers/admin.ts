@@ -1128,13 +1128,14 @@ export const adminRouter = router({
       });
 
       // Emit event for real-time dashboard on desk-specific channel
-      const { pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
-        team: {
-          ...team,
-          teamIndex,
-        },
-      });
+      const { getPusherServer } = await import('@/lib/pusher');
+      const pusher = getPusherServer();
+      if (pusher) {
+        await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
+          team,
+          adminName: ctx.admin.name,
+        });
+      }
 
       return {
         ...team,
@@ -1163,13 +1164,16 @@ export const adminRouter = router({
       });
 
       // Emit confirmed event on desk-specific channel
-      const { pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(`admin-checkin-${input.deskId}`, 'checkin:confirmed', {
-        teamId: input.teamId,
-        teamName: team.name,
-        desk: input.desk,
-        adminName: ctx.admin.name,
-      });
+      const { getPusherServer } = await import('@/lib/pusher');
+      const pusher = getPusherServer();
+      if (pusher) {
+        await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:confirmed', {
+          teamId: input.teamId,
+          teamName: team.name,
+          desk: input.desk,
+          adminName: ctx.admin.name,
+        });
+      }
 
       return { success: true };
     }),
@@ -1191,12 +1195,15 @@ export const adminRouter = router({
       });
 
       // Emit flagged event on desk-specific channel
-      const { pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(`admin-checkin-${input.deskId}`, 'checkin:flagged', {
-        teamId: input.teamId,
-        reason: input.reason,
-        adminName: ctx.admin.name,
-      });
+      const { getPusherServer } = await import('@/lib/pusher');
+      const pusher = getPusherServer();
+      if (pusher) {
+        await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:flagged', {
+          teamId: input.teamId,
+          reason: input.reason, // Changed 'issue' to 'reason' as per original code
+          adminName: ctx.admin.name,
+        });
+      }
 
       return { success: true };
     }),

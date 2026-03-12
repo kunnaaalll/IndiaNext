@@ -497,9 +497,15 @@ export const adminRouter = router({
   // SHORTLISTED TEAMS
   // ═══════════════════════════════════════════════════════════
 
-  getShortlistedTeams: canViewTeams.query(async ({ ctx }) => {
-    const teams = await ctx.prisma.team.findMany({
-      where: { status: 'SHORTLISTED', deletedAt: null },
+  getShortlistedTeams: canViewTeams
+    .input(z.object({ track: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const teams = await ctx.prisma.team.findMany({
+        where: {
+          status: 'SHORTLISTED',
+          deletedAt: null,
+          ...(input?.track && input.track !== 'all' ? { track: input.track as any } : {}),
+        },
       include: {
         members: {
           include: {

@@ -48,14 +48,19 @@ export default function ShortlistedTeamsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkNote, setBulkNote] = useState('');
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [filterTrack, setFilterTrack] = useState('all');
 
   const {
-    data: teams,
+    data: allTeams,
     isLoading,
     refetch,
   } = trpc.admin.getShortlistedTeams.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
+
+  const displayTeams = (allTeams || [])
+    .map((team, idx) => ({ ...team, globalIdx: idx }))
+    .filter((team) => filterTrack === 'all' || team.track === filterTrack);
 
   const sendSingle = trpc.admin.sendShortlistConfirmationEmail.useMutation({
     onSuccess: () => {
@@ -77,14 +82,14 @@ export default function ShortlistedTeamsPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const total = teams?.length ?? 0;
+  const total = displayTeams.length;
   const allSelected = total > 0 && selectedIds.size === total;
 
   function toggleAll() {
     if (allSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(teams?.map((t: { id: string }) => t.id) ?? []));
+      setSelectedIds(new Set(displayTeams.map((t) => t.id)));
     }
   }
 
@@ -121,6 +126,18 @@ export default function ShortlistedTeamsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <select
+            value={filterTrack}
+            onChange={(e) => {
+              setFilterTrack(e.target.value);
+              setSelectedIds(new Set());
+            }}
+            className="px-3 py-2 text-[10px] font-mono bg-white/[0.03] border border-white/10 rounded-md text-gray-400 focus:outline-none focus:ring-1 focus:ring-orange-500/50 cursor-pointer hover:bg-white/[0.05] transition-all"
+          >
+            <option value="all">ALL TRACKS</option>
+            <option value="IDEA_SPRINT">IDEA SPRINT</option>
+            <option value="BUILD_STORM">BUILD STORM</option>
+          </select>
           <button
             onClick={() => refetch()}
             className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-mono font-bold text-gray-400 border border-white/10 rounded-md hover:bg-white/[0.04] hover:text-white transition-all"
@@ -207,8 +224,8 @@ export default function ShortlistedTeamsPage() {
           </div>
 
           {/* Rows */}
-          {teams?.map((team, idx) => {
-            const desk = assignDesk(idx);
+          {displayTeams.map((team) => {
+            const desk = assignDesk(team.globalIdx);
             const leader = team.members.find((m) => m.role === 'LEADER');
             const isExpanded = expandedTeam === team.id;
             const isSelected = selectedIds.has(team.id);
@@ -444,7 +461,7 @@ export default function ShortlistedTeamsPage() {
       {!isLoading && total > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(['A', 'B', 'D', 'C'] as const).map((desk, _i) => {
-            const count = teams?.filter((_, idx) => assignDesk(idx) === desk).length ?? 0;
+            const count = displayTeams.filter((t) => assignDesk(t.globalIdx) === desk).length;
             return (
               <div
                 key={desk}

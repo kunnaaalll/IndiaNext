@@ -303,7 +303,9 @@ export function StatusOrScoring({
                     teamId, 
                     notes: statusNote || undefined 
                   });
-                } catch (err) {}
+                } catch (err) {
+                  console.error('Failed to trigger email:', err);
+                }
               }}
               disabled={sendEmailMutation.isPending}
               className="inline-flex items-center gap-2 px-4 py-2 text-[10px] font-mono font-bold tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md hover:bg-emerald-500/20 disabled:opacity-40"

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc-client';
 import { toast } from 'sonner';
-import { assignDesk, DESKS } from '@/lib/logistics-utils';
+import { assignDesk } from '@/lib/logistics-utils';
 import {
   Star,
   Mail,

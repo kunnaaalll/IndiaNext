@@ -6,7 +6,6 @@ import { trpc } from '@/lib/trpc-client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  CheckCircle2, 
   Clock, 
   AlertTriangle, 
   Users, 
@@ -14,8 +13,6 @@ import {
   UserCheck,
   Flag,
   RotateCcw,
-  Wifi,
-  WifiOff,
   Search,
   Activity,
   ChevronRight,
@@ -27,7 +24,12 @@ import { useAdminRole } from '../AdminRoleContext';
 
 export default function DesktopDashboard() {
   const { desk: contextDesk } = useAdminRole();
-  const [deskId, setDeskId] = useState<string | null>(null);
+  const [deskId, setDeskId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('admin_checkin_desk');
+    }
+    return null;
+  });
   const [activeTeam, setActiveTeam] = useState<any>(null);
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -47,12 +49,11 @@ export default function DesktopDashboard() {
   const flagMutation = trpc.admin.flagCheckInIssue.useMutation();
 
   // Initialize desk from context or localStorage
+  // Sync with context if provided
   useEffect(() => {
     if (contextDesk) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDeskId(contextDesk);
-    } else {
-      const savedDesk = localStorage.getItem('admin_checkin_desk');
-      if (savedDesk) setDeskId(savedDesk);
     }
   }, [contextDesk]);
 
@@ -93,7 +94,6 @@ export default function DesktopDashboard() {
     return () => {
       pusher.unsubscribe(channelName);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deskId, activeTeam?.id, utils]);
 
   const selectDesk = (id: string) => {
@@ -211,7 +211,7 @@ export default function DesktopDashboard() {
                   <p className="text-[9px] tracking-widest">AWAITING_UPLINK...</p>
                 </div>
               ) : (
-                recentScans.map((team, idx) => (
+                recentScans.map((team) => (
                   <motion.div
                     key={team.id}
                     initial={{ opacity: 0, x: -10 }}

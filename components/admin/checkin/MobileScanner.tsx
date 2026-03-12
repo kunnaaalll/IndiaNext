@@ -27,7 +27,7 @@ export default function MobileScanner() {
     if (contextDesk) {
       setDeskId(contextDesk);
     } else {
-      const savedDesk = localStorage.getItem('admin_checkin_desk');
+      const savedDesk = typeof window !== 'undefined' ? localStorage.getItem('admin_checkin_desk') : null;
       if (savedDesk) setDeskId(savedDesk);
     }
   }, [contextDesk]);
@@ -54,7 +54,12 @@ export default function MobileScanner() {
             aspectRatio: 1.0,
           },
           onScanSuccess,
-          () => {} // onScanFailure - ignored for quieter UI
+          (errorMessage) => {
+            // Quieter logs for background scanning failures
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('QR Scan error:', errorMessage);
+            }
+          }
         );
         setIsScanning(true);
         setCameraError(null);
@@ -86,11 +91,13 @@ export default function MobileScanner() {
 
     let shortCode = decodedText;
     try {
-      if (decodedText.includes('code=')) {
-        const url = new URL(decodedText);
-        shortCode = url.searchParams.get('code') || decodedText;
+        if (decodedText.includes('code=')) {
+          const url = new URL(decodedText);
+          shortCode = url.searchParams.get('code') || decodedText;
+        }
+      } catch (err) {
+        console.warn('URL parsing failed during scan:', err);
       }
-    } catch (e) {}
 
     // Per-code 5s cooldown
     const lastTime = lastScanMap.current.get(shortCode) || 0;

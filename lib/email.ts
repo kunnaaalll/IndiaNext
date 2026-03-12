@@ -233,7 +233,8 @@ function isQuotaExceededError(error: EmailError): boolean {
 }
 
 async function sendEmailWithRetry(options: SendEmailOptions): Promise<EmailResult> {
-  let { to, subject, html, type, maxRetries = EMAIL_CONFIG.maxRetries } = options;
+  const { html, type, maxRetries = EMAIL_CONFIG.maxRetries } = options;
+  let { to, subject } = options;
   const from = EMAIL_CONFIG.from;
 
   // 🧪 TEST MODE REDIRECTION

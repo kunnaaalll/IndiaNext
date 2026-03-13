@@ -32,10 +32,7 @@ export default function MobileScanner() {
     }
   }, [contextDesk]);
 
-  const { refetch: getTeam } = trpc.admin.getTeamByShortCode.useQuery(
-    { shortCode: lastScanned || '', deskId: deskId || '' },
-    { enabled: false }
-  );
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     if (!deskId) return;
@@ -111,7 +108,10 @@ export default function MobileScanner() {
 
     try {
       setIsLoading(true);
-      await getTeam();
+      await utils.admin.getTeamByShortCode.fetch({
+        shortCode,
+        deskId: deskId || '',
+      });
       toast.success(`Team ${shortCode} sent to Dashboard`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to process QR code');

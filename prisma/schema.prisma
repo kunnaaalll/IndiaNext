@@ -225,8 +225,7 @@ model MemberVerification {
   memberId          String   @unique
   member            TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
   
-  collegeIdVerified Boolean  @default(false)
-  govtIdVerified    Boolean  @default(false)
+  isPresent         Boolean  @default(false)
   exceptionNote     String?  @db.Text
   
   verifiedAt        DateTime @default(now())

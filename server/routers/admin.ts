@@ -1193,8 +1193,7 @@ export const adminRouter = router({
         lunchCoupons: z.number(),
         verifications: z.array(z.object({
           memberId: z.string(),
-          collegeIdVerified: z.boolean(),
-          govtIdVerified: z.boolean(),
+          isPresent: z.boolean(),
           exceptionNote: z.string().optional()
         }))
       })
@@ -1216,14 +1215,12 @@ export const adminRouter = router({
             where: { memberId: v.memberId },
             create: {
               memberId: v.memberId,
-              collegeIdVerified: v.collegeIdVerified,
-              govtIdVerified: v.govtIdVerified,
+              isPresent: v.isPresent,
               exceptionNote: v.exceptionNote,
               verifiedBy: ctx.admin.id,
             },
             update: {
-              collegeIdVerified: v.collegeIdVerified,
-              govtIdVerified: v.govtIdVerified,
+              isPresent: v.isPresent,
               exceptionNote: v.exceptionNote,
               verifiedBy: ctx.admin.id,
             }

@@ -67,6 +67,7 @@ export function VenueManagement() {
   const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterVenue, setFilterVenue] = useState<string>('all');
+  const [filterTrack, setFilterTrack] = useState<string>('all');
 
   // Bulk Table Generation State
   const [showBulkGen, setShowBulkGen] = useState<string | null>(null);
@@ -131,9 +132,11 @@ export function VenueManagement() {
       const matchesVenue = filterVenue === 'all' || 
         (filterVenue === 'unassigned' ? !team.venueId : team.venueId === filterVenue);
 
-      return matchesSearch && matchesVenue;
+      const matchesTrack = filterTrack === 'all' || team.track === filterTrack;
+
+      return matchesSearch && matchesVenue && matchesTrack;
     });
-  }, [shortlistedTeamsData, search, filterVenue]);
+  }, [shortlistedTeamsData, search, filterVenue, filterTrack]);
 
   const stats = useMemo(() => {
     if (!shortlistedTeamsData) return { total: 0, assigned: 0, unassigned: 0 };
@@ -243,7 +246,24 @@ export function VenueManagement() {
                 </div>
               </div>
 
-              <div className="md:col-span-4 flex items-center gap-3">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Filter className="h-3.5 w-3.5 text-gray-600" />
+                  </div>
+                  <select
+                    value={filterTrack}
+                    onChange={(e) => setFilterTrack(e.target.value)}
+                    className="w-full bg-[#0A0A0A]/80 border border-white/[0.08] rounded-2xl pl-11 pr-4 py-4 text-[11px] font-mono text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 appearance-none cursor-pointer hover:border-white/20 transition-all uppercase"
+                  >
+                    <option value="all">ALL_TRACKS</option>
+                    <option value="IDEA_SPRINT">IDEA_SPRINT</option>
+                    <option value="PROTOTYPE">PROTOTYPE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 flex items-center gap-3">
                 <div className="flex items-center p-1 bg-black/40 border border-white/[0.06] rounded-2xl">
                   <button
                     onClick={() => setViewMode('grid')}

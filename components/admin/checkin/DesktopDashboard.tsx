@@ -65,7 +65,7 @@ export default function DesktopDashboard() {
   const flagMutation = trpc.admin.flagCheckInIssue.useMutation();
 
   // Check-in Specific State
-  const [memberVerifications, setMemberVerifications] = useState<Record<string, { collegeId: boolean, govtId: boolean, note: string }>>({});
+  const [memberVerifications, setMemberVerifications] = useState<Record<string, { present: boolean, note: string }>>({});
   const [breakfastCount, setBreakfastCount] = useState(0);
   const [lunchCount, setLunchCount] = useState(0);
   const [showException, setShowException] = useState<string | null>(null);
@@ -92,7 +92,7 @@ export default function DesktopDashboard() {
       setActiveTeam(data.team);
       // Initialize local states for the team
       const initialVerifications = data.team.members.reduce((acc: any, m: any) => {
-        acc[m.id] = { collegeId: false, govtId: false, note: '' };
+        acc[m.id] = { present: false, note: '' };
         return acc;
       }, {});
       setMemberVerifications(initialVerifications);
@@ -147,19 +147,19 @@ export default function DesktopDashboard() {
   };
 
   const isFullyVerified = activeTeam?.members.every((m: any) => 
-    memberVerifications[m.id]?.collegeId && memberVerifications[m.id]?.govtId
+    memberVerifications[m.id]?.present || memberVerifications[m.id]?.note
   );
 
   const verifiedCount = activeTeam?.members.filter((m: any) => 
-    memberVerifications[m.id]?.collegeId && memberVerifications[m.id]?.govtId
+    memberVerifications[m.id]?.present
   ).length;
 
   const handleConfirm = async () => {
     if (!activeTeam || !deskId) return;
     
-    // Check if we need an exception note for unverified members
+    // Check if we need an exception note for members not marked present
     const needsException = activeTeam.members.some((m: any) => 
-      !(memberVerifications[m.id]?.collegeId && memberVerifications[m.id]?.govtId) && !memberVerifications[m.id]?.note
+      !memberVerifications[m.id]?.present && !memberVerifications[m.id]?.note
     );
 
     if (needsException) {
@@ -175,8 +175,7 @@ export default function DesktopDashboard() {
         lunchCoupons: lunchCount,
         verifications: activeTeam.members.map((m: any) => ({
           memberId: m.id,
-          collegeIdVerified: memberVerifications[m.id]?.collegeId || false,
-          govtIdVerified: memberVerifications[m.id]?.govtId || false,
+          isPresent: memberVerifications[m.id]?.present || false,
           exceptionNote: memberVerifications[m.id]?.note || undefined
         }))
       });
@@ -425,17 +424,31 @@ export default function DesktopDashboard() {
               <div className="p-8 border-b border-white/5">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-[10px] font-black text-zinc-400 tracking-[0.2em] uppercase flex items-center gap-2">
-                    <Fingerprint className="h-3.5 w-3.5 text-orange-500" /> MEMBER_VERIFICATION_MATRIX
+                    <Fingerprint className="h-3.5 w-3.5 text-orange-500" /> MEMBER_PRESENCE_MATRIX
                   </h3>
-                  <div className={`px-3 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest ${verifiedCount === activeTeam.members.length ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
-                    {verifiedCount} / {activeTeam.members.length} VERIFIED
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => {
+                        const allPresent = activeTeam.members.reduce((acc: any, m: any) => {
+                          acc[m.id] = { present: true, note: '' };
+                          return acc;
+                        }, {});
+                        setMemberVerifications(allPresent);
+                      }}
+                      className="px-3 py-1 rounded-lg text-[9px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all uppercase tracking-widest"
+                    >
+                      MARK_ALL_PRESENT
+                    </button>
+                    <div className={`px-3 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest ${verifiedCount === activeTeam.members.length ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
+                      {verifiedCount} / {activeTeam.members.length} PRESENT
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   {activeTeam.members.map((m: any) => {
                     const v = memberVerifications[m.id];
-                    const fullyVerified = v?.collegeId && v?.govtId;
+                    const fullyVerified = v?.present;
                     return (
                       <div key={m.id} className="space-y-2">
                         <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${fullyVerified ? 'bg-emerald-500/[0.03] border-emerald-500/20' : 'bg-white/[0.02] border-white/5'}`}>
@@ -450,22 +463,19 @@ export default function DesktopDashboard() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <VerificationToggle 
-                              label="COLLEGE" 
-                              active={v?.collegeId} 
-                              onClick={() => setMemberVerifications(prev => ({ ...prev, [m.id]: { ...prev[m.id], collegeId: !prev[m.id].collegeId } }))} 
-                            />
-                            <VerificationToggle 
-                              label="GOVT" 
-                              active={v?.govtId} 
-                              onClick={() => setMemberVerifications(prev => ({ ...prev, [m.id]: { ...prev[m.id], govtId: !prev[m.id].govtId } }))} 
-                            />
-                            {!fullyVerified && (
+                            <button
+                              onClick={() => setMemberVerifications(prev => ({ ...prev, [m.id]: { ...prev[m.id], present: !prev[m.id].present } }))}
+                              className={`px-4 py-2 rounded-xl text-[9px] font-black tracking-widest uppercase border transition-all flex items-center gap-2 ${memberVerifications[m.id]?.present ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-white/5 text-zinc-600 border-white/5 hover:border-white/10'}`}
+                            >
+                              <div className={`w-1.5 h-1.5 rounded-full ${memberVerifications[m.id]?.present ? 'bg-white animate-pulse' : 'bg-zinc-800'}`} />
+                              {memberVerifications[m.id]?.present ? 'PRESENT' : 'MARK_PRESENT'}
+                            </button>
+                            {!memberVerifications[m.id]?.present && (
                               <button 
                                 onClick={() => setShowException(showException === m.id ? null : m.id)}
-                                className={`ml-2 px-3 py-1.5 rounded-lg text-[9px] font-black tracking-widest uppercase border transition-all ${v?.note ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'text-zinc-500 border-white/5 hover:bg-white/5'}`}
+                                className={`ml-2 px-3 py-2 rounded-xl text-[9px] font-black tracking-widest uppercase border transition-all ${memberVerifications[m.id]?.note ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'text-zinc-500 border-white/5 hover:bg-white/5'}`}
                               >
-                                {v?.note ? 'NOTED' : 'EXCEPTION'}
+                                {memberVerifications[m.id]?.note ? 'NOTED' : 'EXCEPTION'}
                               </button>
                             )}
                           </div>
@@ -569,7 +579,7 @@ export default function DesktopDashboard() {
                 <button
                   onClick={handleConfirm}
                   disabled={confirmMutation.isPending || (activeTeam?.members.some((m: any) => 
-                    !(memberVerifications[m.id]?.collegeId && memberVerifications[m.id]?.govtId) && !memberVerifications[m.id]?.note
+                    !memberVerifications[m.id]?.present && !memberVerifications[m.id]?.note
                   ))}
                   className="flex-[4] bg-orange-600 hover:bg-orange-500 disabled:opacity-30 disabled:cursor-not-allowed text-white py-5 rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-orange-900/20"
                 >
@@ -646,17 +656,6 @@ function StatItem({ label, current, total, color }: { label: string, current: nu
   );
 }
 
-function VerificationToggle({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-2 py-1.5 rounded-lg text-[8px] font-black tracking-tighter border transition-all flex items-center gap-1.5 ${active ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-900/10' : 'bg-white/5 text-zinc-600 border-white/5 hover:border-white/10'}`}
-    >
-      <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-white shadow-[0_0_5px_rgba(255,255,255,1)]' : 'bg-zinc-800'}`} />
-      {label}_ID
-    </button>
-  );
-}
 
 function CouponCounter({ label, count, max, setCount, color, icon: Icon }: any) {
   const colorMap: any = {

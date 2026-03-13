@@ -10,7 +10,13 @@ import { useAdminRole } from '../AdminRoleContext';
 
 export default function MobileScanner() {
   const { desk: contextDesk } = useAdminRole();
-  const [deskId, setDeskId] = useState<string | null>(null);
+  const [deskId, setDeskId] = useState<string | null>(() => {
+    if (contextDesk) return contextDesk;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('admin_checkin_desk');
+    }
+    return null;
+  });
   const [isScanning, setIsScanning] = useState(false);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -148,7 +154,7 @@ export default function MobileScanner() {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {['A', 'B', 'C', 'D'].map((id) => (
+            {(contextDesk ? [contextDesk] : ['A', 'B', 'C', 'D']).map((id) => (
               <button
                 key={id}
                 onClick={() => selectDesk(id)}

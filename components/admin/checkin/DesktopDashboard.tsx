@@ -166,8 +166,8 @@ export default function DesktopDashboard() {
               BIND THIS TERMINAL TO A PHYSICAL CHECK-IN DESK FOR REAL-TIME SYNC
             </p>
           </div>
-          <div className="grid grid-cols-4 gap-6">
-            {['A', 'B', 'C', 'D'].map((id) => (
+          <div className="flex justify-center gap-6">
+            {(contextDesk ? [contextDesk] : ['A', 'B', 'C', 'D']).map((id) => (
               <button
                 key={id}
                 onClick={() => selectDesk(id)}

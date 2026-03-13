@@ -1132,10 +1132,18 @@ export const adminRouter = router({
       const { getPusherServer } = await import('@/lib/pusher');
       const pusher = getPusherServer();
       if (pusher) {
-        await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
-          team,
-          adminName: ctx.admin.name,
-        });
+        try {
+          console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId}`);
+          await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
+            team,
+            adminName: ctx.admin.name,
+          });
+          console.log(`[Pusher] Successfully triggered qr:scanned for desk ${input.deskId}`);
+        } catch (error) {
+          console.error('[Pusher] Trigger failed:', error);
+        }
+      } else {
+        console.warn('[Pusher] Server instance not available - check environment variables');
       }
 
       return {

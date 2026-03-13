@@ -1341,6 +1341,12 @@ async function sendShortlistEmail(
 
   if (!team) return { success: false, error: 'Team not found for shortlist email' };
 
+  // [NEW] Prevent duplicate shortlisted emails
+  if (team.shortlistedEmailSent) {
+    console.warn(`[Email] Shortlist email already sent for team ${team.name} (ID: ${team.id})`);
+    return { success: false, error: 'Shortlisted email already sent for this team' };
+  }
+
   // Calculate teamIndex by counting already shortlisted teams before this one
   const teamIndex = await prisma.team.count({
     where: {
@@ -1364,12 +1370,24 @@ async function sendShortlistEmail(
 
   const subject = `Congratulations — Team "${escapeHtml(team.name)}" Shortlisted | IndiaNext 2026`;
 
-  return sendEmailWithRetry({
+  const result = await sendEmailWithRetry({
     to,
     subject,
     html,
     type: 'STATUS_UPDATE',
   });
+
+  // [NEW] Mark as sent ONLY IF successful
+  if (result.success) {
+    await prisma.team.update({
+      where: { id: team.id },
+      data: { shortlistedEmailSent: true },
+    }).catch(err => {
+      console.error(`[Email] Failed to update shortlistedEmailSent for team ${team.id}:`, err);
+    });
+  }
+
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1382,6 +1400,18 @@ async function sendApprovalEmail(
   notes?: string,
   shortCode?: string
 ): Promise<EmailResult> {
+  // [NEW] Fetch team to check for duplicate approval emails
+  const team = await prisma.team.findFirst({
+    where: { shortCode: shortCode || undefined, name: teamName },
+  });
+
+  if (!team) return { success: false, error: 'Team not found for approval email' };
+
+  if (team.approvedEmailSent) {
+    console.warn(`[Email] Approval email already sent for team ${team.name} (ID: ${team.id})`);
+    return { success: false, error: 'Approval email already sent for this team' };
+  }
+
   const subject = ` You're IN! Team "${escapeHtml(teamName)}" Approved — IndiaNext Hackathon 2026`;
 
   const html = `
@@ -1683,12 +1713,24 @@ async function sendApprovalEmail(
     </html>
   `;
 
-  return sendEmailWithRetry({
+  const result = await sendEmailWithRetry({
     to,
     subject,
     html,
     type: 'STATUS_UPDATE',
   });
+
+  // [NEW] Mark as sent ONLY IF successful
+  if (result.success) {
+    await prisma.team.update({
+      where: { id: team.id },
+      data: { approvedEmailSent: true },
+    }).catch(err => {
+      console.error(`[Email] Failed to update approvedEmailSent for team ${team.id}:`, err);
+    });
+  }
+
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════

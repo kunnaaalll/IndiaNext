@@ -161,6 +161,10 @@ model Team {
   lunchCouponsIssued     Int       @default(0)
   isFlagged              Boolean   @default(false)
   flagReason             String?   @db.Text
+
+  // Notification status
+  shortlistedEmailSent   Boolean   @default(false)
+  approvedEmailSent      Boolean   @default(false)
   
   // Metadata
   createdAt DateTime @default(now())

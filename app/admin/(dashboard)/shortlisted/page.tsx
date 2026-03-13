@@ -370,22 +370,29 @@ export default function ShortlistedTeamsPage() {
 
                   {/* Send email */}
                   <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => {
-                        setSendingId(team.id);
-                        sendSingle.mutate({ teamId: team.id });
-                      }}
-                      disabled={sendingId === team.id || sendSingle.isPending}
-                      title="Send confirmation email to team leader"
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      {sendingId === team.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Mail className="h-3 w-3" />
-                      )}
-                      EMAIL
-                    </button>
+                    {team.shortlistedEmailSent ? (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono font-bold text-gray-500 bg-white/[0.03] border border-white/[0.06] rounded-md cursor-not-allowed">
+                        <CheckCircle className="h-3 w-3 text-emerald-500" />
+                        SENT
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSendingId(team.id);
+                          sendSingle.mutate({ teamId: team.id });
+                        }}
+                        disabled={sendingId === team.id || sendSingle.isPending}
+                        title="Send confirmation email to team leader"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        {sendingId === team.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Mail className="h-3 w-3" />
+                        )}
+                        EMAIL
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -499,27 +506,38 @@ export default function ShortlistedTeamsPage() {
                     {/* Quick send for this team */}
                     <div className="mt-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                        {team.shortlistedEmailSent ? (
+                          <MailCheck className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                        )}
                         <span className="text-[10px] font-mono text-gray-500">
-                          Send full confirmation email (with event schedule, rules, QR pass & Desk{' '}
-                          {desk} assignment)
+                          {team.shortlistedEmailSent
+                            ? 'Full confirmation email already sent'
+                            : `Send full confirmation email (with event schedule, rules, QR pass & Desk ${desk} assignment)`}
                         </span>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSendingId(team.id);
-                          sendSingle.mutate({ teamId: team.id });
-                        }}
-                        disabled={sendingId === team.id || sendSingle.isPending}
-                        className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono font-bold text-white bg-orange-500/20 border border-orange-500/30 rounded-md hover:bg-orange-500/30 disabled:opacity-50 transition-all"
-                      >
-                        {sendingId === team.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Send className="h-3 w-3" />
-                        )}
-                        SEND CONFIRMATION
-                      </button>
+                      {team.shortlistedEmailSent ? (
+                        <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-gray-500 bg-white/[0.03] border border-white/[0.06] rounded-md cursor-not-allowed">
+                          ALREADY SENT
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSendingId(team.id);
+                            sendSingle.mutate({ teamId: team.id });
+                          }}
+                          disabled={sendingId === team.id || sendSingle.isPending}
+                          className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono font-bold text-white bg-orange-500/20 border border-orange-500/30 rounded-md hover:bg-orange-500/30 disabled:opacity-50 transition-all"
+                        >
+                          {sendingId === team.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          SEND CONFIRMATION
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

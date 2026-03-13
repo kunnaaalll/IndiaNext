@@ -383,42 +383,8 @@ export const adminRouter = router({
         },
       });
 
-      // Send notification to team members
-      const notifications = team.members.map((member: { userId: string }) => ({
-        userId: member.userId,
-        type: 'STATUS_UPDATE' as const,
-        title: `Team Status Updated`,
-        message: `Your team "${team.name}" status has been changed to ${input.status}`,
-        link: `/team/${team.id}`,
-      }));
-
-      await ctx.prisma.notification.createMany({
-        data: notifications,
-      });
-
-      // Send email to team leader only (if requested or by default for specific statuses)
-      const leader = team.members.find(
-        (m: { role: string; user: { email: string; name: string | null } }) => m.role === 'LEADER'
-      );
-      if (leader?.user?.email) {
-        // ALWAYS send for APPROVED or SHORTLISTED if sendEmail is true
-        // Or send according to former logic if its just a regular status update
-        const shouldSend =
-          input.sendEmail || (input.status !== 'SHORTLISTED' && input.status !== 'APPROVED');
-
-        if (shouldSend) {
-          sendStatusUpdateEmail(
-            leader.user.email,
-            team.name,
-            input.status,
-            input.reviewNotes || input.rejectionReason,
-            team.shortCode ?? undefined
-          ).catch((err) => {
-            console.error(`[EMAIL] Failed to send status update email to ${leader.user.email}:`, err);
-          });
-        }
-      }
-
+      // Email sending is now handled manually via sendShortlistConfirmationEmail mutation
+      // to prevent unintentional duplicate sends.
       return team;
     }),
 
@@ -435,7 +401,7 @@ export const adminRouter = router({
           'SHORTLISTED',
         ]),
         reviewNotes: z.string().optional(),
-        sendEmail: z.boolean().optional().default(false),
+        // sendEmail: z.boolean().optional().default(false), // Logic removed as requested
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -453,37 +419,8 @@ export const adminRouter = router({
         },
       });
 
-      // Send emails to team leaders if requested
-      if (input.sendEmail) {
-        const teams = await ctx.prisma.team.findMany({
-          where: { id: { in: input.teamIds } },
-          include: {
-            members: {
-              where: { role: 'LEADER' },
-              include: { user: { select: { email: true, name: true } } },
-            },
-          },
-        });
-
-        // Loop through and send (non-blocking)
-        teams.forEach((team) => {
-          const leader = team.members[0];
-          if (leader?.user?.email) {
-            sendStatusUpdateEmail(
-              leader.user.email,
-              team.name,
-              input.status,
-              input.reviewNotes,
-              team.shortCode ?? undefined
-            ).catch((err) => {
-              console.error(
-                `[BULK EMAIL] Failed to send ${input.status} email to ${leader.user.email}:`,
-                err
-              );
-            });
-          }
-        });
-      }
+      // Email sending for bulk updates is disabled as requested.
+      // Individual emails should be sent manually from each team's detail page if needed.
 
       // ✅ INVALIDATE CACHES after bulk mutation
       await Promise.all([
@@ -501,36 +438,6 @@ export const adminRouter = router({
           metadata: { status: input.status, adminId, adminName: ctx.admin.name },
         })),
       });
-
-      // Send emails to team leaders (non-blocking)
-      const teams = await ctx.prisma.team.findMany({
-        where: { id: { in: input.teamIds } },
-        select: {
-          name: true,
-          shortCode: true,
-          members: {
-            where: { role: 'LEADER' },
-            select: { user: { select: { email: true } } },
-          },
-        },
-      });
-
-      // NOTE: SHORTLISTED and APPROVED emails are sent manually from the UI
-      for (const t of teams) {
-        const leaderEmail = t.members[0]?.user?.email;
-        if (leaderEmail && input.status !== 'SHORTLISTED' && input.status !== 'APPROVED') {
-          sendStatusUpdateEmail(
-            leaderEmail,
-            t.name,
-            input.status,
-            input.reviewNotes,
-            t.shortCode ?? undefined
-          ).catch((err) => {
-            console.error(`[EMAIL] Failed to send bulk status email to ${leaderEmail}:`, err);
-          });
-        }
-      }
-
       return { count: result.count };
     }),
 
@@ -577,8 +484,12 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const team = await ctx.prisma.team.findUnique({
-        where: { id: input.teamId, status: 'SHORTLISTED', deletedAt: null },
+      const team = await ctx.prisma.team.findFirst({
+        where: {
+          id: input.teamId,
+          deletedAt: null,
+          status: { in: ['SHORTLISTED', 'APPROVED'] },
+        },
         include: {
           members: {
             include: { user: { select: { email: true, name: true } } },
@@ -631,7 +542,12 @@ export const adminRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const teams = await ctx.prisma.team.findMany({
-        where: { id: { in: input.teamIds }, status: 'SHORTLISTED', deletedAt: null },
+        where: {
+          id: { in: input.teamIds },
+          status: 'SHORTLISTED',
+          shortlistedEmailSent: false,
+          deletedAt: null,
+        },
         include: {
           members: {
             where: { role: 'LEADER' },
@@ -669,7 +585,14 @@ export const adminRouter = router({
           action: 'team.bulk_shortlist_emails_sent',
           entity: 'Team',
           entityId: 'bulk',
-          metadata: { sent, failed, adminId: ctx.admin.id, adminName: ctx.admin.name },
+          metadata: {
+            totalAttempted: input.teamIds.length,
+            filteredTeams: teams.length,
+            sent,
+            failed,
+            adminId: ctx.admin.id,
+            adminName: ctx.admin.name,
+          },
         },
       });
 

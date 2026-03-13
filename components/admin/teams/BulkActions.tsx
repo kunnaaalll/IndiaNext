@@ -51,7 +51,6 @@ const actions = [
 ];
 
 export function BulkActions({ selectedTeams, onComplete }: BulkActionsProps) {
-  const [sendEmail, setSendEmail] = useState(true);
   const bulkUpdate = trpc.admin.bulkUpdateStatus.useMutation();
 
   const handleAction = async (status: string) => {
@@ -65,9 +64,8 @@ export function BulkActions({ selectedTeams, onComplete }: BulkActionsProps) {
           | 'WAITLISTED'
           | 'UNDER_REVIEW'
           | 'SHORTLISTED',
-        sendEmail,
       });
-      toast.success(`Updated ${result.count} teams to ${status}${sendEmail ? ' & sent emails' : ''}`);
+      toast.success(`Updated ${result.count} teams to ${status}`);
       onComplete();
     } catch {
       toast.error('Failed to update teams');
@@ -81,15 +79,6 @@ export function BulkActions({ selectedTeams, onComplete }: BulkActionsProps) {
           {selectedTeams.length} TEAM
           {selectedTeams.length > 1 ? 'S' : ''} SELECTED
         </span>
-        <label className="flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded cursor-pointer hover:bg-white/10 transition-colors">
-          <input
-            type="checkbox"
-            checked={sendEmail}
-            onChange={(e) => setSendEmail(e.target.checked)}
-            className="w-3.5 h-3.5 accent-orange-500 rounded border-white/20 bg-black"
-          />
-          <span className="text-[10px] font-mono font-bold text-gray-400">NOTIFY_VIA_EMAIL</span>
-        </label>
         <div className="flex gap-2 flex-wrap">
           {actions.map((action) => {
             const Icon = action.icon;

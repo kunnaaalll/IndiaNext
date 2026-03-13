@@ -372,6 +372,8 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
         currentScore={team.submission?.judgeScore || null}
         currentComments={team.submission?.judgeComments || null}
         reviewNotes={team.reviewNotes}
+        shortlistedEmailSent={team.shortlistedEmailSent}
+        approvedEmailSent={team.approvedEmailSent}
         onStatusUpdate={handleStatusChange}
         onScoreUpdate={handleScoreUpdate}
       />

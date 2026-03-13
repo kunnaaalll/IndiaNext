@@ -707,7 +707,7 @@ const TracksSection = () => {
             subtitle="SURPRISE_CHALLENGE (70 SLOTS)"
             accent={ORANGE}
             icon={<Terminal />}
-            desc="A secret Problem Statement revealed at H-Hour (11:00 AM). High stakes, low sleep, pure logic."
+            desc="A secret Problem Statement revealed at H-Hour (12:00 PM). High stakes, low sleep, pure logic."
             tags={['Algorithm Wizards', 'Execution Specialists']}
           />
           <HoloCard
@@ -890,37 +890,37 @@ const TimelineSection = () => {
       timestamp: new Date('2026-03-16T08:00:00'),
       date: 'MAR 16, 2026',
       day: 'DAY 1',
-      time: '08:00 – 09:00 AM',
+      time: '08:00 – 11:00 AM',
       desc: 'ARRIVAL & FUEL UP',
       icon: <Globe />,
     },
     {
       id: 2,
       event: 'Opening Ceremony',
-      timestamp: new Date('2026-03-16T09:00:00'),
+      timestamp: new Date('2026-03-16T11:00:00'),
       date: 'MAR 16, 2026',
       day: 'DAY 1',
-      time: '09:00 – 09:30 AM',
+      time: '11:00 – 11:30 AM',
       desc: 'MISSION BRIEFING',
       icon: <Rocket />,
     },
     {
       id: 3,
       event: 'Idea Discussion',
-      timestamp: new Date('2026-03-16T09:30:00'),
+      timestamp: new Date('2026-03-16T11:30:00'),
       date: 'MAR 16, 2026',
       day: 'DAY 1',
-      time: '09:30 – 10:30 AM',
+      time: '11:30 AM – 12:30 PM',
       desc: 'STRATEGY SESSION',
       icon: <Target />,
     },
     {
       id: 4,
       event: 'Development Start',
-      timestamp: new Date('2026-03-16T11:00:00'),
+      timestamp: new Date('2026-03-16T12:00:00'),
       date: 'MAR 16, 2026',
       day: 'DAY 1',
-      time: '11:00 AM – 02:00 PM',
+      time: '12:00 PM – 02:00 PM',
       desc: 'BUILD SEQUENCE INITIATED',
       icon: <FastForward />,
     },

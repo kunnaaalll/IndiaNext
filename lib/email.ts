@@ -1026,7 +1026,7 @@ export function buildShortlistEmailHtml(data: ShortlistEmailData): string {
         </div>
 
         <div style="background: rgba(255,102,0,0.05); border: 1px solid rgba(255,102,0,0.2); border-radius: 10px; padding: 14px 18px; text-align: center;">
-          <p style="color: #FF6600; margin: 0; font-size: 12px; line-height: 1.6;"><strong>The Team Leader must be present for registration</strong> at Desk ${desk} by <strong>9:00 AM.</strong> All members must check in together.</p>
+          <p style="color: #FF6600; margin: 0; font-size: 12px; line-height: 1.6;"><strong>The Team Leader must be present for registration</strong> at Desk ${desk} by <strong>11:00 AM.</strong> All members must check in together.</p>
         </div>
       </div>
     </div>
@@ -1095,7 +1095,7 @@ export function buildShortlistEmailHtml(data: ShortlistEmailData): string {
             </tr>
             <tr><td colspan="2" style="padding: 2px;"></td></tr>
             <tr>
-              <td class="sct" style="padding: 8px 10px; color: #FF6600; font-size: 12px; font-weight: 700; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px; vertical-align: top;">09:00 AM</td>
+              <td class="sct" style="padding: 8px 10px; color: #FF6600; font-size: 12px; font-weight: 700; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px; vertical-align: top;">11:00 AM</td>
               <td class="scd" style="padding: 8px 10px; color: #ccc; font-size: 12px; background: rgba(255,102,0,0.03); border-radius: 0 4px 4px 0;">Opening Ceremony</td>
             </tr>
             <tr><td colspan="2" style="padding: 2px;"></td></tr>
@@ -1466,17 +1466,17 @@ async function sendApprovalEmail(
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>
                 <tr>
-                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">09:00 AM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #ededed; font-size: 12px; background: rgba(255,102,0,0.03); border-radius: 0 4px 4px 0;">Opening Ceremony (9:00 - 9:30 AM)</td>
-                </tr>
-                <tr><td colspan="2" style="padding: 2px;"></td></tr>
-                <tr>
-                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">09:30 AM</td>
-                  <td class="sch-desc" style="padding: 7px 10px; color: #10b981; font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.06); border-radius: 0 4px 4px 0;">Idea Discussion (9:30 - 10:30 AM)</td>
-                </tr>
-                <tr><td colspan="2" style="padding: 2px;"></td></tr>
-                <tr>
                   <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">11:00 AM</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #ededed; font-size: 12px; background: rgba(255,102,0,0.03); border-radius: 0 4px 4px 0;">Opening Ceremony (11:00 - 11:30 AM)</td>
+                </tr>
+                <tr><td colspan="2" style="padding: 2px;"></td></tr>
+                <tr>
+                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">11:30 AM</td>
+                  <td class="sch-desc" style="padding: 7px 10px; color: #10b981; font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.06); border-radius: 0 4px 4px 0;">Idea Discussion (11:30 AM - 12:30 PM)</td>
+                </tr>
+                <tr><td colspan="2" style="padding: 2px;"></td></tr>
+                <tr>
+                  <td class="sch-time" style="padding: 7px 10px; color: #FF6600; font-size: 12px; font-weight: bold; background: rgba(255,102,0,0.06); border-radius: 4px 0 0 4px;">12:00 PM</td>
                   <td class="sch-desc" style="padding: 7px 10px; color: #10b981; font-size: 12px; font-weight: bold; background: rgba(16,185,129,0.06); border-radius: 0 4px 4px 0;">[START] Development Begins</td>
                 </tr>
                 <tr><td colspan="2" style="padding: 2px;"></td></tr>

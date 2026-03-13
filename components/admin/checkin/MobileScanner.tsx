@@ -33,6 +33,21 @@ export default function MobileScanner() {
   }, [contextDesk]);
 
   const utils = trpc.useUtils();
+  const heartbeat = trpc.admin.sendScannerHeartbeat.useMutation();
+
+  // Heartbeat to keep dashboard updated on scanner presence
+  useEffect(() => {
+    if (!deskId) return;
+
+    const interval = setInterval(() => {
+      heartbeat.mutate({ deskId });
+    }, 10000); // Heartbeat every 10s
+
+    // Trigger immediate heartbeat on mount
+    heartbeat.mutate({ deskId });
+
+    return () => clearInterval(interval);
+  }, [deskId, heartbeat]);
 
   useEffect(() => {
     if (!deskId) return;

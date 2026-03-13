@@ -16,6 +16,7 @@ import {
   Activity,
   ChevronRight,
   ShieldCheck,
+  Camera,
 } from 'lucide-react';
 import { getPusherClient } from '@/lib/pusher';
 import { assignDesk } from '@/lib/logistics-utils';
@@ -32,6 +33,7 @@ export default function DesktopDashboard() {
   const [activeTeam, setActiveTeam] = useState<any>(null);
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [isScannerActive, setIsScannerActive] = useState(false);
   const [selectedDesk, setSelectedDesk] = useState<string>('');
 
   const utils = trpc.useUtils();
@@ -91,6 +93,14 @@ export default function DesktopDashboard() {
     const updateStatus = () => setIsConnected(pusher.connection.state === 'connected');
     pusher.connection.bind('state_change', updateStatus);
     updateStatus();
+
+    // Track scanner presence
+    let presenceTimeout: NodeJS.Timeout;
+    channel.bind('scanner:presence', () => {
+      setIsScannerActive(true);
+      clearTimeout(presenceTimeout);
+      presenceTimeout = setTimeout(() => setIsScannerActive(false), 15000);
+    });
 
     return () => {
       pusher.unsubscribe(channelName);
@@ -189,15 +199,30 @@ export default function DesktopDashboard() {
                 Operator Terminal
               </span>
             </div>
-            <div
-              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'}`}
-            >
+            <div className="flex flex-col items-end gap-2">
               <div
-                className={`w-1 h-1 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}
-              />
-              <span className="text-[8px] font-bold uppercase tracking-widest">
-                {isConnected ? 'Link_Active' : 'Offline'}
-              </span>
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${isConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'}`}
+              >
+                <div
+                  className={`w-1 h-1 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}
+                />
+                <span className="text-[8px] font-bold uppercase tracking-widest">
+                  {isConnected ? 'Link_Active' : 'Offline'}
+                </span>
+              </div>
+
+              {isConnected && (
+                <div
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all ${isScannerActive ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-white/5 text-zinc-600 border-white/5'}`}
+                >
+                  <Camera
+                    className={`h-2.5 w-2.5 ${isScannerActive ? 'animate-pulse' : 'opacity-20'}`}
+                  />
+                  <span className="text-[7px] font-bold uppercase tracking-[0.2em]">
+                    {isScannerActive ? 'Scanner_Live' : 'No_Scanner'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

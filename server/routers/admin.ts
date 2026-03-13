@@ -1152,6 +1152,19 @@ export const adminRouter = router({
       };
     }),
 
+  sendScannerHeartbeat: canViewTeams
+    .input(z.object({ deskId: z.string() }))
+    .mutation(async ({ input }) => {
+      const { getPusherServer } = await import('@/lib/pusher');
+      const pusher = getPusherServer();
+      if (pusher) {
+        await pusher.trigger(`admin-checkin-${input.deskId}`, 'scanner:presence', {
+          timestamp: new Date().toISOString(),
+        });
+      }
+      return { success: true };
+    }),
+
   confirmCheckIn: canEditTeamsRateLimited
     .input(
       z.object({

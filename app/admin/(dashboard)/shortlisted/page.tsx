@@ -101,6 +101,34 @@ export default function ShortlistedTeamsPage() {
     });
   }
 
+  // Calculate Statistics
+  const stats = displayTeams.reduce(
+    (acc, team) => {
+      acc.totalParticipants += team.members.length;
+      team.members.forEach((m: any) => {
+        const g = (m.user.gender || '').toLowerCase();
+        if (g === 'female') acc.females++;
+        else if (g === 'male') acc.males++;
+        else acc.others++;
+      });
+
+      const size = team.members.length;
+      if (size === 4) acc.teamsOf4++;
+      else if (size === 3) acc.teamsOf3++;
+      else if (size === 2) acc.teamsOf2++;
+      return acc;
+    },
+    {
+      totalParticipants: 0,
+      females: 0,
+      males: 0,
+      others: 0,
+      teamsOf4: 0,
+      teamsOf3: 0,
+      teamsOf2: 0,
+    }
+  );
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* ── Page Header ── */}
@@ -143,6 +171,54 @@ export default function ShortlistedTeamsPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Dashboard Stats ── */}
+      {!isLoading && displayTeams.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-[#0A0A0A] rounded-xl border border-white/[0.06] p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
+              TOTAL_PARTICIPANTS
+            </span>
+            <span className="text-3xl font-mono font-black text-white">{stats.totalParticipants}</span>
+          </div>
+
+          <div className="bg-[#0A0A0A] rounded-xl border border-white/[0.06] p-4 grid grid-cols-2 gap-4">
+            <div className="text-center border-r border-white/5">
+              <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block mb-1">
+                FEMALES
+              </span>
+              <span className="text-xl font-mono font-black text-pink-500">{stats.females}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block mb-1">
+                MALES
+              </span>
+              <span className="text-xl font-mono font-black text-blue-500">{stats.males}</span>
+            </div>
+          </div>
+
+          <div className="bg-[#0A0A0A] rounded-xl border border-white/[0.06] p-4 grid grid-cols-3 gap-2 col-span-1 lg:col-span-2">
+            <div className="text-center border-r border-white/5">
+              <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block mb-1">
+                TEAM_4
+              </span>
+              <span className="text-xl font-mono font-black text-orange-500">{stats.teamsOf4}</span>
+            </div>
+            <div className="text-center border-r border-white/5">
+              <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block mb-1">
+                TEAM_3
+              </span>
+              <span className="text-xl font-mono font-black text-orange-400">{stats.teamsOf3}</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest block mb-1">
+                TEAM_2
+              </span>
+              <span className="text-xl font-mono font-black text-orange-300">{stats.teamsOf2}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Bulk Email Bar ── */}
       {selectedIds.size > 0 && (

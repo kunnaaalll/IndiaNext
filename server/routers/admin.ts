@@ -515,6 +515,7 @@ export const adminRouter = router({
                   name: true,
                   email: true,
                   college: true,
+                  gender: true,
                 },
               },
             },

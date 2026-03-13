@@ -67,9 +67,17 @@ export default function MobileScanner() {
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
+            fps: 30, // Higher FPS for smoother scanning
+            qrbox: (viewfinderWidth, viewfinderHeight) => {
+              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              return { width: minEdge * 0.7, height: minEdge * 0.7 };
+            },
             aspectRatio: 1.0,
+            videoConstraints: {
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 },
+              facingMode: 'environment',
+            },
           },
           onScanSuccess,
           (errorMessage) => {
@@ -229,40 +237,66 @@ export default function MobileScanner() {
       {/* Camera Viewport */}
       <div className="flex-1 relative bg-zinc-950 flex items-center justify-center overflow-hidden">
         {cameraError ? (
-          <div className="text-center p-8 space-y-4">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-            <p className="text-zinc-400 text-xs italic leading-relaxed">{cameraError}</p>
+          <div className="text-center p-10 space-y-6 max-w-sm">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+              <AlertCircle className="h-10 w-10 text-red-500" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-white font-bold text-lg tracking-tight">Camera_Access_Required</h2>
+              <p className="text-zinc-500 text-xs leading-relaxed">
+                We need camera access to scan QR codes. Please ensure you have granted permission in your browser settings.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-900/50 rounded-xl border border-white/5 text-[10px] text-zinc-400 text-left space-y-2">
+              <p className="font-bold text-zinc-300">Quick Fix:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Tap the lock icon in the URL bar</li>
+                <li>Enable &quot;Camera&quot; permission</li>
+                <li>Refresh the page</li>
+              </ul>
+            </div>
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] text-white font-bold tracking-widest uppercase"
+              className="w-full py-4 bg-orange-600 hover:bg-orange-500 active:scale-95 rounded-2xl text-[10px] text-white font-black tracking-[0.3em] uppercase transition-all shadow-xl shadow-orange-900/20"
             >
-              Retry Access
+              Retry_Initialization
             </button>
           </div>
         ) : (
           <>
-            <div id="reader" className="w-full h-full" />
+            <div id="reader" className="w-full h-full object-cover" />
 
             {/* Overlay UI */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
               {/* Scan Box Frame */}
-              <div className="relative w-64 h-64 border-2 border-white/20 rounded-3xl box-content">
-                {/* Corners */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-orange-500 rounded-tl-2xl -translate-x-1 -translate-y-1" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-orange-500 rounded-tr-2xl translate-x-1 -translate-y-1" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-orange-500 rounded-bl-2xl -translate-x-1 translate-y-1" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-orange-500 rounded-br-2xl translate-x-1 translate-y-1" />
+              <div className="relative w-[70vw] h-[70vw] max-w-[300px] max-h-[300px]">
+                {/* Visual Guidelines */}
+                <div className="absolute inset-0 border-2 border-white/10 rounded-3xl" />
+                
+                {/* Glowing Corners */}
+                <div className="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-orange-500 rounded-tl-2xl shadow-[-5px_-5px_15px_rgba(255,102,0,0.3)]" />
+                <div className="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-orange-500 rounded-tr-2xl shadow-[5px_-5px_15px_rgba(255,102,0,0.3)]" />
+                <div className="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-orange-500 rounded-bl-2xl shadow-[-5px_5px_15px_rgba(255,102,0,0.3)]" />
+                <div className="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-orange-500 rounded-br-2xl shadow-[5px_5px_15px_rgba(255,102,0,0.3)]" />
 
-                {/* Scanning Beam */}
+                {/* Scanning Beam (Improved) */}
                 <motion.div
-                  animate={{ top: ['0%', '100%', '0%'] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-orange-500 to-transparent shadow-[0_0_15px_rgba(255,102,0,0.8)] z-20"
+                  animate={{ 
+                    top: ['5%', '95%', '5%'],
+                    opacity: [0.5, 1, 0.5]
+                  }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                  className="absolute left-4 right-4 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,102,0,0.8)] z-20 rounded-full blur-[1px]"
                 />
               </div>
 
               {/* Tinted Background Outer */}
-              <div className="absolute inset-0 border-[20vw] sm:border-[30vw] border-black/60 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 border-[15vw] border-black/80" />
+              
+              <div className="absolute bottom-1/4 translate-y-20 text-center space-y-2 px-6">
+                <p className="text-[10px] font-bold text-white/50 tracking-[0.4em] uppercase">Align_Barcode_Within_Frame</p>
+                <div className="h-px w-10 bg-orange-500/30 mx-auto" />
+              </div>
             </div>
           </>
         )}

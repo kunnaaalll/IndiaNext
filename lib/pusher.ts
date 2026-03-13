@@ -39,8 +39,11 @@ export const getPusherClient = () => {
       return null;
     }
 
+    console.log('[Pusher] Initializing client with key:', key.substring(0, 5) + '...', 'Cluster:', cluster);
     pusherClient = new PusherClient(key, {
       cluster: cluster,
+      forceTLS: true,
+      enabledTransports: ['ws', 'wss'],
     });
   }
   return pusherClient;

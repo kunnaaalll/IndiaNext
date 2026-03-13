@@ -340,6 +340,7 @@ export const adminRouter = router({
         ]),
         reviewNotes: z.string().optional(),
         rejectionReason: z.string().optional(),
+        sendEmail: z.boolean().optional().default(false),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -395,21 +396,27 @@ export const adminRouter = router({
         data: notifications,
       });
 
-      // Send email to team leader only (non-blocking)
-      // NOTE: SHORTLISTED and APPROVED emails are sent manually from the UI
+      // Send email to team leader only (if requested or by default for specific statuses)
       const leader = team.members.find(
         (m: { role: string; user: { email: string; name: string | null } }) => m.role === 'LEADER'
       );
-      if (leader?.user?.email && input.status !== 'SHORTLISTED' && input.status !== 'APPROVED') {
-        sendStatusUpdateEmail(
-          leader.user.email,
-          team.name,
-          input.status,
-          input.reviewNotes || input.rejectionReason,
-          team.shortCode ?? undefined
-        ).catch((err) => {
-          console.error(`[EMAIL] Failed to send status update email to ${leader.user.email}:`, err);
-        });
+      if (leader?.user?.email) {
+        // ALWAYS send for APPROVED or SHORTLISTED if sendEmail is true
+        // Or send according to former logic if its just a regular status update
+        const shouldSend =
+          input.sendEmail || (input.status !== 'SHORTLISTED' && input.status !== 'APPROVED');
+
+        if (shouldSend) {
+          sendStatusUpdateEmail(
+            leader.user.email,
+            team.name,
+            input.status,
+            input.reviewNotes || input.rejectionReason,
+            team.shortCode ?? undefined
+          ).catch((err) => {
+            console.error(`[EMAIL] Failed to send status update email to ${leader.user.email}:`, err);
+          });
+        }
       }
 
       return team;
@@ -428,6 +435,7 @@ export const adminRouter = router({
           'SHORTLISTED',
         ]),
         reviewNotes: z.string().optional(),
+        sendEmail: z.boolean().optional().default(false),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -444,6 +452,38 @@ export const adminRouter = router({
           reviewedAt: new Date(),
         },
       });
+
+      // Send emails to team leaders if requested
+      if (input.sendEmail) {
+        const teams = await ctx.prisma.team.findMany({
+          where: { id: { in: input.teamIds } },
+          include: {
+            members: {
+              where: { role: 'LEADER' },
+              include: { user: { select: { email: true, name: true } } },
+            },
+          },
+        });
+
+        // Loop through and send (non-blocking)
+        teams.forEach((team) => {
+          const leader = team.members[0];
+          if (leader?.user?.email) {
+            sendStatusUpdateEmail(
+              leader.user.email,
+              team.name,
+              input.status,
+              input.reviewNotes,
+              team.shortCode ?? undefined
+            ).catch((err) => {
+              console.error(
+                `[BULK EMAIL] Failed to send ${input.status} email to ${leader.user.email}:`,
+                err
+              );
+            });
+          }
+        });
+      }
 
       // ✅ INVALIDATE CACHES after bulk mutation
       await Promise.all([

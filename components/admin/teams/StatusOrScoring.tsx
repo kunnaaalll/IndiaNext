@@ -37,7 +37,7 @@ interface StatusOrScoringProps {
   currentScore: number | null; // used by parent for display
   currentComments: string | null; // used by parent for display
   reviewNotes: string | null;
-  onStatusUpdate: (status: string, notes?: string) => Promise<void>;
+  onStatusUpdate: (status: string, notes?: string, sendEmail?: boolean) => Promise<void>;
   onScoreUpdate: (score: number, comments: string) => Promise<void>; // used by judge flow
 }
 
@@ -93,6 +93,7 @@ export function StatusOrScoring({
   onScoreUpdate: _onScoreUpdate,
 }: StatusOrScoringProps) {
   const [statusNote, setStatusNote] = useState('');
+  const [sendEmail, setSendEmail] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [criteria, setCriteria] = useState<any[]>([]);
   const [existingScores, setExistingScores] = useState<any[]>([]);
@@ -243,9 +244,20 @@ export function StatusOrScoring({
     <div className="space-y-4">
       {/* Status Management */}
       <div className="bg-[#0A0A0A] rounded-lg border border-white/[0.06] p-5">
-        <h3 className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-[0.3em] mb-4">
-          UPDATE_STATUS
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-[0.3em]">
+            UPDATE_STATUS
+          </h3>
+          <label className="flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 rounded cursor-pointer hover:bg-white/10 transition-colors">
+            <input
+              type="checkbox"
+              checked={sendEmail}
+              onChange={(e) => setSendEmail(e.target.checked)}
+              className="w-3 1/2 h-3 1/2 accent-orange-500 rounded border-white/20 bg-black"
+            />
+            <span className="text-[9px] font-mono font-bold text-gray-500">NOTIFY_VIA_EMAIL</span>
+          </label>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
           <div className="w-full sm:flex-1 sm:min-w-[200px]">
             <input
@@ -263,7 +275,8 @@ export function StatusOrScoring({
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    await onStatusUpdate(action.status, statusNote || undefined);
+                    // Update: Pass sendEmail to handle it in parent or mutation
+                    await onStatusUpdate(action.status, statusNote || undefined, sendEmail);
                     setStatusNote('');
                   } finally {
                     setIsSubmitting(false);

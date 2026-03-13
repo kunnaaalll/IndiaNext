@@ -138,14 +138,23 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const handleStatusChange = async (status: string) => {
+  const handleStatusChange = async (status: string, notes?: string, sendEmail: boolean = false) => {
     try {
       await updateStatus.mutateAsync({
         teamId: id,
-        status: status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'WAITLISTED' | 'UNDER_REVIEW',
-        reviewNotes: statusNote || undefined,
+        status: status as
+          | 'PENDING'
+          | 'APPROVED'
+          | 'REJECTED'
+          | 'WAITLISTED'
+          | 'UNDER_REVIEW'
+          | 'SHORTLISTED',
+        reviewNotes: notes || undefined,
+        sendEmail,
       });
-      toast.success(`Status updated to ${status.replace('_', ' ')}`);
+      toast.success(
+        `Status updated to ${status.replace('_', ' ')}${sendEmail ? ' & email sent' : ''}`
+      );
       setStatusNote('');
       refetch();
     } catch {

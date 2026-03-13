@@ -148,6 +148,11 @@ model Team {
   checkedInBy     String?          // Admin ID who checked in
   attendanceNotes String?          @db.Text
   
+  // 📍 Logistics Mapping (New)
+  venueId         String?
+  venue           Venue?           @relation(fields: [venueId], references: [id])
+  tableNumber     String?
+  
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -172,6 +177,7 @@ model Team {
   // ✅ SECURITY FIX (L-11): Index team name for search performance
   @@index([name])
   @@index([attendance])
+  @@index([venueId])
   @@unique([createdBy, track]) // One team per leader per track (belt-and-suspenders with transaction check)
   @@map("teams")
 }
@@ -638,6 +644,16 @@ model ProblemReservation {
   @@index([expiresAt])
   @@index([problemStatementId])
   @@map("problem_reservations")
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  teams     Team[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("venues")
 }
 
 // ═══════════════════════════════════════════════════════════

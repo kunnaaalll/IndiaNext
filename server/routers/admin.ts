@@ -243,6 +243,7 @@ export const adminRouter = router({
               },
             },
             tags: true,
+            venue: true,
             _count: {
               select: {
                 comments: true,
@@ -1270,4 +1271,76 @@ export const adminRouter = router({
 
     return { total, checkedIn };
   }),
+
+  // ═══════════════════════════════════════════════════════════
+  // VENUE & LOGISTICS (SHORTLISTED ONLY)
+  // ═══════════════════════════════════════════════════════════
+
+  getVenues: canViewTeams.query(async ({ ctx }) => {
+    return ctx.prisma.venue.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }),
+
+  createVenue: canEditTeamsRateLimited
+    .input(z.object({ name: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.venue.create({
+        data: { name: input.name },
+      });
+    }),
+
+  deleteVenue: canEditTeamsRateLimited
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Check if any teams are assigned to this venue
+      const teamCount = await ctx.prisma.team.count({
+        where: { venueId: input.id },
+      });
+      if (teamCount > 0) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Cannot delete venue that has teams assigned to it.',
+        });
+      }
+      return ctx.prisma.venue.delete({
+        where: { id: input.id },
+      });
+    }),
+
+  updateTeamLogistics: canEditTeamsRateLimited
+    .input(
+      z.object({
+        teamId: z.string(),
+        venueId: z.string().nullable(),
+        tableNumber: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // First, ensure the team is shortlisted
+      const team = await ctx.prisma.team.findUnique({
+        where: { id: input.teamId },
+        select: { status: true },
+      });
+
+      if (!team || team.status !== 'SHORTLISTED') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only shortlisted teams can have their logistics updated.',
+        });
+      }
+
+      const updated = await ctx.prisma.team.update({
+        where: { id: input.teamId },
+        data: {
+          venueId: input.venueId || null,
+          tableNumber: input.tableNumber || null,
+        },
+      });
+
+      // Invalidate cache for this team
+      await invalidateTeamCache(updated.shortCode);
+      
+      return updated;
+    }),
 });

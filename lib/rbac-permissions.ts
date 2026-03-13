@@ -229,7 +229,8 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'ANALYTICS', href: '/admin/analytics', code: '05' },
   { label: 'LOGISTICS', href: '/admin/logistics', code: '06' },
   { label: 'CHECK-IN', href: '/admin/checkin', code: '07' },
-  { label: 'EMAILS', href: '/admin/emails', code: '08' },
+  { label: 'VENUE', href: '/admin/venue', code: '08' },
+  { label: 'EMAILS', href: '/admin/emails', code: '09' },
 ];
 
 /** Returns the subset of nav items the given role is allowed to see. */
@@ -252,6 +253,8 @@ export function getAllowedNavItems(role: AdminRole): NavItem[] {
         return hasPermission(role as UserRole, 'MARK_ATTENDANCE');
       case 'EMAILS':
         return hasPermission(role as UserRole, 'SEND_EMAILS');
+      case 'VENUE':
+        return hasPermission(role as UserRole, 'EDIT_TEAMS'); // Admin/Super Admin only
       default:
         return false;
     }

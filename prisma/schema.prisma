@@ -154,6 +154,13 @@ model Team {
   tableId         String?          @unique
   table           Table?           @relation(fields: [tableId], references: [id])
   tableNumber     String?          // Fallback or display string
+
+  // Check-in details
+  checkedIn              Boolean   @default(false)
+  breakfastCouponsIssued Int       @default(0)
+  lunchCouponsIssued     Int       @default(0)
+  isFlagged              Boolean   @default(false)
+  flagReason             String?   @db.Text
   
   // Metadata
   createdAt DateTime @default(now())
@@ -181,6 +188,8 @@ model Team {
   @@index([attendance])
   @@index([venueId])
   @@index([tableId])
+  @@index([checkedIn])
+  @@index([isFlagged])
   @@unique([createdBy, track]) // One team per leader per track (belt-and-suspenders with transaction check)
   @@map("teams")
 }
@@ -202,11 +211,29 @@ model TeamMember {
   
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  verification MemberVerification?
 
   @@index([teamId])
   @@index([userId])
   @@index([role])
   @@map("team_members")
+}
+
+model MemberVerification {
+  id                String   @id @default(cuid())
+  memberId          String   @unique
+  member            TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  collegeIdVerified Boolean  @default(false)
+  govtIdVerified    Boolean  @default(false)
+  exceptionNote     String?  @db.Text
+  
+  verifiedAt        DateTime @default(now())
+  verifiedBy        String?  // Admin ID
+
+  @@index([memberId])
+  @@map("member_verifications")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -652,6 +679,9 @@ model ProblemReservation {
 model Venue {
   id        String   @id @default(cuid())
   name      String   @unique
+  floor     String?
+  block     String?
+  capacity  Int      @default(0)
   teams     Team[]
   tables    Table[]
   createdAt DateTime @default(now())

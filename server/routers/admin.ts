@@ -1116,6 +1116,7 @@ export const adminRouter = router({
           members: {
             include: { user: { select: { name: true, email: true } } },
           },
+          venue: true,
           submission: {
             include: { assignedProblemStatement: true },
           },
@@ -1188,8 +1189,14 @@ export const adminRouter = router({
       z.object({
         teamId: z.string(),
         deskId: z.string(),
-        desk: z.string().optional(),
-        notes: z.string().optional(),
+        breakfastCoupons: z.number(),
+        lunchCoupons: z.number(),
+        verifications: z.array(z.object({
+          memberId: z.string(),
+          collegeIdVerified: z.boolean(),
+          govtIdVerified: z.boolean(),
+          exceptionNote: z.string().optional()
+        }))
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1201,26 +1208,54 @@ export const adminRouter = router({
         });
       }
 
-      const team = await ctx.prisma.team.update({
-        where: { id: input.teamId },
-        data: {
-          attendance: 'PRESENT',
-          checkedInAt: new Date(),
-          checkedInBy: ctx.admin.id,
-          attendanceNotes: input.notes,
-        },
+      // 1. Update Team and Member Verifications in a transaction
+      const team = await ctx.prisma.$transaction(async (tx) => {
+        // Create verifications for each member
+        for (const v of input.verifications) {
+          await tx.memberVerification.upsert({
+            where: { memberId: v.memberId },
+            create: {
+              memberId: v.memberId,
+              collegeIdVerified: v.collegeIdVerified,
+              govtIdVerified: v.govtIdVerified,
+              exceptionNote: v.exceptionNote,
+              verifiedBy: ctx.admin.id,
+            },
+            update: {
+              collegeIdVerified: v.collegeIdVerified,
+              govtIdVerified: v.govtIdVerified,
+              exceptionNote: v.exceptionNote,
+              verifiedBy: ctx.admin.id,
+            }
+          });
+        }
+
+        // Update team status
+        return tx.team.update({
+          where: { id: input.teamId },
+          data: {
+            checkedIn: true,
+            checkedInAt: new Date(),
+            checkedInBy: ctx.admin.id,
+            attendance: 'PRESENT',
+            breakfastCouponsIssued: input.breakfastCoupons,
+            lunchCouponsIssued: input.lunchCoupons,
+          },
+        });
       });
 
-      // Emit confirmed event on desk-specific channel
+      // 2. Emit confirmed event on desk-specific channel
       const { getPusherServer } = await import('@/lib/pusher');
       const pusher = getPusherServer();
       if (pusher) {
         await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:confirmed', {
           teamId: input.teamId,
           teamName: team.name,
-          desk: input.desk,
           adminName: ctx.admin.name,
         });
+        
+        // Also emit a global stats update
+        await pusher.trigger('admin-updates', 'stats:updated', {});
       }
 
       return { success: true };
@@ -1246,6 +1281,8 @@ export const adminRouter = router({
       await ctx.prisma.team.update({
         where: { id: input.teamId },
         data: {
+          isFlagged: true,
+          flagReason: input.reason,
           attendanceNotes: `FLAGGED: ${input.reason}`,
         },
       });
@@ -1256,21 +1293,31 @@ export const adminRouter = router({
       if (pusher) {
         await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:flagged', {
           teamId: input.teamId,
-          reason: input.reason, // Changed 'issue' to 'reason' as per original code
+          reason: input.reason,
           adminName: ctx.admin.name,
         });
+        await pusher.trigger('admin-updates', 'stats:updated', {});
       }
 
       return { success: true };
     }),
 
   getCheckInStats: canViewTeams.query(async ({ ctx }) => {
-    const [total, checkedIn] = await Promise.all([
+    const [total, checkedIn, breakfast, lunch, flagged] = await Promise.all([
       ctx.prisma.team.count({ where: { status: 'SHORTLISTED', deletedAt: null } }),
-      ctx.prisma.team.count({ where: { attendance: 'PRESENT', deletedAt: null } }),
+      ctx.prisma.team.count({ where: { checkedIn: true, deletedAt: null } }),
+      ctx.prisma.team.aggregate({ _sum: { breakfastCouponsIssued: true } }),
+      ctx.prisma.team.aggregate({ _sum: { lunchCouponsIssued: true } }),
+      ctx.prisma.team.count({ where: { isFlagged: true, deletedAt: null } }),
     ]);
 
-    return { total, checkedIn };
+    return { 
+      total, 
+      checkedIn,
+      breakfastCoupons: breakfast._sum.breakfastCouponsIssued || 0,
+      lunchCoupons: lunch._sum.lunchCouponsIssued || 0,
+      flaggedCount: flagged
+    };
   }),
 
   // ═══════════════════════════════════════════════════════════

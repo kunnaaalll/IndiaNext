@@ -36,7 +36,6 @@ export const getPusherClient = () => {
 
     if (!key || !cluster) {
       console.warn('Pusher environment variables are missing. Real-time features will not work.');
-      // Return a dummy object or handle null in components
       return null;
     }
 

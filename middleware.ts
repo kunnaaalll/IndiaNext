@@ -149,7 +149,7 @@ export function middleware(request: NextRequest) {
     // Use Web Crypto API (available in Edge Runtime)
     const nonceArray = new Uint8Array(16);
     crypto.getRandomValues(nonceArray);
-    const nonce = Buffer.from(nonceArray).toString('base64');
+    const nonce = btoa(String.fromCharCode(...Array.from(nonceArray)));
 
     response.headers.set(
       'Content-Security-Policy',

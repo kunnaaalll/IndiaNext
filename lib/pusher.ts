@@ -1,5 +1,4 @@
 import Pusher from 'pusher';
-import PusherClient from 'pusher-js';
 
 // Server-side Pusher (lazy initializer)
 let _pusherServer: Pusher | null = null;
@@ -27,9 +26,12 @@ export const getPusherServer = () => {
   return _pusherServer;
 };
 
-let pusherClient: PusherClient | null = null;
+// Browser-side Pusher Client
+let pusherClient: any = null;
 
 export const getPusherClient = () => {
+  if (typeof window === 'undefined') return null;
+  
   if (!pusherClient) {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
@@ -39,12 +41,21 @@ export const getPusherClient = () => {
       return null;
     }
 
-    console.log('[Pusher] Initializing client with key:', key.substring(0, 5) + '...', 'Cluster:', cluster);
-    pusherClient = new PusherClient(key, {
-      cluster: cluster,
-      forceTLS: true,
-      enabledTransports: ['ws', 'wss'],
-    });
+    try {
+      // Synchronous require but only on client
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const PusherClient = require('pusher-js');
+      
+      console.log('[Pusher] Initializing client with key:', key.substring(0, 5) + '...', 'Cluster:', cluster);
+      pusherClient = new PusherClient(key, {
+        cluster: cluster,
+        forceTLS: true,
+        enabledTransports: ['ws', 'wss'],
+      });
+    } catch (err) {
+      console.error('[Pusher] Client initialization failed:', err);
+      return null;
+    }
   }
   return pusherClient;
 };

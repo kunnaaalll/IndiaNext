@@ -237,7 +237,12 @@ export const canViewAnalytics = adminProcedure.use(requirePermission('viewAnalyt
 export const canManageUsers = adminProcedure.use(requirePermission('manageUsers'));
 export const canViewAuditLogs = adminProcedure.use(requirePermission('viewAuditLogs'));
 
+// Logistics (Event Day)
+export const canMarkAttendance = adminProcedure.use(requirePermission('markAttendance'));
+export const canViewAttendance = adminProcedure.use(requirePermission('viewAttendance'));
+
 // Rate-limited versions
 export const canEditTeamsRateLimited = canEditTeams.use(rateLimitMutation);
 export const canDeleteTeamsRateLimited = canDeleteTeams.use(rateLimitMutation);
 export const canExportTeamsRateLimited = canExportTeams.use(rateLimitMutation);
+export const canMarkAttendanceRateLimited = canMarkAttendance.use(rateLimitMutation);

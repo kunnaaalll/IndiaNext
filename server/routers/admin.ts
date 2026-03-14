@@ -11,6 +11,7 @@ import {
   canViewAnalytics,
   canManageUsers,
   canViewAuditLogs,
+  canMarkAttendanceRateLimited,
 } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { sendStatusUpdateEmail } from '@/lib/email';
@@ -1147,7 +1148,7 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  confirmCheckIn: canEditTeamsRateLimited
+  confirmCheckIn: canMarkAttendanceRateLimited
     .input(
       z.object({
         teamId: z.string(),
@@ -1221,7 +1222,7 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  flagCheckInIssue: canEditTeamsRateLimited
+  flagCheckInIssue: canMarkAttendanceRateLimited
     .input(
       z.object({
         teamId: z.string(),
@@ -1362,7 +1363,7 @@ export const adminRouter = router({
       });
     }),
 
-  updateTeamLogistics: canEditTeamsRateLimited
+  updateTeamLogistics: canMarkAttendanceRateLimited
     .input(
       z.object({
         teamId: z.string(),

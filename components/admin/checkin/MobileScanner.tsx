@@ -41,25 +41,32 @@ export default function MobileScanner() {
   const utils = trpc.useUtils();
   const heartbeat = trpc.admin.sendScannerHeartbeat.useMutation();
 
+  const lastHeartbeat = useRef<number>(0);
+  const heartbeatMutation = useRef(heartbeat);
+  heartbeatMutation.current = heartbeat;
+
   // Heartbeat to keep dashboard updated on scanner presence
   useEffect(() => {
     if (!deskId) return;
 
-    const interval = setInterval(() => {
-      heartbeat.mutate({ deskId }, {
+    const sendHeartbeat = () => {
+      const now = Date.now();
+      if (now - lastHeartbeat.current < 25000) return; // Force min 25s gap
+
+      lastHeartbeat.current = now;
+      heartbeatMutation.current.mutate({ deskId }, {
         onSuccess: () => console.debug(`[Heartbeat] Sent for station ${deskId}`),
         onError: (err) => console.error(`[Heartbeat] Failed:`, err.message)
       });
-    }, 10000); // Heartbeat every 10s
+    };
 
-    // Trigger immediate heartbeat on mount
-    heartbeat.mutate({ deskId }, {
-      onSuccess: () => console.debug(`[Heartbeat] Initial sent for station ${deskId}`),
-      onError: (err) => console.error(`[Heartbeat] Initial failed:`, err.message)
-    });
+    // Initial heartbeat
+    sendHeartbeat();
+
+    const interval = setInterval(sendHeartbeat, 30000); // Heartbeat every 30s
 
     return () => clearInterval(interval);
-  }, [deskId, heartbeat]);
+  }, [deskId]);
 
   useEffect(() => {
     if (!deskId) return;
@@ -73,7 +80,7 @@ export default function MobileScanner() {
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 30,
+            fps: 15, // Reduced FPS to save battery and processing
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
           },
@@ -111,8 +118,15 @@ export default function MobileScanner() {
     localStorage.setItem('admin_checkin_desk', id);
   };
 
+  const lastGlobalScanTime = useRef<number>(0);
+
   async function onScanSuccess(decodedText: string) {
     if (!deskId || isLoading) return;
+
+    const now = Date.now();
+    // Global throttling: Max 1 scan attempt every 2 seconds
+    if (now - lastGlobalScanTime.current < 2000) return;
+    lastGlobalScanTime.current = now;
 
     let shortCode = decodedText;
     try {
@@ -124,10 +138,9 @@ export default function MobileScanner() {
       console.warn('URL parsing failed during scan:', err);
     }
 
-    // Per-code 5s cooldown
+    // Per-code 10s cooldown
     const lastTime = lastScanMap.current.get(shortCode) || 0;
-    const now = Date.now();
-    if (now - lastTime < 5000) return;
+    if (now - lastTime < 10000) return;
 
     lastScanMap.current.set(shortCode, now);
     setLastScanned(shortCode);

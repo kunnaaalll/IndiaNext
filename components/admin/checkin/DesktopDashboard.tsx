@@ -132,7 +132,7 @@ export default function DesktopDashboard() {
       console.log(`[Pusher] RECEIVED scanner:presence at ${data?.timestamp || new Date().toISOString()}`);
       setIsScannerActive(true);
       clearTimeout(presenceTimeout);
-      presenceTimeout = setTimeout(() => setIsScannerActive(false), 15000);
+      presenceTimeout = setTimeout(() => setIsScannerActive(false), 45000); // 45s (30s heartbeat + 15s buffer)
     });
 
     return () => {

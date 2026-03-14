@@ -122,7 +122,12 @@ export default function DesktopDashboard() {
       refetchStats();
     });
 
-    const updateStatus = () => setIsConnected(pusher.connection.state === 'connected');
+    const updateStatus = () => {
+      const state = pusher.connection.state;
+      console.log(`[Pusher] Connection state: ${state}`);
+      setIsConnected(state === 'connected');
+    };
+    
     pusher.connection.bind('state_change', updateStatus);
     updateStatus();
 
@@ -135,10 +140,15 @@ export default function DesktopDashboard() {
     });
 
     return () => {
+      console.log(`[Pusher] Cleaning up subscriptions for desk ${deskId}`);
+      channel.unbind_all();
       pusher.unsubscribe(channelName);
+      globalUpdateChannel.unbind_all();
       pusher.unsubscribe('admin-updates');
+      pusher.connection.unbind('state_change', updateStatus);
+      clearTimeout(presenceTimeout);
     };
-  }, [deskId, activeTeam?.id, utils]);
+  }, [deskId, utils]);
 
   const selectDesk = (id: string) => {
     if (contextDesk) return;

@@ -22,6 +22,7 @@ import {
   invalidateDashboardCache,
   invalidateTeamCache,
 } from '@/lib/redis-cache';
+import { getPusherServer } from '@/lib/pusher';
 
 export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
@@ -1104,21 +1105,17 @@ export const adminRouter = router({
       });
 
       // Emit event for real-time dashboard on desk-specific channel
-      const { getPusherServer } = await import('@/lib/pusher');
-      const pusher = getPusherServer();
-      if (pusher) {
-        try {
-          console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId}`);
+      try {
+        const pusher = getPusherServer();
+        if (pusher) {
+          console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId} for team ${team.name}`);
           await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
             team,
             adminName: ctx.admin.name,
           });
-          console.log(`[Pusher] Successfully triggered qr:scanned for desk ${input.deskId}`);
-        } catch (error) {
-          console.error('[Pusher] Trigger failed:', error);
         }
-      } else {
-        console.warn('[Pusher] Server instance not available - check environment variables');
+      } catch (error) {
+        console.error('[Pusher] qr:scanned trigger failed:', error);
       }
 
       return {
@@ -1138,12 +1135,15 @@ export const adminRouter = router({
         });
       }
 
-      const { getPusherServer } = await import('@/lib/pusher');
-      const pusher = getPusherServer();
-      if (pusher) {
-        await pusher.trigger(`admin-checkin-${input.deskId}`, 'scanner:presence', {
-          timestamp: new Date().toISOString(),
-        });
+      try {
+        const pusher = getPusherServer();
+        if (pusher) {
+          await pusher.trigger(`admin-checkin-${input.deskId}`, 'scanner:presence', {
+            timestamp: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.error('[Pusher] scanner:presence trigger failed:', err);
       }
       return { success: true };
     }),

@@ -60,29 +60,24 @@ export function middleware(request: NextRequest) {
     // ✅ SECURITY FIX: CSRF validation enabled in production by default
     // In development, enable with ENABLE_CSRF=true for local testing
     const csrfEnabled = process.env.NODE_ENV === 'production' || process.env.ENABLE_CSRF === 'true';
+    // ✅ MOBILE COMPATIBILITY FIX: Relaxed CSRF for mobile browsers
+    // Some mobile browsers omit Origin or Referer for same-site requests
     if (csrfEnabled) {
-      // Block requests with NO origin header for state-changing methods.
-      // Same-origin browser requests always include Origin; its absence means
-      // server-to-server or curl — which should use API keys, not cookies.
-      if (!origin) {
-        console.warn('[CSRF] Blocked request with no Origin header');
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'CSRF_VALIDATION_FAILED',
-            message: 'Origin header required for state-changing requests.',
-          },
-          { status: 403 }
-        );
-      }
+      const referer = request.headers.get('referer');
+      const host = request.headers.get('host');
+      
+      const isOriginAllowed = origin && ALLOWED_ORIGINS.has(origin);
+      const isRefererAllowed = referer && origins.some(o => referer.startsWith(o));
+      const isHostAllowed = host && origins.some(o => o.includes(host));
 
-      if (!ALLOWED_ORIGINS.has(origin)) {
-        console.warn(`[CSRF] Blocked request from origin: ${origin}`);
+      // Allow if ANY of these match our trusted origins
+      if (!isOriginAllowed && !isRefererAllowed && !isHostAllowed) {
+        console.warn(`[CSRF] Blocked request. Origin: ${origin}, Referer: ${referer}, Host: ${host}`);
         return NextResponse.json(
           {
             success: false,
             error: 'CSRF_VALIDATION_FAILED',
-            message: 'Request origin not allowed.',
+            message: 'Untrusted request origin. If you are on mobile, please refresh and try again.',
           },
           { status: 403 }
         );

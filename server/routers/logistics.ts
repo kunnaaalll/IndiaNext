@@ -66,8 +66,8 @@ export const logisticsRouter = router({
     .query(async ({ ctx, input }) => {
       requireLogisticsRole(ctx.admin.role, 'View approved teams');
 
-      const where: Record<string, unknown> = {
-        status: 'APPROVED',
+      const where: Record<string, any> = {
+        status: { in: ['APPROVED', 'SHORTLISTED'] },
         deletedAt: null,
       };
 
@@ -197,10 +197,10 @@ export const logisticsRouter = router({
         });
       }
 
-      if (team.status !== 'APPROVED') {
+      if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Team "${team.name}" is not approved (status: ${team.status})`,
+          message: `Team "${team.name}" is not qualified for logistics (status: ${team.status})`,
         });
       }
 
@@ -266,10 +266,10 @@ export const logisticsRouter = router({
         });
       }
 
-      if (team.status !== 'APPROVED') {
+      if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Team "${team.name}" is not approved (status: ${team.status})`,
+          message: `Team "${team.name}" is not qualified for logistics (status: ${team.status})`,
         });
       }
 
@@ -328,10 +328,10 @@ export const logisticsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Team not found' });
       }
 
-      if (currentTeam.status !== 'APPROVED') {
+      if (currentTeam.status !== 'APPROVED' && currentTeam.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only mark attendance for approved teams',
+          message: 'Can only mark attendance for approved/shortlisted teams',
         });
       }
 
@@ -427,10 +427,10 @@ export const logisticsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found' });
       }
 
-      if (member.team.status !== 'APPROVED') {
+      if (member.team.status !== 'APPROVED' && member.team.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only mark attendance for approved teams',
+          message: 'Can only mark attendance for approved/shortlisted teams',
         });
       }
 
@@ -536,10 +536,10 @@ export const logisticsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found' });
       }
 
-      if (member.team.status !== 'APPROVED') {
+      if (member.team.status !== 'APPROVED' && member.team.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only edit members of approved teams',
+          message: 'Can only edit members of approved/shortlisted teams',
         });
       }
 
@@ -660,10 +660,10 @@ export const logisticsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found' });
       }
 
-      if (currentMember.team.status !== 'APPROVED') {
+      if (currentMember.team.status !== 'APPROVED' && currentMember.team.status !== 'SHORTLISTED') {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only swap members in approved teams',
+          message: 'Can only swap members in approved/shortlisted teams',
         });
       }
 
@@ -787,24 +787,24 @@ export const logisticsRouter = router({
 
     const [totalApproved, present, absent, partial, notMarked, totalMembers, membersPresent] =
       await Promise.all([
-        ctx.prisma.team.count({ where: { status: 'APPROVED', deletedAt: null } }),
+        ctx.prisma.team.count({ where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } }),
         ctx.prisma.team.count({
-          where: { status: 'APPROVED', attendance: 'PRESENT', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PRESENT', deletedAt: null },
         }),
         ctx.prisma.team.count({
-          where: { status: 'APPROVED', attendance: 'ABSENT', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'ABSENT', deletedAt: null },
         }),
         ctx.prisma.team.count({
-          where: { status: 'APPROVED', attendance: 'PARTIAL', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PARTIAL', deletedAt: null },
         }),
         ctx.prisma.team.count({
-          where: { status: 'APPROVED', attendance: 'NOT_MARKED', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'NOT_MARKED', deletedAt: null },
         }),
         ctx.prisma.teamMember.count({
-          where: { team: { status: 'APPROVED', deletedAt: null } },
+          where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } },
         }),
         ctx.prisma.teamMember.count({
-          where: { team: { status: 'APPROVED', deletedAt: null }, isPresent: true },
+          where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null }, isPresent: true },
         }),
       ]);
 
@@ -836,8 +836,8 @@ export const logisticsRouter = router({
     .mutation(async ({ ctx, input }) => {
       requireLogisticsRole(ctx.admin.role, 'Export attendance');
 
-      const where: Record<string, unknown> = {
-        status: 'APPROVED',
+      const where: Record<string, any> = {
+        status: { in: ['APPROVED', 'SHORTLISTED'] },
         deletedAt: null,
       };
 

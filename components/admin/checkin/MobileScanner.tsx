@@ -46,11 +46,17 @@ export default function MobileScanner() {
     if (!deskId) return;
 
     const interval = setInterval(() => {
-      heartbeat.mutate({ deskId });
+      heartbeat.mutate({ deskId }, {
+        onSuccess: () => console.debug(`[Heartbeat] Sent for station ${deskId}`),
+        onError: (err) => console.error(`[Heartbeat] Failed:`, err.message)
+      });
     }, 10000); // Heartbeat every 10s
 
     // Trigger immediate heartbeat on mount
-    heartbeat.mutate({ deskId });
+    heartbeat.mutate({ deskId }, {
+      onSuccess: () => console.debug(`[Heartbeat] Initial sent for station ${deskId}`),
+      onError: (err) => console.error(`[Heartbeat] Initial failed:`, err.message)
+    });
 
     return () => clearInterval(interval);
   }, [deskId, heartbeat]);
@@ -130,12 +136,15 @@ export default function MobileScanner() {
 
     try {
       setIsLoading(true);
+      console.log(`[Scanner] Processing code: ${shortCode} for station: ${deskId}`);
       await utils.admin.getTeamByShortCode.fetch({
         shortCode,
         deskId: deskId || '',
       });
+      console.log(`[Scanner] SUCCESSFULLY sent ${shortCode} to dashboard`);
       toast.success(`Team ${shortCode} sent to Dashboard`);
     } catch (error: any) {
+      console.error(`[Scanner] FAILED to process ${shortCode}:`, error.message);
       toast.error(error.message || 'Failed to process QR code');
     } finally {
       setIsLoading(false);

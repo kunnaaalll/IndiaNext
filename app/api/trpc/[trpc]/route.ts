@@ -15,12 +15,10 @@ const handler = (req: Request) =>
     req,
     router: appRouter,
     createContext,
-    onError:
-      process.env.NODE_ENV === 'development'
-        ? ({ path, error }) => {
-            console.error(`❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`);
-          }
-        : undefined,
+    onError: ({ path, error }) => {
+      console.error(`❌ tRPC failed on ${path ?? '<no-path>'}: ${error.code} - ${error.message}`);
+      if (error.cause) console.error('  Cause:', error.cause);
+    },
   });
 
 export { handler as GET, handler as POST };

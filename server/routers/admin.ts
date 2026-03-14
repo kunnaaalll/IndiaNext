@@ -1137,6 +1137,8 @@ export const adminRouter = router({
         });
       }
 
+      console.log(`[Pusher] Scanner Heartbeat for Station ${input.deskId} from Admin ${ctx.admin.name}`);
+
       try {
         const pusher = getPusherServer();
         if (pusher) {

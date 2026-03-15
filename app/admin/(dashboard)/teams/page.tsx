@@ -11,17 +11,18 @@ import { Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function TeamsManagementPage() {
-  const { role: _role, isLogistics, isOrganizer } = useAdminRole();
+  const { role, isLogistics, isOrganizer } = useAdminRole();
   const [filters, setFilters] = useState({
     status: 'all',
     track: 'all',
     college: '',
     search: '',
     dateRange: { from: undefined, to: undefined },
-    sortBy: 'createdAt' as 'createdAt' | 'name' | 'status' | 'college',
+    sortBy: 'createdAt' as 'createdAt' | 'name' | 'status' | 'college' | 'ideasprintRanking' | 'buildstormRanking' | 'overallScore',
     sortOrder: 'desc' as 'asc' | 'desc',
     page: 1,
     pageSize: 50,
+    rankingMode: 'all',
   });
 
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -123,7 +124,7 @@ export default function TeamsManagementPage() {
           const merged = { ...filters, ...newFilters };
           setFilters({
             ...merged,
-            sortBy: merged.sortBy as 'createdAt' | 'name' | 'status' | 'college',
+            sortBy: merged.sortBy as 'createdAt' | 'name' | 'status' | 'college' | 'ideasprintRanking' | 'buildstormRanking' | 'overallScore',
             sortOrder: merged.sortOrder as 'asc' | 'desc',
           });
         }}
@@ -153,13 +154,17 @@ export default function TeamsManagementPage() {
             field === 'createdAt' ||
             field === 'name' ||
             field === 'status' ||
-            field === 'college'
+            field === 'college' ||
+            field === 'ideasprintRanking' ||
+            field === 'buildstormRanking' ||
+            field === 'overallScore'
           ) {
             if (order === 'asc' || order === 'desc') {
               setFilters({ ...filters, sortBy: field, sortOrder: order });
             }
           }
         }}
+        judgeMode={role === 'JUDGE'}
         readOnly={isReadOnly}
       />
     </div>

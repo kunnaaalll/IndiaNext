@@ -128,6 +128,7 @@ export default function MobileScanner() {
     if (now - lastGlobalScanTime.current < 2000) return;
     lastGlobalScanTime.current = now;
 
+    // Extract shortCode for display purposes
     let shortCode = decodedText;
     try {
       if (decodedText.includes('code=')) {
@@ -150,8 +151,12 @@ export default function MobileScanner() {
     try {
       setIsLoading(true);
       console.log(`[Scanner] Processing code: ${shortCode} for station: ${deskId}`);
+      
+      // Encode the full QR payload as base64 for secure transmission
+      const qrPayload = btoa(decodedText);
+      
       await utils.admin.getTeamByShortCode.fetch({
-        shortCode,
+        qrPayload,
         deskId: deskId || '',
       });
       console.log(`[Scanner] SUCCESSFULLY sent ${shortCode} to dashboard`);

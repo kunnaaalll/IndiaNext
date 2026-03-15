@@ -5,12 +5,12 @@ import {
   rateLimitedAdminProcedure,
   rateLimitMutation,
   canViewTeams,
+  canViewTeamsRateLimited,
   canEditTeamsRateLimited,
   canDeleteTeamsRateLimited,
   canExportTeamsRateLimited,
   canViewAnalytics,
   canManageUsers,
-  canViewAuditLogs,
   canMarkAttendanceRateLimited,
 } from '../trpc';
 import { TRPCError } from '@trpc/server';
@@ -23,6 +23,11 @@ import {
   invalidateTeamCache,
 } from '@/lib/redis-cache';
 import { getPusherServer } from '@/lib/pusher';
+import { rateLimitPusherEvent } from '@/lib/pusher-rate-limit';
+import { isDuplicatePusherEvent } from '@/lib/pusher-deduplication';
+import { trackPusherEvent, checkPusherQuota } from '@/lib/pusher-monitor';
+import { executePusherWithCircuitBreaker } from '@/lib/pusher-circuit-breaker';
+import { validateQRCode } from '@/lib/qr-security';
 
 export const adminRouter = router({
   // ═══════════════════════════════════════════════════════════
@@ -129,11 +134,12 @@ export const adminRouter = router({
             to: z.date().optional(),
           })
           .optional(),
-        sortBy: z.enum(['createdAt', 'name', 'status', 'college']).default('createdAt'),
+        sortBy: z.enum(['createdAt', 'name', 'status', 'college', 'ideasprintRanking', 'buildstormRanking', 'overallScore']).default('createdAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
         page: z.number().default(1),
         // ✅ SECURITY FIX (H-6): Cap pageSize at 100 to prevent DoS
         pageSize: z.number().min(1).max(100).default(50),
+        rankingMode: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -141,130 +147,193 @@ export const adminRouter = router({
       // ✅ FIX H-5: Field filtering for JUDGE role
       const isJudge = ctx.admin.role === 'JUDGE';
 
-      const where: Record<string, unknown> = {
-        deletedAt: null,
-      };
+      try {
+        const where: Record<string, unknown> = {
+          deletedAt: null,
+        };
 
-      // Status filter
-      if (input.status && input.status !== 'all') {
-        where.status = input.status;
-      }
-
-      // Track filter
-      if (input.track && input.track !== 'all') {
-        if (input.track === 'BOTH') {
-          // Both tracks means we want teams whose leader is in teams of both tracks
-          // Get all leaders
-          const leadersInBoth = await ctx.prisma.user.findMany({
-            where: {
-              AND: [
-                {
-                  teamMemberships: {
-                    some: { team: { track: 'IDEA_SPRINT', deletedAt: null }, role: 'LEADER' },
-                  },
-                },
-                {
-                  teamMemberships: {
-                    some: { team: { track: 'BUILD_STORM', deletedAt: null }, role: 'LEADER' },
-                  },
-                },
-              ],
-            },
-            select: { id: true },
-          });
-          const leaderIds = leadersInBoth.map((u) => u.id);
-          where.createdBy = { in: leaderIds };
-        } else {
-          where.track = input.track;
+        // Status filter
+        if (input.status && input.status !== 'all') {
+          if (input.status.includes(',')) {
+            // Handle comma-separated statuses (e.g., "APPROVED,SHORTLISTED")
+            const statuses = input.status.split(',');
+            where.status = { in: statuses };
+          } else {
+            where.status = input.status;
+          }
+        } else if (isJudge) {
+          // Judge-specific filtering: only show approved and shortlisted teams if no specific status is requested
+          where.status = { in: ['APPROVED', 'SHORTLISTED'] };
         }
-      }
 
-      // College filter
-      if (input.college) {
-        where.college = { contains: input.college, mode: 'insensitive' };
-      }
+        // Ranking mode filter for judges
+        if (isJudge && input.rankingMode && input.rankingMode !== 'all') {
+          if (input.rankingMode === 'ideasprint') {
+            where.track = 'IDEA_SPRINT';
+          } else if (input.rankingMode === 'buildstorm') {
+            where.track = 'BUILD_STORM';
+          }
+        }
 
-      // Search filter
-      if (input.search) {
-        where.OR = [
-          { name: { contains: input.search, mode: 'insensitive' } },
-          { college: { contains: input.search, mode: 'insensitive' } },
-          {
-            members: {
-              some: {
-                user: {
-                  OR: [
-                    { name: { contains: input.search, mode: 'insensitive' } },
-                    { email: { contains: input.search, mode: 'insensitive' } },
-                  ],
-                },
+        // Track filter
+        if (input.track && input.track !== 'all') {
+          if (input.track === 'BOTH') {
+            // Both tracks means we want teams whose leader is in teams of both tracks
+            // Get all leaders
+            const leadersInBoth = await ctx.prisma.user.findMany({
+              where: {
+                AND: [
+                  {
+                    teamMemberships: {
+                      some: { team: { track: 'IDEA_SPRINT', deletedAt: null }, role: 'LEADER' },
+                    },
+                  },
+                  {
+                    teamMemberships: {
+                      some: { team: { track: 'BUILD_STORM', deletedAt: null }, role: 'LEADER' },
+                    },
+                  },
+                ],
               },
-            },
-          },
-        ];
-      }
+              select: { id: true },
+            });
+            const leaderIds = leadersInBoth.map((u) => u.id);
+            where.createdBy = { in: leaderIds };
+          } else {
+            where.track = input.track;
+          }
+        }
 
-      // Date range filter
-      if (input.dateRange?.from || input.dateRange?.to) {
-        const createdAt: { gte?: Date; lte?: Date } = {};
-        if (input.dateRange.from) createdAt.gte = input.dateRange.from;
-        if (input.dateRange.to) createdAt.lte = input.dateRange.to;
-        where.createdAt = createdAt;
-      }
+        // College filter
+        if (input.college) {
+          where.college = { contains: input.college, mode: 'insensitive' };
+        }
 
-      const [teams, totalCount] = await Promise.all([
-        ctx.prisma.team.findMany({
-          where,
-          include: {
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    // ✅ FIX H-5: Hide PII from JUDGE role
-                    email: !isJudge,
-                    phone: !isJudge,
-                    college: true,
-                    avatar: true,
+        // Search filter
+        if (input.search) {
+          const searchConditions: any[] = [
+            { name: { contains: input.search, mode: 'insensitive' } },
+            { college: { contains: input.search, mode: 'insensitive' } },
+          ];
+
+          // Only include email search for non-judge users
+          if (!isJudge) {
+            searchConditions.push({
+              members: {
+                some: {
+                  user: {
+                    OR: [
+                      { name: { contains: input.search, mode: 'insensitive' } },
+                      { email: { contains: input.search, mode: 'insensitive' } },
+                    ],
                   },
                 },
               },
-            },
-            submission: {
-              select: {
-                id: true,
-                submittedAt: true,
-                ideaTitle: true,
-                assignedProblemStatement: {
-                  select: { title: true },
-                },
-                _count: {
-                  select: { files: true },
+            });
+          } else {
+            searchConditions.push({
+              members: {
+                some: {
+                  user: {
+                    name: { contains: input.search, mode: 'insensitive' },
+                  },
                 },
               },
-            },
-            tags: true,
-            venue: true,
-            _count: {
-              select: {
-                comments: true,
-              },
-            },
-          },
-          orderBy: { [input.sortBy]: input.sortOrder },
-          skip: (input.page - 1) * input.pageSize,
-          take: input.pageSize,
-        }),
-        ctx.prisma.team.count({ where }),
-      ]);
+            });
+          }
 
-      return {
-        teams,
-        totalCount,
-        totalPages: Math.ceil(totalCount / input.pageSize),
-        currentPage: input.page,
-      };
+          where.OR = searchConditions;
+        }
+
+        // Date range filter
+        if (input.dateRange?.from || input.dateRange?.to) {
+          const createdAt: { gte?: Date; lte?: Date } = {};
+          if (input.dateRange.from) createdAt.gte = input.dateRange.from;
+          if (input.dateRange.to) createdAt.lte = input.dateRange.to;
+          where.createdAt = createdAt;
+        }
+
+        // Handle special sorting for ranking fields
+        let orderBy: any;
+        
+        if (input.sortBy === 'ideasprintRanking' || input.sortBy === 'buildstormRanking' || input.sortBy === 'overallScore') {
+          // For ranking-based sorting, fall back to createdAt sorting
+          orderBy = { createdAt: input.sortOrder };
+        } else {
+          // Validate sortBy field to prevent errors
+          const validSortFields = ['createdAt', 'name', 'status', 'college'];
+          const sortField = validSortFields.includes(input.sortBy) ? input.sortBy : 'createdAt';
+          orderBy = { [sortField]: input.sortOrder };
+        }
+
+        const [teams, totalCount] = await Promise.all([
+          ctx.prisma.team.findMany({
+            where,
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: isJudge ? false : true,
+                      phone: isJudge ? false : true,
+                      college: true,
+                      avatar: true,
+                    },
+                  },
+                },
+              },
+              submission: {
+                select: {
+                  id: true,
+                  submittedAt: true,
+                  ideaTitle: true,
+                  assignedProblemStatement: {
+                    select: { title: true },
+                  },
+                  _count: {
+                    select: { files: true },
+                  },
+                },
+              },
+              tags: true,
+              venue: true,
+              _count: {
+                select: {
+                  comments: true,
+                },
+              },
+            },
+            orderBy,
+            skip: (input.page - 1) * input.pageSize,
+            take: input.pageSize,
+          }),
+          ctx.prisma.team.count({ where }),
+        ]);
+
+        // Post-process teams for ranking if needed
+        let processedTeams = teams;
+        if (input.sortBy === 'ideasprintRanking' || input.sortBy === 'buildstormRanking' || input.sortBy === 'overallScore') {
+          // For now, just return teams without ranking calculation
+          // TODO: Implement proper ranking calculation with separate score queries
+          processedTeams = teams.map((team: any) => ({
+            ...team,
+            calculatedScore: 0,
+            scoreCount: 0,
+          }));
+        }
+
+        return {
+          teams: processedTeams,
+          totalCount,
+          totalPages: Math.ceil(totalCount / input.pageSize),
+          currentPage: input.page,
+        };
+      } catch (error) {
+        console.error('Error in getTeams:', error);
+        throw error;
+      }
     }),
 
   getTeamById: canViewTeams.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
@@ -281,12 +350,11 @@ export const adminRouter = router({
         members: {
           include: {
             user: {
-              // ✅ FIX H-5: Hide PII from JUDGE role
               select: {
                 id: true,
                 name: true,
-                email: !isJudge,
-                phone: !isJudge,
+                email: isJudge ? false : true,
+                phone: isJudge ? false : true,
                 college: true,
                 degree: true,
                 year: true,
@@ -895,7 +963,7 @@ export const adminRouter = router({
   // ACTIVITY LOGS
   // ═══════════════════════════════════════════════════════════
 
-  getActivityLogs: canViewAuditLogs
+  getActivityLogs: canViewAnalytics
     .input(
       z.object({
         action: z.string().optional(),
@@ -906,7 +974,7 @@ export const adminRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // ✅ FIX H-2: Permission check now handled by middleware guard (ADMIN and SUPER_ADMIN)
+      // ✅ FIX H-2: Permission check now handled by middleware guard (ORGANIZER, JUDGE, ADMIN, SUPER_ADMIN)
       const where: Record<string, unknown> = {};
 
       if (input.action) {
@@ -1064,8 +1132,8 @@ export const adminRouter = router({
   // CHECK-IN & LOGISTICS
   // ═══════════════════════════════════════════════════════════
 
-  getTeamByShortCode: canViewTeams
-    .input(z.object({ shortCode: z.string(), deskId: z.string() }))
+  getTeamByShortCode: canViewTeamsRateLimited
+    .input(z.object({ qrPayload: z.string(), deskId: z.string() }))
     .query(async ({ ctx, input }) => {
       // Backend Enforcement: If admin has an assigned desk, they MUST use it
       if (ctx.admin.desk && ctx.admin.desk !== input.deskId) {
@@ -1075,8 +1143,19 @@ export const adminRouter = router({
         });
       }
 
+      // Validate QR code security (nonce, expiry, scan limit)
+      const qrValidation = await validateQRCode(input.qrPayload);
+      if (!qrValidation.valid) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: qrValidation.reason || 'Invalid QR code',
+        });
+      }
+
+      const shortCode = qrValidation.shortCode!;
+
       const team = await ctx.prisma.team.findUnique({
-        where: { shortCode: input.shortCode, deletedAt: null },
+        where: { shortCode, deletedAt: null },
         include: {
           members: {
             include: { user: { select: { name: true, email: true } } },
@@ -1104,20 +1183,51 @@ export const adminRouter = router({
         },
       });
 
-      // Emit event for real-time dashboard on desk-specific channel
-      try {
-        const pusher = getPusherServer();
-        if (pusher) {
-          console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId} for team ${team.name}`);
-          await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
-            team,
-            adminName: ctx.admin.name,
-          });
+      // Event deduplication check
+      const dedupKey = `qr:${shortCode}:${input.deskId}:${ctx.admin.id}`;
+      const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
+      
+      if (!isDuplicate) {
+        // Check Pusher quota before triggering
+        const quotaStatus = await checkPusherQuota();
+        if (!quotaStatus.ok) {
+          console.error('[Pusher] Quota exceeded, skipping qr:scanned event');
         } else {
-          console.error('[Pusher] ERROR: getPusherServer() returned null. Check environment variables.');
+          if (quotaStatus.warningLevel !== 'normal') {
+            console.warn(`[Pusher] Quota warning: ${quotaStatus.percentUsed.toFixed(1)}% used`);
+          }
+
+          // Pusher rate limiting check
+          const rateLimitResult = await rateLimitPusherEvent('qr:scanned', ctx.admin.id);
+          
+          if (rateLimitResult.allowed) {
+            // Emit event for real-time dashboard on desk-specific private channel
+            const pusher = getPusherServer();
+            if (pusher) {
+              console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId} for team ${team.name}`);
+              
+              const result = await executePusherWithCircuitBreaker(async () => {
+                await pusher.trigger(`private-admin-checkin-${input.deskId}`, 'qr:scanned', {
+                  team,
+                  adminName: ctx.admin.name,
+                });
+              });
+
+              if (result.success) {
+                // Track successful event
+                await trackPusherEvent('qr:scanned');
+              } else {
+                console.error('[Pusher] qr:scanned trigger failed:', result.error);
+              }
+            } else {
+              console.error('[Pusher] ERROR: getPusherServer() returned null. Check environment variables.');
+            }
+          } else {
+            console.warn(`[Pusher] Rate limit exceeded for qr:scanned: ${rateLimitResult.reason}`);
+          }
         }
-      } catch (error) {
-        console.error('[Pusher] qr:scanned trigger failed:', error);
+      } else {
+        console.log(`[Pusher] Duplicate qr:scanned event skipped: ${dedupKey}`);
       }
 
       return {
@@ -1126,7 +1236,7 @@ export const adminRouter = router({
       };
     }),
 
-  sendScannerHeartbeat: canViewTeams
+  sendScannerHeartbeat: canViewTeamsRateLimited
     .input(z.object({ deskId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Backend Enforcement: If admin has an assigned desk, they MUST use it
@@ -1139,16 +1249,29 @@ export const adminRouter = router({
 
       console.log(`[Pusher] Scanner Heartbeat for Station ${input.deskId} from Admin ${ctx.admin.name}`);
 
-      try {
+      // Pusher rate limiting check
+      const rateLimitResult = await rateLimitPusherEvent('scanner:presence', ctx.admin.id);
+      
+      if (rateLimitResult.allowed) {
         const pusher = getPusherServer();
         if (pusher) {
-          await pusher.trigger(`admin-checkin-${input.deskId}`, 'scanner:presence', {
-            timestamp: new Date().toISOString(),
+          const result = await executePusherWithCircuitBreaker(async () => {
+            await pusher.trigger(`private-admin-checkin-${input.deskId}`, 'scanner:presence', {
+              timestamp: new Date().toISOString(),
+            });
           });
+
+          if (result.success) {
+            // Track successful event
+            await trackPusherEvent('scanner:presence');
+          } else {
+            console.error('[Pusher] scanner:presence trigger failed:', result.error);
+          }
         }
-      } catch (err) {
-        console.error('[Pusher] scanner:presence trigger failed:', err);
+      } else {
+        console.warn(`[Pusher] Rate limit exceeded for scanner:presence: ${rateLimitResult.reason}`);
       }
+
       return { success: true };
     }),
 
@@ -1209,18 +1332,58 @@ export const adminRouter = router({
         });
       });
 
-      // 2. Emit confirmed event on desk-specific channel
-      const { getPusherServer } = await import('@/lib/pusher');
-      const pusher = getPusherServer();
-      if (pusher) {
-        await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:confirmed', {
-          teamId: input.teamId,
-          teamName: team.name,
-          adminName: ctx.admin.name,
-        });
+      // 2. Event deduplication check for checkin:confirmed
+      const dedupKey = `checkin:confirmed:${input.teamId}:${input.deskId}`;
+      const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
+      
+      if (!isDuplicate) {
+        // Pusher rate limiting for checkin:confirmed
+        const rateLimitConfirmed = await rateLimitPusherEvent('checkin:confirmed', ctx.admin.id);
         
-        // Also emit a global stats update
-        await pusher.trigger('admin-updates', 'stats:updated', {});
+        if (rateLimitConfirmed.allowed) {
+          const pusher = getPusherServer();
+          if (pusher) {
+            // Emit confirmed event on desk-specific private channel
+            const result = await executePusherWithCircuitBreaker(async () => {
+              await pusher.trigger(`private-admin-checkin-${input.deskId}`, 'checkin:confirmed', {
+                teamId: input.teamId,
+                teamName: team.name,
+                adminName: ctx.admin.name,
+              });
+            });
+
+            if (result.success) {
+              await trackPusherEvent('checkin:confirmed');
+            } else {
+              console.error('[Pusher] checkin:confirmed trigger failed:', result.error);
+            }
+          }
+        } else {
+          console.warn(`[Pusher] Rate limit exceeded for checkin:confirmed: ${rateLimitConfirmed.reason}`);
+        }
+
+        // Pusher rate limiting for stats:updated
+        const rateLimitStats = await rateLimitPusherEvent('stats:updated', ctx.admin.id);
+        
+        if (rateLimitStats.allowed) {
+          const pusher = getPusherServer();
+          if (pusher) {
+            // Emit global stats update on private channel
+            const result = await executePusherWithCircuitBreaker(async () => {
+              await pusher.trigger('private-admin-updates', 'stats:updated', {});
+            });
+
+            if (result.success) {
+              await trackPusherEvent('stats:updated');
+            } else {
+              console.error('[Pusher] stats:updated trigger failed:', result.error);
+            }
+          }
+        } else {
+          console.warn(`[Pusher] Rate limit exceeded for stats:updated: ${rateLimitStats.reason}`);
+        }
+      } else {
+        console.log(`[Pusher] Duplicate checkin:confirmed event skipped: ${dedupKey}`);
       }
 
       return { success: true };
@@ -1252,16 +1415,58 @@ export const adminRouter = router({
         },
       });
 
-      // Emit flagged event on desk-specific channel
-      const { getPusherServer } = await import('@/lib/pusher');
-      const pusher = getPusherServer();
-      if (pusher) {
-        await pusher.trigger(`admin-checkin-${input.deskId}`, 'checkin:flagged', {
-          teamId: input.teamId,
-          reason: input.reason,
-          adminName: ctx.admin.name,
-        });
-        await pusher.trigger('admin-updates', 'stats:updated', {});
+      // Event deduplication check for checkin:flagged
+      const dedupKey = `checkin:flagged:${input.teamId}:${input.deskId}`;
+      const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
+      
+      if (!isDuplicate) {
+        // Pusher rate limiting for checkin:flagged
+        const rateLimitFlagged = await rateLimitPusherEvent('checkin:flagged', ctx.admin.id);
+        
+        if (rateLimitFlagged.allowed) {
+          const pusher = getPusherServer();
+          if (pusher) {
+            // Emit flagged event on desk-specific private channel
+            const result = await executePusherWithCircuitBreaker(async () => {
+              await pusher.trigger(`private-admin-checkin-${input.deskId}`, 'checkin:flagged', {
+                teamId: input.teamId,
+                reason: input.reason,
+                adminName: ctx.admin.name,
+              });
+            });
+
+            if (result.success) {
+              await trackPusherEvent('checkin:flagged');
+            } else {
+              console.error('[Pusher] checkin:flagged trigger failed:', result.error);
+            }
+          }
+        } else {
+          console.warn(`[Pusher] Rate limit exceeded for checkin:flagged: ${rateLimitFlagged.reason}`);
+        }
+
+        // Pusher rate limiting for stats:updated
+        const rateLimitStats = await rateLimitPusherEvent('stats:updated', ctx.admin.id);
+        
+        if (rateLimitStats.allowed) {
+          const pusher = getPusherServer();
+          if (pusher) {
+            // Emit global stats update on private channel
+            const result = await executePusherWithCircuitBreaker(async () => {
+              await pusher.trigger('private-admin-updates', 'stats:updated', {});
+            });
+
+            if (result.success) {
+              await trackPusherEvent('stats:updated');
+            } else {
+              console.error('[Pusher] stats:updated trigger failed:', result.error);
+            }
+          }
+        } else {
+          console.warn(`[Pusher] Rate limit exceeded for stats:updated: ${rateLimitStats.reason}`);
+        }
+      } else {
+        console.log(`[Pusher] Duplicate checkin:flagged event skipped: ${dedupKey}`);
       }
 
       return { success: true };
@@ -1403,5 +1608,238 @@ export const adminRouter = router({
       await invalidateTeamCache(updated.shortCode);
 
       return updated;
+    }),
+
+  // ═══════════════════════════════════════════════════════════
+  // CRITERIA MANAGEMENT
+  // ═══════════════════════════════════════════════════════════
+
+  getCriteria: canViewAnalytics
+    .input(
+      z.object({
+        track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']).optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const where: any = {};
+      if (input.track) {
+        where.track = input.track;
+      }
+
+      const criteria = await ctx.prisma.scoringCriterion.findMany({
+        where,
+        orderBy: [
+          { track: 'asc' },
+          { order: 'asc' },
+        ],
+      });
+
+      return {
+        criteria,
+        totalCount: criteria.length,
+      };
+    }),
+
+  createCriterion: canEditTeamsRateLimited
+    .input(
+      z.object({
+        track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']),
+        criterionId: z.string().min(1).max(50),
+        name: z.string().min(1).max(100),
+        description: z.string().min(1).max(500),
+        weight: z.number().min(1).max(100),
+        maxPoints: z.number().min(1).max(100),
+        order: z.number().min(1),
+        isActive: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if criterion ID already exists for this track
+      const existing = await ctx.prisma.scoringCriterion.findUnique({
+        where: {
+          track_criterionId: {
+            track: input.track,
+            criterionId: input.criterionId,
+          },
+        },
+      });
+
+      if (existing) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Criterion ID already exists for this track',
+        });
+      }
+
+      // Check if total weight would exceed 100%
+      const existingCriteria = await ctx.prisma.scoringCriterion.findMany({
+        where: {
+          track: input.track,
+          isActive: true,
+        },
+      });
+
+      const totalWeight = existingCriteria.reduce((sum, c) => sum + c.weight, 0);
+      if (input.isActive && totalWeight + input.weight > 100) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Total weight would exceed 100%. Current: ${totalWeight}%, Adding: ${input.weight}%`,
+        });
+      }
+
+      const criterion = await ctx.prisma.scoringCriterion.create({
+        data: input,
+      });
+
+      return criterion;
+    }),
+
+  updateCriterion: canEditTeamsRateLimited
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1).max(100),
+        description: z.string().min(1).max(500),
+        weight: z.number().min(1).max(100),
+        maxPoints: z.number().min(1).max(100),
+        order: z.number().min(1),
+        isActive: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updateData } = input;
+
+      // Get the current criterion
+      const current = await ctx.prisma.scoringCriterion.findUnique({
+        where: { id },
+      });
+
+      if (!current) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Criterion not found',
+        });
+      }
+
+      // Check if total weight would exceed 100%
+      const existingCriteria = await ctx.prisma.scoringCriterion.findMany({
+        where: {
+          track: current.track,
+          isActive: true,
+          id: { not: id },
+        },
+      });
+
+      const totalWeight = existingCriteria.reduce((sum, c) => sum + c.weight, 0);
+      if (input.isActive && totalWeight + input.weight > 100) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Total weight would exceed 100%. Current: ${totalWeight}%, Adding: ${input.weight}%`,
+        });
+      }
+
+      const criterion = await ctx.prisma.scoringCriterion.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return criterion;
+    }),
+
+  deleteCriterion: canEditTeamsRateLimited
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Check if criterion has any scores
+      const scoresCount = await ctx.prisma.criterionScore.count({
+        where: {
+          criterion: {
+            criterionId: {
+              in: await ctx.prisma.scoringCriterion
+                .findUnique({ where: { id: input.id } })
+                .then(c => c ? [c.criterionId] : []),
+            },
+          },
+        },
+      });
+
+      if (scoresCount > 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Cannot delete criterion that has existing scores. Deactivate it instead.',
+        });
+      }
+
+      await ctx.prisma.scoringCriterion.delete({
+        where: { id: input.id },
+      });
+
+      return { success: true };
+    }),
+
+  toggleCriterion: canEditTeamsRateLimited
+    .input(
+      z.object({
+        id: z.string(),
+        isActive: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const criterion = await ctx.prisma.scoringCriterion.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!criterion) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Criterion not found',
+        });
+      }
+
+      // If activating, check weight limits
+      if (input.isActive) {
+        const existingCriteria = await ctx.prisma.scoringCriterion.findMany({
+          where: {
+            track: criterion.track,
+            isActive: true,
+            id: { not: input.id },
+          },
+        });
+
+        const totalWeight = existingCriteria.reduce((sum, c) => sum + c.weight, 0);
+        if (totalWeight + criterion.weight > 100) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Cannot activate. Total weight would be ${totalWeight + criterion.weight}%`,
+          });
+        }
+      }
+
+      const updated = await ctx.prisma.scoringCriterion.update({
+        where: { id: input.id },
+        data: { isActive: input.isActive },
+      });
+
+      return updated;
+    }),
+
+  reorderCriteria: canEditTeamsRateLimited
+    .input(
+      z.object({
+        track: z.enum(['IDEA_SPRINT', 'BUILD_STORM']),
+        criteriaIds: z.array(z.string()),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Update order for each criterion
+      const updates = input.criteriaIds.map((id, index) =>
+        ctx.prisma.scoringCriterion.update({
+          where: { id },
+          data: { order: index + 1 },
+        })
+      );
+
+      await Promise.all(updates);
+
+      return { success: true };
     }),
 });

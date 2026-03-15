@@ -226,11 +226,12 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'TEAMS', href: '/admin/teams', code: '02' },
   { label: 'SHORTLISTED', href: '/admin/shortlisted', code: '03' },
   { label: 'PROBLEMS', href: '/admin/problem-statements', code: '04' },
-  { label: 'ANALYTICS', href: '/admin/analytics', code: '05' },
-  { label: 'LOGISTICS', href: '/admin/logistics', code: '06' },
-  { label: 'CHECK-IN', href: '/admin/checkin', code: '07' },
-  { label: 'VENUE', href: '/admin/venue', code: '08' },
-  { label: 'EMAILS', href: '/admin/emails', code: '09' },
+  { label: 'CRITERIA', href: '/admin/criteria', code: '05' },
+  { label: 'ANALYTICS', href: '/admin/analytics', code: '06' },
+  { label: 'LOGISTICS', href: '/admin/logistics', code: '07' },
+  { label: 'CHECK-IN', href: '/admin/checkin', code: '08' },
+  { label: 'VENUE', href: '/admin/venue', code: '09' },
+  { label: 'EMAILS', href: '/admin/emails', code: '10' },
 ];
 
 /** Returns the subset of nav items the given role is allowed to see. */
@@ -245,6 +246,8 @@ export function getAllowedNavItems(role: AdminRole): NavItem[] {
         return hasPermission(role as UserRole, 'EDIT_TEAMS'); // Admin/Super Admin only
       case 'PROBLEMS':
         return hasPermission(role as UserRole, 'EDIT_TEAMS'); // Only ADMIN and SUPER_ADMIN can manage problems
+      case 'CRITERIA':
+        return hasPermission(role as UserRole, 'EDIT_TEAMS'); // Only ADMIN and SUPER_ADMIN can manage criteria
       case 'ANALYTICS':
         return hasPermission(role as UserRole, 'VIEW_ANALYTICS');
       case 'LOGISTICS':

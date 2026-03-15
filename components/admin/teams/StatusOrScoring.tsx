@@ -116,7 +116,7 @@ export function StatusOrScoring({
 
   // Load rubric data for judges AND admins (admins see all judge scores)
   useEffect(() => {
-    if (teamStatus === 'APPROVED') {
+    if (teamStatus === 'APPROVED' || teamStatus === 'SHORTLISTED') {
       loadRubricData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,16 +142,16 @@ export function StatusOrScoring({
 
   // Judges see scoring rubric
   if (userRole === 'JUDGE') {
-    // Judges can only score APPROVED teams
-    if (teamStatus !== 'APPROVED') {
+    // Judges can score APPROVED and SHORTLISTED teams
+    if (teamStatus !== 'APPROVED' && teamStatus !== 'SHORTLISTED') {
       return (
         <div className="bg-[#0A0A0A] rounded-lg border border-yellow-500/20 p-5">
           <div className="flex items-center gap-3 text-yellow-400">
             <AlertTriangle className="h-5 w-5" />
             <div>
-              <h3 className="text-sm font-mono font-bold">TEAM NOT APPROVED</h3>
+              <h3 className="text-sm font-mono font-bold">TEAM NOT ELIGIBLE FOR SCORING</h3>
               <p className="text-xs text-gray-400 mt-1">
-                You can only score teams with APPROVED status. Current status: {teamStatus}
+                You can only score teams with APPROVED or SHORTLISTED status. Current status: {teamStatus}
               </p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export function StatusOrScoring({
         </div>
 
         {/* Judge Scores Panel (visible to logistics/organizers when scores exist) */}
-        {teamStatus === 'APPROVED' && (
+        {(teamStatus === 'APPROVED' || teamStatus === 'SHORTLISTED') && (
           <AdminJudgeScoresPanel
             criteria={criteria}
             multiJudge={multiJudge}
@@ -297,7 +297,7 @@ export function StatusOrScoring({
       </div>
 
       {/* Judge Scores Panel (visible to admins when scores exist) */}
-      {teamStatus === 'APPROVED' && (
+      {(teamStatus === 'APPROVED' || teamStatus === 'SHORTLISTED') && (
         <AdminJudgeScoresPanel
           criteria={criteria}
           multiJudge={multiJudge}

@@ -109,13 +109,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
     }
 
-    // ⭐ CRITICAL: Judges can ONLY score APPROVED teams
-    if (team.status !== 'APPROVED') {
+    // ⭐ CRITICAL: Judges can score APPROVED and SHORTLISTED teams
+    if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
       return NextResponse.json(
         {
           success: false,
-          error: 'TEAM_NOT_APPROVED',
-          message: `Cannot score team with status: ${team.status}. Only APPROVED teams can be scored.`,
+          error: 'TEAM_NOT_ELIGIBLE',
+          message: `Cannot score team with status: ${team.status}. Only APPROVED and SHORTLISTED teams can be scored.`,
         },
         { status: 403 }
       );
@@ -389,10 +389,10 @@ export async function GET(req: Request) {
       },
     });
 
-    // Judges can only view scores for approved teams
-    if (admin.role === 'JUDGE' && team.status !== 'APPROVED') {
+    // Judges can view scores for approved and shortlisted teams
+    if (admin.role === 'JUDGE' && team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
       return NextResponse.json(
-        { success: false, error: 'Cannot view scores for non-approved team' },
+        { success: false, error: 'Cannot view scores for teams that are not approved or shortlisted' },
         { status: 403 }
       );
     }

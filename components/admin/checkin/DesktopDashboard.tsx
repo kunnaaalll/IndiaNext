@@ -78,9 +78,21 @@ export default function DesktopDashboard() {
     const pusher = getPusherClient();
     if (!pusher) return;
 
-    const channelName = `admin-checkin-${deskId}`;
-    console.log(`[Pusher] Subscribing to channel: ${channelName}`);
+    // Configure auth endpoint for private channel authentication
+    pusher.config.authEndpoint = '/api/pusher/auth';
+
+    const channelName = `private-admin-checkin-${deskId}`;
+    console.log(`[Pusher] Subscribing to private channel: ${channelName}`);
     const channel = pusher.subscribe(channelName);
+
+    // Handle authentication errors
+    channel.bind('pusher:subscription_error', (error: any) => {
+      console.error(`[Pusher] Subscription error for ${channelName}:`, error);
+      toast.error('Channel Authentication Failed', {
+        description: 'Unable to connect to real-time updates. Please check your permissions.',
+      });
+      setIsConnected(false);
+    });
 
     channel.bind('qr:scanned', (data: any) => {
       console.log(`[Pusher] RECEIVED qr:scanned for team: ${data.team?.name}`);
@@ -112,7 +124,16 @@ export default function DesktopDashboard() {
       utils.admin.getCheckInStats.invalidate();
     });
 
-    const globalUpdateChannel = pusher.subscribe('admin-updates');
+    const globalUpdateChannel = pusher.subscribe('private-admin-updates');
+    
+    // Handle authentication errors for global channel
+    globalUpdateChannel.bind('pusher:subscription_error', (error: any) => {
+      console.error(`[Pusher] Subscription error for private-admin-updates:`, error);
+      toast.error('Global Channel Authentication Failed', {
+        description: 'Unable to connect to global updates. Please check your permissions.',
+      });
+    });
+    
     globalUpdateChannel.bind('stats:updated', () => {
       refetchStats();
     });
@@ -140,7 +161,7 @@ export default function DesktopDashboard() {
       channel.unbind_all();
       pusher.unsubscribe(channelName);
       globalUpdateChannel.unbind_all();
-      pusher.unsubscribe('admin-updates');
+      pusher.unsubscribe('private-admin-updates');
       pusher.connection.unbind('state_change', updateStatus);
       clearTimeout(presenceTimeout);
     };

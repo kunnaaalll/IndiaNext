@@ -1,19 +1,19 @@
 /**
  * QR Pusher Security Fixes - Security Protections Verification Tests
- * 
+ *
  * **IMPORTANT**: These tests verify that security fixes are working correctly.
  * All tests should PASS on fixed code, confirming vulnerabilities are resolved.
- * 
+ *
  * These tests encode the expected secure behavior and validate that:
  * - Rate limiting is enforced (server-side)
  * - Event deduplication prevents quota waste
  * - Private channels require authentication
  * - QR codes have security protections
  * - Monitoring and circuit breakers are in place
- * 
+ *
  * Feature: qr-pusher-security-fixes
  * Property 1: Expected Behavior - Security Protections Enforced
- * 
+ *
  * Validates: Requirements 2.1-2.23 (Expected Secure Behavior)
  */
 
@@ -51,7 +51,7 @@ function createTestContext(adminOverrides = {}): Context {
     desk: 'A',
     ...adminOverrides,
   };
-  
+
   return {
     prisma: mockPrisma,
     adminSession: {
@@ -102,9 +102,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.1: Pusher Quota Exhaustion - FIXED
-   * 
+   *
    * **Validates: Requirement 2.1, 2.3**
-   * 
+   *
    * Simulates 100 rapid QR scans via direct API calls.
    * Expected after fix: Rate limiting blocks after 30 events/min.
    */
@@ -133,20 +133,20 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
     const rateLimitedCount = results.filter(
       (r) => r.status === 'rejected' && (r.reason as any)?.code === 'TOO_MANY_REQUESTS'
     ).length;
-    
+
     // EXPECTED AFTER FIX: Rate limiting enforced, most requests blocked
     expect(successCount).toBeLessThanOrEqual(30); // At most 30 succeed
     expect(rateLimitedCount).toBeGreaterThan(0); // Some requests rate limited
-    
+
     // Verify Pusher was NOT called 100 times (quota protected)
     expect(mockPusherTrigger.mock.calls.length).toBeLessThanOrEqual(30);
   });
 
   /**
    * Test 1.2: Rate Limiting Bypass - FIXED
-   * 
+   *
    * **Validates: Requirement 2.1, 2.2**
-   * 
+   *
    * Calls getTeamByShortCode 50 times in 10 seconds via direct tRPC calls.
    * Expected after fix: First 30 succeed, requests 31-50 return 429.
    */
@@ -184,9 +184,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.3: Client Throttling Bypass - FIXED
-   * 
+   *
    * **Validates: Requirement 2.1, 2.5**
-   * 
+   *
    * Simulates 3 browser tabs scanning same QR simultaneously.
    * Expected after fix: Server-side rate limiting or deduplication enforced.
    */
@@ -221,9 +221,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.4: Unauthenticated Channel Access - FIXED
-   * 
+   *
    * **Validates: Requirement 2.8**
-   * 
+   *
    * Verifies that Pusher channels now use private- prefix.
    * Expected after fix: Channels use private- prefix and require auth.
    */
@@ -251,7 +251,7 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
     // Verify Pusher trigger was called with PRIVATE channel name
     expect(mockPusherTrigger).toHaveBeenCalled();
-    
+
     // EXPECTED AFTER FIX: Channel name has private- prefix
     const channelName = mockPusherTrigger.mock.calls[0][0];
     expect(channelName).toMatch(/^private-/); // Confirms fix is applied
@@ -259,9 +259,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.5: Event Duplication - FIXED
-   * 
+   *
    * **Validates: Requirement 2.5, 2.6**
-   * 
+   *
    * Scans same QR code 5 times within 5 seconds.
    * Expected after fix: First event sent, subsequent 4 deduplicated within 10s window.
    */
@@ -292,9 +292,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.6: Heartbeat Spam - FIXED
-   * 
+   *
    * **Validates: Requirement 2.2, 2.3**
-   * 
+   *
    * Sends 100 heartbeats in 10 seconds via script.
    * Expected after fix: Rate limiting blocks after 30 heartbeats/min.
    */
@@ -307,9 +307,7 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
     // Send 100 heartbeats rapidly
     const heartbeatPromises = [];
     for (let i = 0; i < 100; i++) {
-      heartbeatPromises.push(
-        caller.admin.sendScannerHeartbeat({ deskId: 'A' })
-      );
+      heartbeatPromises.push(caller.admin.sendScannerHeartbeat({ deskId: 'A' }));
     }
 
     const results = await Promise.allSettled(heartbeatPromises);
@@ -327,9 +325,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.7: Error Handling - FIXED
-   * 
+   *
    * **Validates: Requirement 2.20, 2.21**
-   * 
+   *
    * Simulates Pusher failure (network error).
    * Expected after fix: Circuit breaker opens after 5 failures, graceful degradation.
    */
@@ -339,7 +337,7 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
     const mockTeam = createMockTeam('ERR123');
 
     mockPrisma.team.findUnique.mockResolvedValue(mockTeam);
-    
+
     // Simulate Pusher failure
     mockPusherTrigger.mockRejectedValue(new Error('Pusher API failure'));
 
@@ -364,9 +362,9 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
 
   /**
    * Test 1.8: Monitoring - FIXED
-   * 
+   *
    * **Validates: Requirement 2.16, 2.17, 2.19**
-   * 
+   *
    * Verifies that Pusher quota tracking exists.
    * Expected after fix: Events tracked in Redis with daily metrics.
    */
@@ -391,16 +389,16 @@ describe('QR Pusher Security Fixes - Security Protections Verification Tests', (
     // EXPECTED AFTER FIX: Monitoring infrastructure exists
     // We can verify this by checking if the monitoring functions are available
     // The actual Redis tracking is tested in integration tests
-    
+
     // For now, we just verify the test doesn't crash and monitoring code exists
     expect(true).toBe(true); // Placeholder - monitoring is tested via integration tests
   });
 
   /**
    * Test 1.9: Replay Attack - FIXED
-   * 
+   *
    * **Validates: Requirement 2.12, 2.13, 2.14**
-   * 
+   *
    * Captures QR code and replays it 50 times.
    * Expected after fix: QR validation enforces nonce, expiry, and scan limits.
    */

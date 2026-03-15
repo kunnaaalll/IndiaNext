@@ -152,7 +152,8 @@ export function StatusOrScoring({
             <div>
               <h3 className="text-sm font-mono font-bold">TEAM NOT ELIGIBLE FOR SCORING</h3>
               <p className="text-xs text-gray-400 mt-1">
-                You can only score teams with APPROVED or SHORTLISTED status. Current status: {teamStatus}
+                You can only score teams with APPROVED or SHORTLISTED status. Current status:{' '}
+                {teamStatus}
               </p>
             </div>
           </div>
@@ -162,9 +163,10 @@ export function StatusOrScoring({
 
     // Gate 2: Team must have QUALIFIED in Elimination Round 2
     if (round2Status !== 'QUALIFIED') {
-      const statusMsg = !round2Status || round2Status === 'PENDING'
-        ? 'This team has not been evaluated in the Elimination Rounds yet.'
-        : 'This team was eliminated and cannot be scored.';
+      const statusMsg =
+        !round2Status || round2Status === 'PENDING'
+          ? 'This team has not been evaluated in the Elimination Rounds yet.'
+          : 'This team was eliminated and cannot be scored.';
       return (
         <div className="bg-[#0A0A0A] rounded-lg border border-violet-500/20 p-5 space-y-3">
           <div className="flex items-center gap-3">
@@ -179,12 +181,18 @@ export function StatusOrScoring({
             </div>
           </div>
           <div className="flex items-center gap-2 pt-1">
-            <div className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded border ${
-              round2Status === 'ELIMINATED'
-                ? 'text-red-400 bg-red-500/10 border-red-500/20'
-                : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-            }`}>
-              {round2Status === 'ELIMINATED' ? '❌ ELIMINATED' : round2Status === 'PENDING' ? '⏳ ROUND 2 PENDING' : '⏳ AWAITING ROUND 2'}
+            <div
+              className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded border ${
+                round2Status === 'ELIMINATED'
+                  ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                  : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+              }`}
+            >
+              {round2Status === 'ELIMINATED'
+                ? '❌ ELIMINATED'
+                : round2Status === 'PENDING'
+                  ? '⏳ ROUND 2 PENDING'
+                  : '⏳ AWAITING ROUND 2'}
             </div>
             <p className="text-[10px] font-mono text-gray-600">
               — Complete elimination rounds in the Teams section first
@@ -328,7 +336,6 @@ export function StatusOrScoring({
             {reviewNotes}
           </div>
         )}
-
       </div>
 
       {/* Judge Scores Panel (visible to admins when scores exist) */}

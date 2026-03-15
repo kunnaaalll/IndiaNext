@@ -3,6 +3,7 @@
 ## Executive Summary
 
 This comprehensive analysis identifies **9 critical security vulnerabilities** in the QR code check-in system and Pusher real-time integration. The system is vulnerable to:
+
 - Pusher quota exhaustion attacks
 - Rate limiting bypass
 - Replay attacks
@@ -23,13 +24,15 @@ This comprehensive analysis identifies **9 critical security vulnerabilities** i
 **Location:** `server/routers/admin.ts` (lines 1109-1122, 1143-1152, 1214-1225, 1257-1266)
 
 **Issue:** Every QR scan triggers multiple Pusher events without server-side rate limiting:
+
 - `qr:scanned` event on desk-specific channel
-- `scanner:presence` heartbeat every 30 seconds  
+- `scanner:presence` heartbeat every 30 seconds
 - `checkin:confirmed` on BOTH desk channel AND global `admin-updates`
 - `checkin:flagged` on BOTH channels
 - `stats:updated` on global channel
 
 **Attack Vector:**
+
 ```typescript
 // Attacker can scan same QR code repeatedly or use automated script
 // Each scan = 1-2 Pusher messages (qr:scanned + potential stats update)
@@ -39,6 +42,7 @@ This comprehensive analysis identifies **9 critical security vulnerabilities** i
 ```
 
 **Current Vulnerable Code:**
+
 ```typescript
 // server/routers/admin.ts - Line 1112
 // NO rate limiting on Pusher events!
@@ -53,6 +57,7 @@ await pusher.trigger('admin-updates', 'stats:updated', {}); // Global channel!
 ```
 
 **Impact:**
+
 - ✗ Pusher quota exhaustion → complete service disruption
 - ✗ Financial cost escalation on paid plans ($49-$499/month)
 - ✗ Real-time features stop working for all users
@@ -60,6 +65,7 @@ await pusher.trigger('admin-updates', 'stats:updated', {}); // Global channel!
 - ✗ No visibility into attacks until quota is exhausted
 
 **Proof of Concept:**
+
 ```bash
 # Simple attack script
 for i in {1..1000}; do
@@ -85,17 +91,19 @@ getTeamByShortCode: canViewTeams  // ❌ NO RATE LIMIT!
 ```
 
 **Current Rate Limit Status:**
+
 - ✗ `canViewTeams` = NO rate limit
 - ✓ `canMarkAttendanceRateLimited` = 30 req/min (used for confirmCheckIn)
 - ✗ QR scanning can be called unlimited times per minute
 
 **Attack Vector:**
+
 ```typescript
 // Attacker with valid admin session can spam:
-while(true) {
-  await trpc.admin.getTeamByShortCode.query({ 
-    shortCode: 'ABC123', 
-    deskId: 'A' 
+while (true) {
+  await trpc.admin.getTeamByShortCode.query({
+    shortCode: 'ABC123',
+    deskId: 'A',
   });
   // No rate limit = unlimited requests
   // Each request triggers Pusher event
@@ -103,6 +111,7 @@ while(true) {
 ```
 
 **Impact:**
+
 - ✗ Database query flooding (Prisma connection pool exhaustion)
 - ✗ Pusher quota exhaustion (combined with vulnerability #1)
 - ✗ CPU/memory exhaustion on server
@@ -124,7 +133,7 @@ async function onScanSuccess(decodedText: string) {
   const now = Date.now();
   // Global throttling: Max 1 scan attempt every 2 seconds
   if (now - lastGlobalScanTime.current < 2000) return; // ❌ Client-side only!
-  
+
   // Per-code 10s cooldown
   const lastTime = lastScanMap.current.get(shortCode) || 0;
   if (now - lastTime < 10000) return; // ❌ Client-side only!
@@ -132,12 +141,14 @@ async function onScanSuccess(decodedText: string) {
 ```
 
 **Bypass Methods:**
+
 1. **Direct API calls** - Skip the React component entirely
 2. **Browser DevTools** - Modify `lastGlobalScanTime.current` to 0
 3. **Multiple browser tabs** - Each tab has its own state
 4. **Incognito mode** - Fresh state per window
 
 **Impact:**
+
 - ✗ All client-side protections are security theater
 - ✗ Attackers can bypass 2s and 10s cooldowns
 - ✗ Opens door to all other vulnerabilities
@@ -163,12 +174,14 @@ channel.bind('qr:scanned', (data) => {
 ```
 
 **Attack Vector:**
+
 - Extract `NEXT_PUBLIC_PUSHER_KEY` and `NEXT_PUBLIC_PUSHER_CLUSTER` from client bundle
 - Subscribe to all desk channels (`admin-checkin-A`, `admin-checkin-B`, etc.)
 - Intercept real-time team data including names, emails, admin names
 - Monitor check-in patterns and statistics
 
 **Data Exposed:**
+
 ```typescript
 // qr:scanned event payload
 {
@@ -182,6 +195,7 @@ channel.bind('qr:scanned', (data) => {
 ```
 
 **Impact:**
+
 - ✗ Privacy violation (GDPR/data protection concerns)
 - ✗ Competitive intelligence leakage
 - ✗ Admin identity exposure
@@ -208,6 +222,7 @@ await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
 ```
 
 **Impact:**
+
 - ✗ Wasted Pusher quota on duplicate events
 - ✗ Dashboard UI shows duplicate entries
 - ✗ Confusing user experience
@@ -226,7 +241,7 @@ await pusher.trigger(`admin-checkin-${input.deskId}`, 'qr:scanned', {
 const sendHeartbeat = () => {
   const now = Date.now();
   if (now - lastHeartbeat.current < 25000) return; // ❌ Client-side only!
-  
+
   heartbeatMutation.current.mutate({ deskId });
 };
 
@@ -234,6 +249,7 @@ const interval = setInterval(sendHeartbeat, 30000); // Every 30s
 ```
 
 **Server-side (admin.ts line 1138):**
+
 ```typescript
 sendScannerHeartbeat: canViewTeams  // ❌ NO RATE LIMIT!
   .input(z.object({ deskId: z.string() }))
@@ -244,9 +260,10 @@ sendScannerHeartbeat: canViewTeams  // ❌ NO RATE LIMIT!
 ```
 
 **Attack Vector:**
+
 ```typescript
 // Bypass client throttling
-while(true) {
+while (true) {
   await trpc.admin.sendScannerHeartbeat.mutate({ deskId: 'A' });
   // Can send 100+ heartbeats per second
   // Each heartbeat = 1 Pusher message
@@ -254,6 +271,7 @@ while(true) {
 ```
 
 **Impact:**
+
 - ✗ Pusher quota exhaustion via heartbeat spam
 - ✗ 100 heartbeats/sec = 360,000 messages/hour
 - ✗ Can exhaust daily quota in under 1 hour
@@ -279,6 +297,7 @@ try {
 ```
 
 **Impact:**
+
 - ✗ Silent failures when quota is exhausted
 - ✗ No alerting when Pusher is down
 - ✗ Inconsistent state between DB and real-time updates
@@ -293,6 +312,7 @@ try {
 **Issue:** No monitoring of Pusher usage or quota consumption:
 
 **Missing Capabilities:**
+
 - ✗ No Pusher message counter
 - ✗ No quota usage alerts
 - ✗ No rate limit metrics
@@ -300,6 +320,7 @@ try {
 - ✗ No dashboard for Pusher health
 
 **Impact:**
+
 - ✗ Cannot detect attacks until service fails
 - ✗ No proactive quota management
 - ✗ No visibility into usage patterns
@@ -322,17 +343,19 @@ try {
 ```
 
 **Attack Vector:**
+
 ```typescript
 // Attacker captures QR code image
 // Can replay scan indefinitely:
 for (let i = 0; i < 1000; i++) {
   await fetch('/api/trpc/admin.getTeamByShortCode', {
-    body: JSON.stringify({ shortCode: 'ABC123', deskId: 'A' })
+    body: JSON.stringify({ shortCode: 'ABC123', deskId: 'A' }),
   });
 }
 ```
 
 **Impact:**
+
 - ✗ Old/leaked QR codes remain valid forever
 - ✗ Enables quota exhaustion attacks
 - ✗ No way to revoke compromised QR codes
@@ -379,11 +402,11 @@ export async function rateLimitPusherEvent(
     config.maxEventsPerMinute,
     60
   );
-  
+
   if (!minuteCheck.success) {
-    return { 
-      allowed: false, 
-      reason: `Rate limit exceeded: ${config.maxEventsPerMinute}/min` 
+    return {
+      allowed: false,
+      reason: `Rate limit exceeded: ${config.maxEventsPerMinute}/min`,
     };
   }
 
@@ -393,11 +416,11 @@ export async function rateLimitPusherEvent(
     config.maxEventsPerHour,
     3600
   );
-  
+
   if (!hourCheck.success) {
-    return { 
-      allowed: false, 
-      reason: `Rate limit exceeded: ${config.maxEventsPerHour}/hour` 
+    return {
+      allowed: false,
+      reason: `Rate limit exceeded: ${config.maxEventsPerHour}/hour`,
     };
   }
 
@@ -493,23 +516,23 @@ export async function isDuplicatePusherEvent(
   windowSeconds: number = 10
 ): Promise<boolean> {
   const redis = getRedis();
-  
+
   if (redis) {
     // Use Redis SET with NX (only set if not exists) and EX (expiry)
     const key = `pusher:dedup:${eventKey}`;
     const result = await redis.set(key, '1', { nx: true, ex: windowSeconds });
     return result === null; // null = key already existed = duplicate
   }
-  
+
   // Fallback to memory (for dev)
   const memoryKey = `dedup:${eventKey}`;
   const now = Date.now();
   const lastSent = memoryDedup.get(memoryKey);
-  
+
   if (lastSent && now - lastSent < windowSeconds * 1000) {
     return true; // Duplicate
   }
-  
+
   memoryDedup.set(memoryKey, now);
   return false;
 }
@@ -562,7 +585,7 @@ import { getAdminSession } from '@/lib/admin-session';
 
 export async function POST(req: NextRequest) {
   const adminSession = await getAdminSession();
-  
+
   if (!adminSession?.admin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
@@ -579,7 +602,7 @@ export async function POST(req: NextRequest) {
   // Validate channel access
   if (channelName.startsWith('private-admin-checkin-')) {
     const deskId = channelName.replace('private-admin-checkin-', '');
-    
+
     // If admin has assigned desk, enforce it
     if (adminSession.admin.desk && adminSession.admin.desk !== deskId) {
       return NextResponse.json({ error: 'Access denied to this desk' }, { status: 403 });
@@ -732,7 +755,7 @@ import { getPusherMetrics } from '@/lib/pusher-monitor';
 
 export async function GET() {
   const session = await getAdminSession();
-  
+
   if (!session?.admin || !['ADMIN', 'SUPER_ADMIN'].includes(session.admin.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
@@ -797,7 +820,7 @@ export async function validateQRCode(
   qrPayload: string
 ): Promise<{ valid: boolean; reason?: string; shortCode?: string }> {
   let qrData: QRCodeData;
-  
+
   try {
     qrData = JSON.parse(Buffer.from(qrPayload, 'base64').toString());
   } catch {
@@ -814,13 +837,13 @@ export async function validateQRCode(
   if (redis) {
     const key = `qr:${qrData.shortCode}:${qrData.nonce}`;
     const data = await redis.get(key);
-    
+
     if (!data) {
       return { valid: false, reason: 'QR code not found or expired' };
     }
 
     const { scans, maxScans } = JSON.parse(data);
-    
+
     if (scans >= maxScans) {
       return { valid: false, reason: 'QR code scan limit exceeded' };
     }
@@ -840,14 +863,14 @@ export async function validateQRCode(
 import { validateQRCode } from '@/lib/qr-security';
 
 getTeamByShortCode: canViewTeamsRateLimited
-  .input(z.object({ 
+  .input(z.object({
     qrPayload: z.string(), // Changed from shortCode
-    deskId: z.string() 
+    deskId: z.string()
   }))
   .query(async ({ ctx, input }) => {
     // ✅ Validate QR code with nonce and expiry
     const validation = await validateQRCode(input.qrPayload);
-    
+
     if (!validation.valid) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -856,13 +879,13 @@ getTeamByShortCode: canViewTeamsRateLimited
     }
 
     const shortCode = validation.shortCode!;
-    
+
     // Continue with existing logic...
     const team = await ctx.prisma.team.findUnique({
       where: { shortCode, deletedAt: null },
       // ...
     });
-    
+
     // ... rest of the code
   }),
 ```
@@ -905,22 +928,22 @@ export async function executePusherWithCircuitBreaker(
     if (now - circuitState.lastFailure > HALF_OPEN_TIMEOUT) {
       circuitState.state = 'half-open';
     } else {
-      return { 
-        success: false, 
-        error: 'Circuit breaker open - Pusher temporarily disabled' 
+      return {
+        success: false,
+        error: 'Circuit breaker open - Pusher temporarily disabled',
       };
     }
   }
 
   try {
     await fn();
-    
+
     // Success - reset circuit
     if (circuitState.state === 'half-open') {
       circuitState.state = 'closed';
       circuitState.failures = 0;
     }
-    
+
     return { success: true };
   } catch (error) {
     circuitState.failures++;
@@ -931,9 +954,9 @@ export async function executePusherWithCircuitBreaker(
       console.error('[Pusher] Circuit breaker opened after repeated failures');
     }
 
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -958,36 +981,39 @@ if (!result.success) {
 
 ## 📊 IMPLEMENTATION PRIORITY MATRIX
 
-| Fix | Priority | Effort | Impact | Timeline |
-|-----|----------|--------|--------|----------|
-| #1: Pusher Rate Limiting | 🔴 CRITICAL | Medium | High | Week 1 |
-| #2: QR Endpoint Rate Limit | 🔴 CRITICAL | Low | High | Week 1 |
-| #3: Event Deduplication | 🟡 HIGH | Medium | Medium | Week 2 |
-| #4: Private Channels | 🟡 HIGH | High | High | Week 2-3 |
-| #5: Quota Monitoring | 🟡 HIGH | Medium | High | Week 2 |
-| #6: QR Code Security | 🟢 MEDIUM | High | Medium | Week 3-4 |
-| #7: Circuit Breaker | 🟢 MEDIUM | Medium | Medium | Week 3 |
+| Fix                        | Priority    | Effort | Impact | Timeline |
+| -------------------------- | ----------- | ------ | ------ | -------- |
+| #1: Pusher Rate Limiting   | 🔴 CRITICAL | Medium | High   | Week 1   |
+| #2: QR Endpoint Rate Limit | 🔴 CRITICAL | Low    | High   | Week 1   |
+| #3: Event Deduplication    | 🟡 HIGH     | Medium | Medium | Week 2   |
+| #4: Private Channels       | 🟡 HIGH     | High   | High   | Week 2-3 |
+| #5: Quota Monitoring       | 🟡 HIGH     | Medium | High   | Week 2   |
+| #6: QR Code Security       | 🟢 MEDIUM   | High   | Medium | Week 3-4 |
+| #7: Circuit Breaker        | 🟢 MEDIUM   | Medium | Medium | Week 3   |
 
 ---
 
 ## 🎯 QUICK WINS (Implement First)
 
 ### 1. Add Rate Limiting (1 hour)
+
 ```typescript
 // server/trpc.ts
 export const canViewTeamsRateLimited = canViewTeams.use(rateLimitMutation);
 
 // server/routers/admin.ts
-getTeamByShortCode: canViewTeamsRateLimited  // Change this line
-sendScannerHeartbeat: canViewTeamsRateLimited  // Change this line
+getTeamByShortCode: canViewTeamsRateLimited; // Change this line
+sendScannerHeartbeat: canViewTeamsRateLimited; // Change this line
 ```
 
 ### 2. Add Basic Pusher Rate Limiting (2 hours)
+
 - Create `lib/pusher-rate-limit.ts`
 - Add rate limit checks before `pusher.trigger()` calls
 - Use existing Redis infrastructure
 
 ### 3. Add Event Deduplication (2 hours)
+
 - Create `lib/pusher-deduplication.ts`
 - Add deduplication checks before Pusher events
 - 10-second window per event type
@@ -999,6 +1025,7 @@ sendScannerHeartbeat: canViewTeamsRateLimited  // Change this line
 ## 🔍 TESTING RECOMMENDATIONS
 
 ### Load Testing
+
 ```bash
 # Test rate limiting
 ab -n 1000 -c 10 -H "Cookie: admin-session=..." \
@@ -1008,6 +1035,7 @@ ab -n 1000 -c 10 -H "Cookie: admin-session=..." \
 ```
 
 ### Security Testing
+
 ```bash
 # Test Pusher channel access
 node test-pusher-access.js
@@ -1015,10 +1043,11 @@ node test-pusher-access.js
 ```
 
 ### Monitoring
+
 ```typescript
 // Add to monitoring dashboard
 const metrics = await getPusherMetrics();
-console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents/2000}%)`);
+console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents / 2000}%)`);
 ```
 
 ---
@@ -1026,6 +1055,7 @@ console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents/
 ## 📈 EXPECTED OUTCOMES
 
 ### Before Fixes
+
 - ✗ Unlimited QR scans per minute
 - ✗ Unlimited Pusher events
 - ✗ Public channel access
@@ -1033,6 +1063,7 @@ console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents/
 - ✗ Vulnerable to quota exhaustion in <24 hours
 
 ### After Fixes
+
 - ✓ 30 QR scans per minute per admin
 - ✓ 30 Pusher events per minute per event type
 - ✓ Private channels with authentication
@@ -1048,6 +1079,7 @@ console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents/
 ### If Quota Exhaustion Occurs
 
 1. **Immediate Actions** (0-5 minutes)
+
    ```bash
    # Disable Pusher temporarily
    export PUSHER_APP_ID=""
@@ -1076,16 +1108,19 @@ console.log(`Pusher usage: ${metrics.totalEvents}/200000 (${metrics.totalEvents/
 ## 📚 INDUSTRY STANDARDS REFERENCE
 
 ### Rate Limiting Best Practices
+
 - **OWASP**: 10-100 requests/minute for authenticated users
 - **Pusher**: Recommend 1000 messages/connection/day
 - **Redis**: Use sliding window algorithm (already implemented)
 
 ### Real-Time Security
+
 - **Pusher Docs**: Always use private channels for sensitive data
 - **WebSocket Security**: Implement authentication on all channels
 - **OWASP**: Never trust client-side rate limiting
 
 ### Monitoring
+
 - **SRE Best Practices**: Alert at 80% quota usage
 - **Observability**: Track P50, P95, P99 latencies
 - **Incident Response**: Have runbooks for quota exhaustion

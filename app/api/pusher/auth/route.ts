@@ -6,10 +6,10 @@ import { z } from 'zod';
 
 /**
  * POST /api/pusher/auth
- * 
+ *
  * Authenticate Pusher private channel subscriptions.
  * Validates admin session and enforces desk/role-based access control.
- * 
+ *
  * Requirements: 2.8, 2.9, 2.10, 2.11
  */
 
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // 2. Parse request body
     const body = await req.json();
     const parsed = authSchema.safeParse(body);
-    
+
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: 'Invalid request', details: parsed.error.errors },
@@ -45,12 +45,12 @@ export async function POST(req: Request) {
     const { socket_id, channel_name } = parsed.data;
 
     // 3. Validate channel access
-    
+
     // Check for private-admin-checkin-* channels (desk-specific)
     const deskChannelMatch = channel_name.match(/^private-admin-checkin-(.+)$/);
     if (deskChannelMatch) {
       const deskId = deskChannelMatch[1];
-      
+
       // If admin has an assigned desk, enforce desk restriction
       if (admin.desk && admin.desk !== deskId) {
         return NextResponse.json(
@@ -62,10 +62,10 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
-      
+
       // Admin without assigned desk can access any desk (ADMIN/SUPER_ADMIN typically)
     }
-    
+
     // Check for private-admin-updates channel (global updates)
     else if (channel_name === 'private-admin-updates') {
       // Only ADMIN and SUPER_ADMIN can access global updates
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         );
       }
     }
-    
+
     // Unknown private channel
     else {
       return NextResponse.json(
@@ -106,7 +106,6 @@ export async function POST(req: Request) {
 
     // 5. Return auth response
     return NextResponse.json(authResponse);
-    
   } catch (error) {
     return handleGenericError(error, '/api/pusher/auth');
   }

@@ -17,7 +17,7 @@ export const getPusherServer = () => {
         hasAppId: !!appId,
         hasKey: !!key,
         hasSecret: !!secret,
-        hasCluster: !!cluster
+        hasCluster: !!cluster,
       });
       return null;
     }
@@ -40,7 +40,7 @@ let pusherClient: any = null;
 
 export const getPusherClient = () => {
   if (typeof window === 'undefined') return null;
-  
+
   if (!pusherClient) {
     const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
     const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
@@ -54,7 +54,7 @@ export const getPusherClient = () => {
       // Synchronous require but only on client
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const PusherLib = require('pusher-js');
-      
+
       console.log(`[Pusher] Initializing client for cluster: ${cluster}`);
       pusherClient = new PusherLib(key, {
         cluster: cluster,

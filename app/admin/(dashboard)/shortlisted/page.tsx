@@ -179,7 +179,9 @@ export default function ShortlistedTeamsPage() {
             <span className="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
               TOTAL_PARTICIPANTS
             </span>
-            <span className="text-3xl font-mono font-black text-white">{stats.totalParticipants}</span>
+            <span className="text-3xl font-mono font-black text-white">
+              {stats.totalParticipants}
+            </span>
           </div>
 
           <div className="bg-[#0A0A0A] rounded-xl border border-white/[0.06] p-4 grid grid-cols-2 gap-4">

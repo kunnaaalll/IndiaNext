@@ -9,8 +9,12 @@ import { RefreshCw, Settings } from 'lucide-react';
 export default function CriteriaManagementPage() {
   const { role } = useAdminRole();
   const [activeTrack, setActiveTrack] = useState<'IDEA_SPRINT' | 'BUILD_STORM'>('IDEA_SPRINT');
-  
-  const { data: criteriaData, isLoading, refetch } = trpc.admin.getCriteria.useQuery({
+
+  const {
+    data: criteriaData,
+    isLoading,
+    refetch,
+  } = trpc.admin.getCriteria.useQuery({
     track: activeTrack,
   });
 

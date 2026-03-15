@@ -33,7 +33,9 @@ export function CriteriaList({ criteria, isLoading, track, onEdit, onRefresh }: 
   const toggleMutation = trpc.admin.toggleCriterion.useMutation();
 
   const handleDelete = async (criterion: Criterion) => {
-    if (!confirm(`Are you sure you want to delete "${criterion.name}"? This action cannot be undone.`)) {
+    if (
+      !confirm(`Are you sure you want to delete "${criterion.name}"? This action cannot be undone.`)
+    ) {
       return;
     }
 
@@ -52,9 +54,9 @@ export function CriteriaList({ criteria, isLoading, track, onEdit, onRefresh }: 
   const handleToggleActive = async (criterion: Criterion) => {
     setTogglingId(criterion.id);
     try {
-      await toggleMutation.mutateAsync({ 
-        id: criterion.id, 
-        isActive: !criterion.isActive 
+      await toggleMutation.mutateAsync({
+        id: criterion.id,
+        isActive: !criterion.isActive,
       });
       toast.success(`Criterion ${criterion.isActive ? 'deactivated' : 'activated'} successfully`);
       onRefresh();
@@ -87,7 +89,8 @@ export function CriteriaList({ criteria, isLoading, track, onEdit, onRefresh }: 
         <AlertTriangle className="h-8 w-8 text-gray-600 mx-auto mb-3" />
         <h3 className="text-sm font-mono font-bold text-gray-400 mb-2">NO CRITERIA DEFINED</h3>
         <p className="text-xs text-gray-600">
-          Add judging criteria to enable scoring for {track === 'IDEA_SPRINT' ? 'IdeaSprint' : 'BuildStorm'} teams.
+          Add judging criteria to enable scoring for{' '}
+          {track === 'IDEA_SPRINT' ? 'IdeaSprint' : 'BuildStorm'} teams.
         </p>
       </div>
     );
@@ -114,11 +117,13 @@ export function CriteriaList({ criteria, isLoading, track, onEdit, onRefresh }: 
 
               {/* Order Number */}
               <div className="flex-shrink-0 pt-1">
-                <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-mono font-bold rounded border ${
-                track === 'IDEA_SPRINT'
-                  ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
-                  : 'text-orange-400 border-orange-500/20 bg-orange-500/10'
-              }`}>
+                <span
+                  className={`inline-flex items-center justify-center w-6 h-6 text-xs font-mono font-bold rounded border ${
+                    track === 'IDEA_SPRINT'
+                      ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10'
+                      : 'text-orange-400 border-orange-500/20 bg-orange-500/10'
+                  }`}
+                >
                   {criterion.order}
                 </span>
               </div>

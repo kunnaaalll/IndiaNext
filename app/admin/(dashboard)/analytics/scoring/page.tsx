@@ -667,7 +667,6 @@ export default function ScoringAnalyticsPage() {
   );
 }
 
-
 // ── Metric Card ──────────────────────────────────────────
 
 function MetricCard({
@@ -699,31 +698,68 @@ function MetricCard({
 
 function TieAnalyticsSection() {
   const [data, setData] = useState<{
-    ideasprint: { totalTies: number; tieGroups: { score: number; teams: { id: string; name: string; manualRank: number | null }[]; resolutionType: 'manual' | 'auto' | null }[]; manualResolved: number; autoResolved: number; totalTeams: number; scoredTeams: number };
-    buildstorm: { totalTies: number; tieGroups: { score: number; teams: { id: string; name: string; manualRank: number | null }[]; resolutionType: 'manual' | 'auto' | null }[]; manualResolved: number; autoResolved: number; totalTeams: number; scoredTeams: number };
+    ideasprint: {
+      totalTies: number;
+      tieGroups: {
+        score: number;
+        teams: { id: string; name: string; manualRank: number | null }[];
+        resolutionType: 'manual' | 'auto' | null;
+      }[];
+      manualResolved: number;
+      autoResolved: number;
+      totalTeams: number;
+      scoredTeams: number;
+    };
+    buildstorm: {
+      totalTies: number;
+      tieGroups: {
+        score: number;
+        teams: { id: string; name: string; manualRank: number | null }[];
+        resolutionType: 'manual' | 'auto' | null;
+      }[];
+      manualResolved: number;
+      autoResolved: number;
+      totalTeams: number;
+      scoredTeams: number;
+    };
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/admin/analytics/tie-analytics')
       .then((r) => r.json())
-      .then((d) => { if (d.success) setData(d.data); })
+      .then((d) => {
+        if (d.success) setData(d.data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return (
-    <div className="bg-[#0A0A0A] rounded-lg border border-white/[0.06] p-4 flex items-center gap-2">
-      <div className="h-3 w-3 rounded-full bg-amber-500 animate-pulse" />
-      <span className="text-[10px] font-mono text-gray-600">Loading tie analytics…</span>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="bg-[#0A0A0A] rounded-lg border border-white/[0.06] p-4 flex items-center gap-2">
+        <div className="h-3 w-3 rounded-full bg-amber-500 animate-pulse" />
+        <span className="text-[10px] font-mono text-gray-600">Loading tie analytics…</span>
+      </div>
+    );
 
   if (!data) return null;
 
   const tracks = [
-    { key: 'ideasprint' as const, label: 'IDEA_SPRINT', color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
-    { key: 'buildstorm' as const, label: 'BUILD_STORM', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20' },
+    {
+      key: 'ideasprint' as const,
+      label: 'IDEA_SPRINT',
+      color: 'text-cyan-400',
+      bg: 'bg-cyan-500/10',
+      border: 'border-cyan-500/20',
+    },
+    {
+      key: 'buildstorm' as const,
+      label: 'BUILD_STORM',
+      color: 'text-orange-400',
+      bg: 'bg-orange-500/10',
+      border: 'border-orange-500/20',
+    },
   ];
 
   return (
@@ -745,18 +781,24 @@ function TieAnalyticsSection() {
           const d = data[t.key];
           return (
             <div key={t.key} className={`rounded-lg border ${t.border} ${t.bg} p-3 space-y-3`}>
-              <p className={`text-[9px] font-mono font-bold tracking-widest ${t.color}`}>{t.label}</p>
+              <p className={`text-[9px] font-mono font-bold tracking-widest ${t.color}`}>
+                {t.label}
+              </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
                   <div className="text-lg font-mono font-bold text-amber-400">{d.totalTies}</div>
                   <div className="text-[8px] font-mono text-gray-600">TIED</div>
                 </div>
                 <div>
-                  <div className="text-lg font-mono font-bold text-emerald-400">{d.autoResolved}</div>
+                  <div className="text-lg font-mono font-bold text-emerald-400">
+                    {d.autoResolved}
+                  </div>
                   <div className="text-[8px] font-mono text-gray-600">AUTO</div>
                 </div>
                 <div>
-                  <div className="text-lg font-mono font-bold text-orange-400">{d.manualResolved}</div>
+                  <div className="text-lg font-mono font-bold text-orange-400">
+                    {d.manualResolved}
+                  </div>
                   <div className="text-[8px] font-mono text-gray-600">MANUAL</div>
                 </div>
               </div>
@@ -764,15 +806,24 @@ function TieAnalyticsSection() {
               {d.tieGroups.length > 0 && (
                 <div className="space-y-1.5">
                   {d.tieGroups.slice(0, 3).map((g, gi) => (
-                    <div key={gi} className="flex items-center justify-between bg-black/20 rounded px-2 py-1">
-                      <span className="text-[9px] font-mono text-gray-400">{g.teams.length} teams @ {g.score.toFixed(1)}</span>
-                      <span className={`text-[8px] font-mono font-bold ${g.resolutionType === 'manual' ? 'text-orange-400' : 'text-emerald-400'}`}>
+                    <div
+                      key={gi}
+                      className="flex items-center justify-between bg-black/20 rounded px-2 py-1"
+                    >
+                      <span className="text-[9px] font-mono text-gray-400">
+                        {g.teams.length} teams @ {g.score.toFixed(1)}
+                      </span>
+                      <span
+                        className={`text-[8px] font-mono font-bold ${g.resolutionType === 'manual' ? 'text-orange-400' : 'text-emerald-400'}`}
+                      >
                         {g.resolutionType === 'manual' ? '🔒 MANUAL' : '⚡ AUTO'}
                       </span>
                     </div>
                   ))}
                   {d.tieGroups.length > 3 && (
-                    <p className="text-[8px] font-mono text-gray-600 text-center">+{d.tieGroups.length - 3} more groups</p>
+                    <p className="text-[8px] font-mono text-gray-600 text-center">
+                      +{d.tieGroups.length - 3} more groups
+                    </p>
                   )}
                 </div>
               )}

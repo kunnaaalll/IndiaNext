@@ -1,10 +1,10 @@
 /**
  * Integration Tests for Pusher API Endpoints
- * 
+ *
  * Tests for:
  * - /api/pusher/auth (Pusher channel authentication)
  * - /api/admin/pusher-metrics (Pusher usage metrics)
- * 
+ *
  * Requirements: 2.8, 2.9, 2.10, 2.11, 2.19
  */
 
@@ -26,7 +26,7 @@ vi.mock('@/lib/pusher-monitor', () => ({
 }));
 
 vi.mock('@/lib/error-handler', () => ({
-  handleGenericError: vi.fn((error) => 
+  handleGenericError: vi.fn((error) =>
     NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 })
   ),
 }));

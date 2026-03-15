@@ -91,9 +91,9 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
   }, [isJudge, filters.status, onChange]);
 
   const hasActiveFilters =
-    filters.status !== 'all' || 
-    filters.track !== 'all' || 
-    filters.search || 
+    filters.status !== 'all' ||
+    filters.track !== 'all' ||
+    filters.search ||
     filters.college ||
     (isJudge && filters.rankingMode !== 'all');
 
@@ -108,7 +108,7 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
       sortOrder: 'desc',
       page: 1,
     };
-    
+
     if (isJudge) {
       onChange({ ...baseFilters, rankingMode: 'all' });
     } else {
@@ -158,7 +158,7 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
               onChange={(e) => {
                 const newRankingMode = e.target.value;
                 const updates: any = { rankingMode: newRankingMode, page: 1 };
-                
+
                 // Auto-set track filter based on ranking mode
                 if (newRankingMode === 'ideasprint') {
                   updates.track = 'IDEA_SPRINT';
@@ -173,7 +173,7 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
                   updates.sortBy = 'overallScore';
                   updates.sortOrder = 'desc';
                 }
-                
+
                 onChange(updates);
               }}
               title="Filter by ranking mode"

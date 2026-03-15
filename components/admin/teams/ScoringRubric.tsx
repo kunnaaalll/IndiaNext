@@ -290,14 +290,18 @@ export function ScoringRubric({
       </div>
 
       {/* ── Low-score mandatory comment warning ──────────────────── */}
-      {Array.from(scores.values()).some((s) => s.points < LOW_SCORE_THRESHOLD && !s.comments.trim()) && (
+      {Array.from(scores.values()).some(
+        (s) => s.points < LOW_SCORE_THRESHOLD && !s.comments.trim()
+      ) && (
         <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-[10px] font-mono font-bold text-red-400">COMMENT REQUIRED FOR LOW SCORES</p>
+            <p className="text-[10px] font-mono font-bold text-red-400">
+              COMMENT REQUIRED FOR LOW SCORES
+            </p>
             <p className="text-[9px] font-mono text-red-300/70 mt-0.5">
-              Scores below {LOW_SCORE_THRESHOLD}/{criteria[0]?.maxPoints ?? 10} need a written justification.
-              Please add a comment for each highlighted criterion.
+              Scores below {LOW_SCORE_THRESHOLD}/{criteria[0]?.maxPoints ?? 10} need a written
+              justification. Please add a comment for each highlighted criterion.
             </p>
           </div>
         </div>
@@ -406,17 +410,23 @@ export function ScoringRubric({
               {currentPoints < LOW_SCORE_THRESHOLD && (
                 <div className="mb-2 flex items-center gap-1.5">
                   <AlertTriangle className="h-3 w-3 text-red-400 shrink-0" />
-                  <span className="text-[9px] font-mono text-red-400">Comment required for score below {LOW_SCORE_THRESHOLD}</span>
+                  <span className="text-[9px] font-mono text-red-400">
+                    Comment required for score below {LOW_SCORE_THRESHOLD}
+                  </span>
                 </div>
               )}
 
               {/* Comments */}
               <div>
-                <label className={`block text-[10px] font-mono mb-1 flex items-center gap-1 ${
-                  currentPoints < LOW_SCORE_THRESHOLD ? 'text-red-400 font-bold' : 'text-gray-500'
-                }`}>
+                <label
+                  className={`block text-[10px] font-mono mb-1 flex items-center gap-1 ${
+                    currentPoints < LOW_SCORE_THRESHOLD ? 'text-red-400 font-bold' : 'text-gray-500'
+                  }`}
+                >
                   <MessageSquare className="h-3 w-3" />
-                  {currentPoints < LOW_SCORE_THRESHOLD ? 'Comment (Required)' : 'Comments (Optional)'}
+                  {currentPoints < LOW_SCORE_THRESHOLD
+                    ? 'Comment (Required)'
+                    : 'Comments (Optional)'}
                 </label>
                 <textarea
                   value={score?.comments || ''}
@@ -429,7 +439,11 @@ export function ScoringRubric({
                       ? 'border border-red-500/40 focus:ring-red-500/50 focus:border-red-500/30'
                       : 'border border-white/[0.04] focus:ring-amber-500/50 focus:border-amber-500/30'
                   }`}
-                  placeholder={currentPoints < LOW_SCORE_THRESHOLD ? `Why is ${criterion.name.toLowerCase()} scored low? (required)` : `Feedback for ${criterion.name.toLowerCase()}...`}
+                  placeholder={
+                    currentPoints < LOW_SCORE_THRESHOLD
+                      ? `Why is ${criterion.name.toLowerCase()} scored low? (required)`
+                      : `Feedback for ${criterion.name.toLowerCase()}...`
+                  }
                 />
               </div>
             </div>

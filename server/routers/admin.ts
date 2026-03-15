@@ -156,7 +156,17 @@ export const adminRouter = router({
             to: z.date().optional(),
           })
           .optional(),
-        sortBy: z.enum(['createdAt', 'name', 'status', 'college', 'ideasprintRanking', 'buildstormRanking', 'overallScore']).default('createdAt'),
+        sortBy: z
+          .enum([
+            'createdAt',
+            'name',
+            'status',
+            'college',
+            'ideasprintRanking',
+            'buildstormRanking',
+            'overallScore',
+          ])
+          .default('createdAt'),
         sortOrder: z.enum(['asc', 'desc']).default('desc'),
         page: z.number().default(1),
         // ✅ SECURITY FIX (H-6): Cap pageSize at 100 to prevent DoS
@@ -278,8 +288,12 @@ export const adminRouter = router({
         // Handle special sorting for ranking fields
         let orderBy: any;
         let needsRankingCalculation = false;
-        
-        if (input.sortBy === 'ideasprintRanking' || input.sortBy === 'buildstormRanking' || input.sortBy === 'overallScore') {
+
+        if (
+          input.sortBy === 'ideasprintRanking' ||
+          input.sortBy === 'buildstormRanking' ||
+          input.sortBy === 'overallScore'
+        ) {
           needsRankingCalculation = true;
           // For ranking-based sorting, we'll calculate rankings after fetching
           orderBy = { createdAt: input.sortOrder };
@@ -347,28 +361,30 @@ export const adminRouter = router({
         let processedTeams = teams;
         if (needsRankingCalculation) {
           // Calculate scores and rankings for each team
-          processedTeams = await Promise.all(teams.map(async (team: any) => {
-            let calculatedScore = 0;
-            let scoreCount = 0;
-            
-            if (team.submission?.criterionScores) {
-              const scores = team.submission.criterionScores;
-              calculatedScore = scores.reduce((sum: number, score: any) => sum + score.points, 0);
-              scoreCount = scores.length;
-              
-              // Calculate average score if there are scores
-              if (scoreCount > 0) {
-                calculatedScore = calculatedScore / scoreCount;
+          processedTeams = await Promise.all(
+            teams.map(async (team: any) => {
+              let calculatedScore = 0;
+              let scoreCount = 0;
+
+              if (team.submission?.criterionScores) {
+                const scores = team.submission.criterionScores;
+                calculatedScore = scores.reduce((sum: number, score: any) => sum + score.points, 0);
+                scoreCount = scores.length;
+
+                // Calculate average score if there are scores
+                if (scoreCount > 0) {
+                  calculatedScore = calculatedScore / scoreCount;
+                }
               }
-            }
-            
-            return {
-              ...team,
-              calculatedScore,
-              scoreCount,
-            };
-          }));
-          
+
+              return {
+                ...team,
+                calculatedScore,
+                scoreCount,
+              };
+            })
+          );
+
           // Sort by calculated score for ranking
           if (input.sortBy === 'ideasprintRanking' && input.track === 'IDEA_SPRINT') {
             processedTeams.sort((a: any, b: any) => {
@@ -389,7 +405,7 @@ export const adminRouter = router({
               return input.sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
             });
           }
-          
+
           // Add ranking numbers based on position in sorted array
           processedTeams = processedTeams.map((team: any, index: number) => ({
             ...team,
@@ -400,17 +416,17 @@ export const adminRouter = router({
           processedTeams = teams.map((team: any) => {
             let calculatedScore = 0;
             let scoreCount = 0;
-            
+
             if (team.submission?.criterionScores) {
               const scores = team.submission.criterionScores;
               calculatedScore = scores.reduce((sum: number, score: any) => sum + score.points, 0);
               scoreCount = scores.length;
-              
+
               if (scoreCount > 0) {
                 calculatedScore = calculatedScore / scoreCount;
               }
             }
-            
+
             return {
               ...team,
               calculatedScore,
@@ -1281,7 +1297,7 @@ export const adminRouter = router({
       // Event deduplication check
       const dedupKey = `qr:${shortCode}:${input.deskId}:${ctx.admin.id}`;
       const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
-      
+
       if (!isDuplicate) {
         // Check Pusher quota before triggering
         const quotaStatus = await checkPusherQuota();
@@ -1294,13 +1310,15 @@ export const adminRouter = router({
 
           // Pusher rate limiting check
           const rateLimitResult = await rateLimitPusherEvent('qr:scanned', ctx.admin.id);
-          
+
           if (rateLimitResult.allowed) {
             // Emit event for real-time dashboard on desk-specific private channel
             const pusher = getPusherServer();
             if (pusher) {
-              console.log(`[Pusher] Triggering qr:scanned for desk ${input.deskId} for team ${team.name}`);
-              
+              console.log(
+                `[Pusher] Triggering qr:scanned for desk ${input.deskId} for team ${team.name}`
+              );
+
               const result = await executePusherWithCircuitBreaker(async () => {
                 await pusher.trigger(`private-admin-checkin-${input.deskId}`, 'qr:scanned', {
                   team,
@@ -1315,7 +1333,9 @@ export const adminRouter = router({
                 console.error('[Pusher] qr:scanned trigger failed:', result.error);
               }
             } else {
-              console.error('[Pusher] ERROR: getPusherServer() returned null. Check environment variables.');
+              console.error(
+                '[Pusher] ERROR: getPusherServer() returned null. Check environment variables.'
+              );
             }
           } else {
             console.warn(`[Pusher] Rate limit exceeded for qr:scanned: ${rateLimitResult.reason}`);
@@ -1342,11 +1362,13 @@ export const adminRouter = router({
         });
       }
 
-      console.log(`[Pusher] Scanner Heartbeat for Station ${input.deskId} from Admin ${ctx.admin.name}`);
+      console.log(
+        `[Pusher] Scanner Heartbeat for Station ${input.deskId} from Admin ${ctx.admin.name}`
+      );
 
       // Pusher rate limiting check
       const rateLimitResult = await rateLimitPusherEvent('scanner:presence', ctx.admin.id);
-      
+
       if (rateLimitResult.allowed) {
         const pusher = getPusherServer();
         if (pusher) {
@@ -1364,7 +1386,9 @@ export const adminRouter = router({
           }
         }
       } else {
-        console.warn(`[Pusher] Rate limit exceeded for scanner:presence: ${rateLimitResult.reason}`);
+        console.warn(
+          `[Pusher] Rate limit exceeded for scanner:presence: ${rateLimitResult.reason}`
+        );
       }
 
       return { success: true };
@@ -1377,11 +1401,13 @@ export const adminRouter = router({
         deskId: z.string(),
         breakfastCoupons: z.number(),
         lunchCoupons: z.number(),
-        verifications: z.array(z.object({
-          memberId: z.string(),
-          isPresent: z.boolean(),
-          exceptionNote: z.string().optional()
-        }))
+        verifications: z.array(
+          z.object({
+            memberId: z.string(),
+            isPresent: z.boolean(),
+            exceptionNote: z.string().optional(),
+          })
+        ),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1409,7 +1435,7 @@ export const adminRouter = router({
               isPresent: v.isPresent,
               exceptionNote: v.exceptionNote,
               verifiedBy: ctx.admin.id,
-            }
+            },
           });
         }
 
@@ -1430,11 +1456,11 @@ export const adminRouter = router({
       // 2. Event deduplication check for checkin:confirmed
       const dedupKey = `checkin:confirmed:${input.teamId}:${input.deskId}`;
       const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
-      
+
       if (!isDuplicate) {
         // Pusher rate limiting for checkin:confirmed
         const rateLimitConfirmed = await rateLimitPusherEvent('checkin:confirmed', ctx.admin.id);
-        
+
         if (rateLimitConfirmed.allowed) {
           const pusher = getPusherServer();
           if (pusher) {
@@ -1454,12 +1480,14 @@ export const adminRouter = router({
             }
           }
         } else {
-          console.warn(`[Pusher] Rate limit exceeded for checkin:confirmed: ${rateLimitConfirmed.reason}`);
+          console.warn(
+            `[Pusher] Rate limit exceeded for checkin:confirmed: ${rateLimitConfirmed.reason}`
+          );
         }
 
         // Pusher rate limiting for stats:updated
         const rateLimitStats = await rateLimitPusherEvent('stats:updated', ctx.admin.id);
-        
+
         if (rateLimitStats.allowed) {
           const pusher = getPusherServer();
           if (pusher) {
@@ -1513,11 +1541,11 @@ export const adminRouter = router({
       // Event deduplication check for checkin:flagged
       const dedupKey = `checkin:flagged:${input.teamId}:${input.deskId}`;
       const isDuplicate = await isDuplicatePusherEvent(dedupKey, 10);
-      
+
       if (!isDuplicate) {
         // Pusher rate limiting for checkin:flagged
         const rateLimitFlagged = await rateLimitPusherEvent('checkin:flagged', ctx.admin.id);
-        
+
         if (rateLimitFlagged.allowed) {
           const pusher = getPusherServer();
           if (pusher) {
@@ -1537,12 +1565,14 @@ export const adminRouter = router({
             }
           }
         } else {
-          console.warn(`[Pusher] Rate limit exceeded for checkin:flagged: ${rateLimitFlagged.reason}`);
+          console.warn(
+            `[Pusher] Rate limit exceeded for checkin:flagged: ${rateLimitFlagged.reason}`
+          );
         }
 
         // Pusher rate limiting for stats:updated
         const rateLimitStats = await rateLimitPusherEvent('stats:updated', ctx.admin.id);
-        
+
         if (rateLimitStats.allowed) {
           const pusher = getPusherServer();
           if (pusher) {
@@ -1576,12 +1606,12 @@ export const adminRouter = router({
       ctx.prisma.team.count({ where: { isFlagged: true, deletedAt: null } }),
     ]);
 
-    return { 
-      total, 
+    return {
+      total,
       checkedIn,
       breakfastCoupons: breakfast._sum.breakfastCouponsIssued || 0,
       lunchCoupons: lunch._sum.lunchCouponsIssued || 0,
-      flaggedCount: flagged
+      flaggedCount: flagged,
     };
   }),
 
@@ -1615,19 +1645,21 @@ export const adminRouter = router({
   }),
 
   createVenue: canEditTeamsRateLimited
-    .input(z.object({ 
-      name: z.string().min(1),
-      floor: z.string().optional(),
-      block: z.string().optional(),
-      capacity: z.number().int().min(0).default(0)
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        floor: z.string().optional(),
+        block: z.string().optional(),
+        capacity: z.number().int().min(0).default(0),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.venue.create({
-        data: { 
+        data: {
           name: input.name,
           floor: input.floor,
           block: input.block,
-          capacity: input.capacity
+          capacity: input.capacity,
         },
       });
     }),
@@ -1762,10 +1794,7 @@ export const adminRouter = router({
 
       const criteria = await ctx.prisma.scoringCriterion.findMany({
         where,
-        orderBy: [
-          { track: 'asc' },
-          { order: 'asc' },
-        ],
+        orderBy: [{ track: 'asc' }, { order: 'asc' }],
       });
 
       return {
@@ -1890,7 +1919,7 @@ export const adminRouter = router({
             criterionId: {
               in: await ctx.prisma.scoringCriterion
                 .findUnique({ where: { id: input.id } })
-                .then(c => c ? [c.criterionId] : []),
+                .then((c) => (c ? [c.criterionId] : [])),
             },
           },
         },
@@ -2045,7 +2074,10 @@ export const adminRouter = router({
         const judgeMap = new Map<string, { total: number; confidence: number }>();
         for (const cs of allCS) {
           let e = judgeMap.get(cs.judgeId);
-          if (!e) { e = { total: 0, confidence: cs.confidence ?? 50 }; judgeMap.set(cs.judgeId, e); }
+          if (!e) {
+            e = { total: 0, confidence: cs.confidence ?? 50 };
+            judgeMap.set(cs.judgeId, e);
+          }
           const norm = (cs.points / cs.criterion.maxPoints) * 100;
           e.total += (norm * cs.criterion.weight) / 100;
         }
@@ -2065,9 +2097,7 @@ export const adminRouter = router({
           ? allCS.filter((cs) => cs.criterion.criterionId === topCriterion.criterionId)
           : [];
         const topCriterionAvg =
-          topCS.length > 0
-            ? topCS.reduce((s, cs) => s + cs.points, 0) / topCS.length
-            : 0;
+          topCS.length > 0 ? topCS.reduce((s, cs) => s + cs.points, 0) / topCS.length : 0;
 
         return {
           ...team,
@@ -2100,8 +2130,12 @@ export const adminRouter = router({
           return jDiff;
         }
         // 3. Earlier submission
-        const aSubmitted = a.submission?.submittedAt ? new Date(a.submission.submittedAt).getTime() : Infinity;
-        const bSubmitted = b.submission?.submittedAt ? new Date(b.submission.submittedAt).getTime() : Infinity;
+        const aSubmitted = a.submission?.submittedAt
+          ? new Date(a.submission.submittedAt).getTime()
+          : Infinity;
+        const bSubmitted = b.submission?.submittedAt
+          ? new Date(b.submission.submittedAt).getTime()
+          : Infinity;
         if (aSubmitted !== bSubmitted) {
           a.tieResolutionMethod = b.tieResolutionMethod = 'submission_time';
           return aSubmitted - bSubmitted;
@@ -2122,7 +2156,9 @@ export const adminRouter = router({
       });
 
       // Assign final ranks
-      scored.forEach((t, i) => { t.finalRank = i + 1; });
+      scored.forEach((t, i) => {
+        t.finalRank = i + 1;
+      });
 
       const total = scored.length;
       const start = (input.page - 1) * input.pageSize;
@@ -2185,9 +2221,19 @@ export const adminRouter = router({
       // Group teams with same score (within tolerance)
       const scored = teams
         .filter((t) => t.submission?.judgeScore != null)
-        .map((t) => ({ id: t.id, name: t.name, score: t.submission!.judgeScore!, manualRank: t.rank }));
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          score: t.submission!.judgeScore!,
+          manualRank: t.rank,
+        }));
 
-      const groups: { score: number; teams: typeof scored; resolved: boolean; resolutionType: 'manual' | 'auto' | null }[] = [];
+      const groups: {
+        score: number;
+        teams: typeof scored;
+        resolved: boolean;
+        resolutionType: 'manual' | 'auto' | null;
+      }[] = [];
       const visited = new Set<string>();
 
       for (const team of scored) {
@@ -2206,10 +2252,19 @@ export const adminRouter = router({
       }
 
       const totalTies = groups.reduce((s, g) => s + g.teams.length, 0);
-      const manualResolved = groups.filter((g) => g.resolutionType === 'manual').reduce((s, g) => s + g.teams.length, 0);
+      const manualResolved = groups
+        .filter((g) => g.resolutionType === 'manual')
+        .reduce((s, g) => s + g.teams.length, 0);
       const autoResolved = totalTies - manualResolved;
 
-      return { totalTies, tieGroups: groups, manualResolved, autoResolved, totalTeams: teams.length, scoredTeams: scored.length };
+      return {
+        totalTies,
+        tieGroups: groups,
+        manualResolved,
+        autoResolved,
+        totalTeams: teams.length,
+        scoredTeams: scored.length,
+      };
     }
 
     const [ideasprint, buildstorm] = await Promise.all([
@@ -2233,7 +2288,9 @@ export const adminRouter = router({
       const [logs, total] = await Promise.all([
         ctx.prisma.scoreAuditLog.findMany({
           where: { submissionId: input.submissionId },
-          include: { criterion: { select: { name: true, criterionId: true, weight: true, maxPoints: true } } },
+          include: {
+            criterion: { select: { name: true, criterionId: true, weight: true, maxPoints: true } },
+          },
           orderBy: { changedAt: 'desc' },
           skip: (input.page - 1) * input.pageSize,
           take: input.pageSize,
@@ -2348,10 +2405,13 @@ export const adminRouter = router({
       });
 
       // Resolve admin IDs → names for judge attribution in the UI
-      const actionByIds = [...new Set([
-        ...teams.map(t => t.round1ActionBy),
-        ...teams.map(t => t.round2ActionBy),
-      ].filter(Boolean) as string[])];
+      const actionByIds = [
+        ...new Set(
+          [...teams.map((t) => t.round1ActionBy), ...teams.map((t) => t.round2ActionBy)].filter(
+            Boolean
+          ) as string[]
+        ),
+      ];
 
       const adminMap: Record<string, string> = {};
       if (actionByIds.length > 0) {
@@ -2362,13 +2422,16 @@ export const adminRouter = router({
         for (const u of users) adminMap[u.id] = u.name || u.email || u.id;
       }
 
-      return teams.map(t => ({
+      return teams.map((t) => ({
         ...t,
-        round1ActionName: t.round1ActionBy ? (adminMap[t.round1ActionBy] ?? t.round1ActionBy) : null,
-        round2ActionName: t.round2ActionBy ? (adminMap[t.round2ActionBy] ?? t.round2ActionBy) : null,
+        round1ActionName: t.round1ActionBy
+          ? (adminMap[t.round1ActionBy] ?? t.round1ActionBy)
+          : null,
+        round2ActionName: t.round2ActionBy
+          ? (adminMap[t.round2ActionBy] ?? t.round2ActionBy)
+          : null,
       }));
     }),
-
 
   /** Per-round analytics: total, qualified, eliminated, pending — per track */
   getRoundAnalytics: canViewTeams.query(async ({ ctx }) => {
@@ -2382,9 +2445,7 @@ export const adminRouter = router({
 
     const buildStats = (arr: typeof eligible, roundKey: 'round1Status' | 'round2Status') => {
       const count = (track: string | null, status: string) =>
-        arr.filter(
-          (t) => (track ? t.track === track : true) && t[roundKey] === status
-        ).length;
+        arr.filter((t) => (track ? t.track === track : true) && t[roundKey] === status).length;
 
       return {
         all: {
@@ -2437,4 +2498,3 @@ export const adminRouter = router({
     return { qualifiedCount: qualified };
   }),
 });
-

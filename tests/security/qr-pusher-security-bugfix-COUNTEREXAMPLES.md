@@ -6,7 +6,7 @@
 **Status**: ✅ ALL TESTS PASSED (Vulnerabilities Confirmed)  
 **Total Tests**: 9  
 **Passed**: 9  
-**Failed**: 0  
+**Failed**: 0
 
 ## Critical Finding
 
@@ -19,6 +19,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: Unlimited Pusher events can be triggered without rate limiting
 
 **Counterexample**:
+
 - Simulated 100 rapid QR scans via direct API calls
 - **Result**: All 100 scans succeeded
 - **Pusher Events Triggered**: 100 `qr:scanned` events
@@ -33,6 +34,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: No server-side rate limiting on `getTeamByShortCode` endpoint
 
 **Counterexample**:
+
 - Called `getTeamByShortCode` 50 times in 10 seconds via direct tRPC calls
 - **Result**: All 50 calls succeeded
 - **Rate Limited**: 0 requests
@@ -47,6 +49,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: Client-side throttling ineffective against multiple clients
 
 **Counterexample**:
+
 - Simulated 3 browser tabs scanning same QR simultaneously
 - **Result**: All 3 scans succeeded
 - **Pusher Events**: 3 separate events triggered
@@ -61,6 +64,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: Pusher channels are public, no authentication required
 
 **Counterexample**:
+
 - Triggered QR scan event
 - **Channel Name Used**: `admin-checkin-A` (PUBLIC channel)
 - **Expected After Fix**: `private-admin-checkin-A` (requires authentication via `/api/pusher/auth`)
@@ -74,6 +78,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: No deduplication of Pusher events within time windows
 
 **Counterexample**:
+
 - Scanned same QR code 5 times within 5 seconds
 - **Result**: 5 separate `qr:scanned` events sent
 - **Expected After Fix**: First event sent, subsequent 4 deduplicated within 10s window
@@ -87,6 +92,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: Unlimited heartbeats accepted without server-side validation
 
 **Counterexample**:
+
 - Sent 100 heartbeats in 10 seconds via script
 - **Result**: All 100 heartbeats succeeded
 - **Pusher Events**: 100 `scanner:presence` events
@@ -101,6 +107,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: No circuit breaker for Pusher failures
 
 **Counterexample**:
+
 - Simulated 5 consecutive Pusher API failures
 - **Result**: All 5 failures logged, operations continued
 - **Circuit Breaker**: Not activated (doesn't exist)
@@ -115,6 +122,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: No quota tracking or monitoring of Pusher usage
 
 **Counterexample**:
+
 - Triggered QR scan event
 - **Redis Metrics**: No tracking found (key `pusher:metrics:YYYY-MM-DD` doesn't exist)
 - **Expected After Fix**: Events tracked in Redis with daily metrics
@@ -128,6 +136,7 @@ All 9 tests PASSED on unfixed code, which **confirms the security vulnerabilitie
 **Vulnerability**: QR codes have no nonce, expiry, or scan limits
 
 **Counterexample**:
+
 - Replayed same QR code 50 times
 - **Result**: All 50 scans succeeded
 - **Expected After Fix**: Scan limit enforced (max 10 scans), expiry checked (24 hours), nonce validated

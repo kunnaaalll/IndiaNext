@@ -20,7 +20,7 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     if (scanIntervalRef.current) {
@@ -58,7 +58,7 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
 
         // Detect QR codes
         const barcodes = await detector.detect(canvas);
-        
+
         if (barcodes.length > 0) {
           const qrCode = barcodes[0].rawValue;
           if (qrCode) {
@@ -84,11 +84,11 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
 
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+        video: {
           facingMode: 'environment',
           width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
+          height: { ideal: 480 },
+        },
       });
 
       streamRef.current = stream;
@@ -98,14 +98,14 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
         await videoRef.current.play();
         setIsScanning(true);
         setCameraError(null);
-        
+
         // Start QR code detection
         startQRDetection();
       }
     } catch (err: any) {
       console.error('Camera error:', err);
       let errorMsg = 'Camera access failed';
-      
+
       if (err.name === 'NotAllowedError') {
         errorMsg = 'Camera permission denied. Please allow camera access and refresh.';
       } else if (err.name === 'NotFoundError') {
@@ -115,7 +115,7 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
       } else if (err.message) {
         errorMsg = err.message;
       }
-      
+
       setCameraError(errorMsg);
       toast.error(errorMsg);
     }
@@ -141,9 +141,7 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
         </div>
         <div className="space-y-2">
           <h2 className="text-white font-bold text-lg tracking-tight">Camera_Error</h2>
-          <p className="text-zinc-500 text-xs leading-relaxed">
-            {cameraError}
-          </p>
+          <p className="text-zinc-500 text-xs leading-relaxed">{cameraError}</p>
         </div>
         <button
           onClick={() => {
@@ -161,18 +159,10 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
   return (
     <div className="relative w-full h-full">
       {/* Video element */}
-      <video
-        ref={videoRef}
-        className="w-full h-full object-cover"
-        playsInline
-        muted
-      />
-      
+      <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+
       {/* Hidden canvas for QR detection */}
-      <canvas
-        ref={canvasRef}
-        className="hidden"
-      />
+      <canvas ref={canvasRef} className="hidden" />
 
       {/* Overlay UI */}
       <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
@@ -187,15 +177,15 @@ export function NativeQRScanner({ onScanSuccess, isActive }: NativeQRScannerProp
           {/* Scanning Beam */}
           {isScanning && (
             <motion.div
-              animate={{ 
+              animate={{
                 top: ['5%', '95%', '5%'],
-                opacity: [0.6, 1, 0.6]
+                opacity: [0.6, 1, 0.6],
               }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               className="absolute left-4 right-4 h-0.5 bg-orange-500 shadow-[0_0_15px_rgba(255,102,0,0.8)] z-20"
             />
           )}
-          
+
           {/* Clean cutout effect */}
           <div className="absolute inset-0 border-2 border-white/5 rounded-2xl" />
         </div>

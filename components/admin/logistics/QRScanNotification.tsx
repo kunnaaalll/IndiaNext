@@ -90,7 +90,9 @@ export function QRScanNotification({ event, onDismiss, onCheckedIn }: QRScanNoti
             <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400">
               {trackLabels[event.track] || event.track}
             </span>
-            <span className={`text-[9px] font-mono font-bold ${attendanceColors[event.attendance] || 'text-gray-400'}`}>
+            <span
+              className={`text-[9px] font-mono font-bold ${attendanceColors[event.attendance] || 'text-gray-400'}`}
+            >
               {event.attendance.replace('_', ' ')}
             </span>
           </div>

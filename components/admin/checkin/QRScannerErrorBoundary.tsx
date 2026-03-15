@@ -45,7 +45,8 @@ export class QRScannerErrorBoundary extends Component<Props, State> {
                   Scanner_Error
                 </h1>
                 <p className="text-zinc-500 text-xs leading-relaxed">
-                  The QR scanner encountered an error. This might be due to camera permissions or browser compatibility.
+                  The QR scanner encountered an error. This might be due to camera permissions or
+                  browser compatibility.
                 </p>
               </div>
             </div>

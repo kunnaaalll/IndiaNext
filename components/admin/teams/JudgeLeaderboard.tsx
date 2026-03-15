@@ -85,9 +85,14 @@ export function JudgeLeaderboard() {
           return (
             <button
               key={t}
-              onClick={() => { setTrack(t); setPage(1); }}
+              onClick={() => {
+                setTrack(t);
+                setPage(1);
+              }}
               className={`flex-1 py-3 text-[11px] font-mono font-bold tracking-wider transition-all flex items-center justify-center gap-2 ${
-                isActive ? `${c.color} ${c.activeBorder} ${c.bg}` : 'text-gray-600 hover:text-gray-400'
+                isActive
+                  ? `${c.color} ${c.activeBorder} ${c.bg}`
+                  : 'text-gray-600 hover:text-gray-400'
               }`}
             >
               <BarChart3 className="h-3.5 w-3.5" />
@@ -107,7 +112,9 @@ export function JudgeLeaderboard() {
             {data ? `${data.totalCount} teams ranked` : 'Loading…'}
           </p>
         </div>
-        <div className={`text-[9px] font-mono font-bold px-2 py-1 rounded border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+        <div
+          className={`text-[9px] font-mono font-bold px-2 py-1 rounded border ${cfg.color} ${cfg.bg} ${cfg.border}`}
+        >
           RANKED_BY_SCORE
         </div>
       </div>
@@ -134,7 +141,9 @@ export function JudgeLeaderboard() {
                 <div
                   key={team.id}
                   className={`flex items-center gap-4 px-4 py-3.5 hover:bg-white/[0.02] transition-colors cursor-pointer group ${
-                    team.finalRank <= 3 ? 'bg-gradient-to-r from-amber-500/[0.03] to-transparent' : ''
+                    team.finalRank <= 3
+                      ? 'bg-gradient-to-r from-amber-500/[0.03] to-transparent'
+                      : ''
                   }`}
                   onClick={() => router.push(`/admin/teams/${team.id}`)}
                 >
@@ -175,19 +184,21 @@ export function JudgeLeaderboard() {
                       <span className={`text-[10px] font-mono ${cfg.color}`}>
                         {team.calculatedScore.toFixed(1)}
                       </span>
-                      <span className="text-[9px] font-mono text-gray-600">
-                        {team.judgeCount}J
-                      </span>
+                      <span className="text-[9px] font-mono text-gray-600">{team.judgeCount}J</span>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0">
-                    <div className={`text-lg font-mono font-bold ${team.finalRank <= 3 ? 'text-amber-400' : cfg.color}`}>
+                    <div
+                      className={`text-lg font-mono font-bold ${team.finalRank <= 3 ? 'text-amber-400' : cfg.color}`}
+                    >
                       {team.calculatedScore.toFixed(1)}
                     </div>
                     <div className="flex items-center gap-1 justify-end mt-0.5">
                       <Users className="h-3 w-3 text-gray-600" />
-                      <span className="text-[9px] font-mono text-gray-600">{team.members?.length || 0}</span>
+                      <span className="text-[9px] font-mono text-gray-600">
+                        {team.members?.length || 0}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -230,7 +241,8 @@ export function JudgeLeaderboard() {
         <div className="flex items-center gap-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
           <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
           <p className="text-[10px] font-mono text-amber-400">
-            No teams have been scored yet in this track. Start scoring from a team&apos;s detail page.
+            No teams have been scored yet in this track. Start scoring from a team&apos;s detail
+            page.
           </p>
         </div>
       )}

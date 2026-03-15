@@ -57,7 +57,7 @@ function CheckinContent() {
       try {
         // Encode the full QR payload as base64 for secure transmission
         const qrPayload = btoa(codeToLookup.trim().toUpperCase());
-        
+
         const result = await utils.logistics.getTeamByShortCode.fetch({
           qrPayload,
         });

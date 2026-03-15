@@ -121,11 +121,11 @@ export async function validateQRCode(qrPayload: string): Promise<QRValidationRes
   try {
     // Decode base64 payload
     const decoded = Buffer.from(qrPayload, 'base64').toString('utf-8');
-    
+
     // Try to parse as JSON (new format)
     let payload: SecureQRPayload | null = null;
     let shortCode: string;
-    
+
     try {
       const parsedPayload = JSON.parse(decoded);
       if (parsedPayload && typeof parsedPayload === 'object' && parsedPayload.shortCode) {
@@ -137,7 +137,7 @@ export async function validateQRCode(qrPayload: string): Promise<QRValidationRes
     } catch (_jsonError) {
       // Not JSON, treat as legacy format (plain shortCode)
       shortCode = decoded;
-      
+
       // Validate shortCode format (basic validation)
       if (!shortCode || typeof shortCode !== 'string' || shortCode.length < 3) {
         return {
@@ -145,7 +145,7 @@ export async function validateQRCode(qrPayload: string): Promise<QRValidationRes
           reason: 'Invalid QR code format: invalid shortCode',
         };
       }
-      
+
       // For legacy format, just return valid with shortCode
       return {
         valid: true,
@@ -160,7 +160,7 @@ export async function validateQRCode(qrPayload: string): Promise<QRValidationRes
         reason: 'Invalid QR code format: failed to parse JSON payload',
       };
     }
-    
+
     if (!payload.shortCode || !payload.nonce || !payload.expiresAt || !payload.maxScans) {
       return {
         valid: false,

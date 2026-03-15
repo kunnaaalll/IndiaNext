@@ -76,7 +76,11 @@ export async function GET(req: NextRequest) {
       req.signal.addEventListener('abort', () => {
         scanEmitter.off('scan', onScan);
         clearInterval(ping);
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       });
     },
   });

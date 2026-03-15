@@ -1,7 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Eye, ChevronLeft, ChevronRight, MessageSquare, Tag, Crown, Users, Trophy, Award } from 'lucide-react';
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Tag,
+  Crown,
+  Users,
+  Trophy,
+  Award,
+} from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -237,8 +247,8 @@ export function TeamsTable({
                               {(team as any).calculatedScore.toFixed(1)}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400">
-                              <Award className="h-2.5 w-2.5" />
-                              #{(team as any).globalRank || (team as any).currentRank || 'N/A'}
+                              <Award className="h-2.5 w-2.5" />#
+                              {(team as any).globalRank || (team as any).currentRank || 'N/A'}
                             </span>
                           </div>
                         )}
@@ -400,7 +410,7 @@ export function TeamsTable({
             {teams.length === 0 ? (
               <tr>
                 <td
-                  colSpan={judgeMode ? (readOnly ? 9 : 10) : (readOnly ? 7 : 8)}
+                  colSpan={judgeMode ? (readOnly ? 9 : 10) : readOnly ? 7 : 8}
                   className="px-4 py-12 text-center text-gray-600 text-xs font-mono tracking-widest"
                 >
                   NO TEAMS FOUND
@@ -506,7 +516,8 @@ export function TeamsTable({
                                 {(team as any).calculatedScore.toFixed(1)}
                               </span>
                               <span className="text-[9px] font-mono text-gray-500">
-                                ({(team as any).scoreCount} judge{(team as any).scoreCount !== 1 ? 's' : ''})
+                                ({(team as any).scoreCount} judge
+                                {(team as any).scoreCount !== 1 ? 's' : ''})
                               </span>
                             </div>
                           ) : (

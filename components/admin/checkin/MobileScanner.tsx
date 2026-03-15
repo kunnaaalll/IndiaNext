@@ -55,10 +55,13 @@ function MobileScannerContent() {
       if (now - lastHeartbeat.current < 25000) return; // Force min 25s gap
 
       lastHeartbeat.current = now;
-      heartbeatMutation.current.mutate({ deskId }, {
-        onSuccess: () => console.debug(`[Heartbeat] Sent for station ${deskId}`),
-        onError: (err) => console.error(`[Heartbeat] Failed:`, err.message)
-      });
+      heartbeatMutation.current.mutate(
+        { deskId },
+        {
+          onSuccess: () => console.debug(`[Heartbeat] Sent for station ${deskId}`),
+          onError: (err) => console.error(`[Heartbeat] Failed:`, err.message),
+        }
+      );
     };
 
     // Initial heartbeat
@@ -116,10 +119,10 @@ function MobileScannerContent() {
     try {
       setIsLoading(true);
       console.log(`[Scanner] Processing code: ${shortCode} for station: ${deskId}`);
-      
+
       // Encode the full QR payload as base64 for secure transmission
       const qrPayload = btoa(decodedText);
-      
+
       await utils.admin.getTeamByShortCode.fetch({
         qrPayload,
         deskId: deskId || '',
@@ -227,7 +230,9 @@ function MobileScannerContent() {
                 <Camera className="h-10 w-10 text-orange-500" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-white font-bold text-lg tracking-tight">Initializing_Scanner</h2>
+                <h2 className="text-white font-bold text-lg tracking-tight">
+                  Initializing_Scanner
+                </h2>
                 <p className="text-zinc-500 text-xs leading-relaxed">
                   Setting up camera access for QR code scanning...
                 </p>
@@ -235,10 +240,7 @@ function MobileScannerContent() {
             </div>
           }
         >
-          <NativeQRScanner
-            onScanSuccess={onScanSuccess}
-            isActive={!!deskId && !isLoading}
-          />
+          <NativeQRScanner onScanSuccess={onScanSuccess} isActive={!!deskId && !isLoading} />
 
           {/* Status Indicator */}
           <div className="absolute bottom-32 flex flex-col items-center gap-4 w-full pointer-events-none z-30">

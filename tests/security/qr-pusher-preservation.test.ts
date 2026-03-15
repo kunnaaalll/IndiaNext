@@ -1,13 +1,13 @@
 /**
  * QR Pusher Security Fixes - Preservation Property Tests
- * 
+ *
  * **IMPORTANT**: These tests capture baseline behavior of legitimate operations.
  * They should PASS on unfixed code to establish the baseline.
  * They must also PASS on fixed code to ensure no regressions.
- * 
+ *
  * Feature: qr-pusher-security-fixes
  * Property 2: Preservation - Legitimate Admin Operations
- * 
+ *
  * **Validates: Requirements 3.1-3.20 (Preservation Requirements)**
  */
 
@@ -62,7 +62,7 @@ function createTestContext(adminOverrides = {}): Context {
     desk: 'A',
     ...adminOverrides,
   };
-  
+
   return {
     prisma: mockPrisma,
     adminSession: {
@@ -104,7 +104,7 @@ function createMockTeam(shortCode: string, overrides = {}) {
 }
 
 // Helper to wait between operations
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
   beforeEach(() => {
@@ -119,12 +119,12 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.1: Normal QR Scanning Preservation
-   * 
+   *
    * **Validates: Requirements 3.1**
-   * 
+   *
    * Property: Scanning different QR codes at reasonable intervals (1 scan per 10 seconds)
    * should fetch team data and trigger Pusher events successfully.
-   * 
+   *
    * This test uses property-based testing to generate multiple valid scan scenarios.
    */
   it('Property 2.1: Normal QR scanning within rate limits should work identically', async () => {
@@ -134,7 +134,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
         async (shortCodes) => {
           vi.clearAllMocks();
           clearMemoryStore(); // Clear rate limits for this iteration
-          
+
           // Use unique admin ID per iteration to avoid rate limit collisions
           const adminId = `test-admin-${Date.now()}-${Math.random()}`;
           const ctx = createTestContext({ id: adminId });
@@ -153,7 +153,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
             // Generate secure QR payload
             const qrPayload = await generateSecureQRCode(shortCode);
             const encodedPayload = encodeQRPayload(qrPayload);
-            
+
             const result = await caller.admin.getTeamByShortCode({
               qrPayload: encodedPayload,
               deskId: 'A',
@@ -170,12 +170,12 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
           // Verify Pusher events were triggered for each scan
           expect(mockPusherTrigger).toHaveBeenCalledTimes(shortCodes.length);
-          
+
           // Verify channel name format (will be public on unfixed, private on fixed)
           mockPusherTrigger.mock.calls.forEach((call) => {
             const channelName = call[0];
             const eventName = call[1];
-            
+
             // Channel should contain desk ID
             expect(channelName).toMatch(/checkin-A/);
             // Event should be qr:scanned
@@ -189,9 +189,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.2: Check-in Confirmation Preservation
-   * 
+   *
    * **Validates: Requirements 3.2, 3.3**
-   * 
+   *
    * Property: Confirming check-ins for teams should update database and trigger Pusher events.
    * Note: This test respects existing rate limits (30 req/min) which is preservation behavior.
    */
@@ -201,31 +201,29 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
     const caller = createCaller(ctx);
 
     const checkIns = [
-      { 
-        teamId: 'team-001', 
-        breakfastCoupons: 4, 
+      {
+        teamId: 'team-001',
+        breakfastCoupons: 4,
         lunchCoupons: 4,
         verifications: [
           { memberId: 'member-1', isPresent: true },
           { memberId: 'member-2', isPresent: true },
-        ]
+        ],
       },
-      { 
-        teamId: 'team-002', 
-        breakfastCoupons: 3, 
+      {
+        teamId: 'team-002',
+        breakfastCoupons: 3,
         lunchCoupons: 3,
-        verifications: [
-          { memberId: 'member-3', isPresent: true },
-        ]
+        verifications: [{ memberId: 'member-3', isPresent: true }],
       },
-      { 
-        teamId: 'team-003', 
-        breakfastCoupons: 4, 
+      {
+        teamId: 'team-003',
+        breakfastCoupons: 4,
         lunchCoupons: 4,
         verifications: [
           { memberId: 'member-4', isPresent: true },
           { memberId: 'member-5', isPresent: true },
-        ]
+        ],
       },
     ];
 
@@ -242,11 +240,11 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
         ],
       });
     });
-    
+
     mockPrisma.team.update.mockImplementation((args: any) => {
       return Promise.resolve({ ...args.data, id: args.where.id, name: `Team ${args.where.id}` });
     });
-    
+
     mockPrisma.memberVerification.upsert.mockResolvedValue({});
     mockPusherTrigger.mockResolvedValue(undefined);
 
@@ -270,22 +268,22 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
     // Verify all confirmations succeeded
     expect(results).toHaveLength(checkIns.length);
-    results.forEach(result => {
+    results.forEach((result) => {
       expect(result.success).toBe(true);
     });
-    
+
     // Verify database updates were called
     expect(mockPrisma.team.update).toHaveBeenCalledTimes(checkIns.length);
-    
+
     // Verify Pusher events were triggered (2 events per check-in: confirmed + stats)
     expect(mockPusherTrigger.mock.calls.length).toBeGreaterThanOrEqual(checkIns.length * 2);
   });
 
   /**
    * Test 2.3: Scanner Heartbeat Preservation
-   * 
+   *
    * **Validates: Requirements 3.6**
-   * 
+   *
    * Property: Sending heartbeats at 30-second intervals should update presence indicators.
    */
   it('Property 2.3: Scanner heartbeats at normal intervals should work', async () => {
@@ -302,12 +300,12 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
     // Verify all heartbeats succeeded
     expect(mockPusherTrigger).toHaveBeenCalledTimes(heartbeatCount);
-    
+
     // Verify event format
     mockPusherTrigger.mock.calls.forEach((call) => {
       const channelName = call[0];
       const eventName = call[1];
-      
+
       expect(channelName).toMatch(/checkin-A/);
       expect(eventName).toBe('scanner:presence');
     });
@@ -315,9 +313,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.4: Admin Desk Restriction Preservation
-   * 
+   *
    * **Validates: Requirements 3.8**
-   * 
+   *
    * Property: Admins with assigned desks should only access their desk's data.
    */
   it('Property 2.4: Admin desk restrictions should be enforced', async () => {
@@ -330,7 +328,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
         async ({ adminDesk, attemptedDesk }) => {
           vi.clearAllMocks();
           clearMemoryStore(); // Clear rate limits for this iteration
-          
+
           // Use unique admin ID per iteration
           const adminId = `test-admin-${Date.now()}-${Math.random()}`;
           const ctx = createTestContext({ id: adminId, desk: adminDesk });
@@ -368,9 +366,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.5: Check-in Stats Preservation
-   * 
+   *
    * **Validates: Requirements 3.7**
-   * 
+   *
    * Property: Requesting stats should return accurate counts.
    */
   it('Property 2.5: Check-in stats should return accurate counts', async () => {
@@ -405,7 +403,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
     // Request stats multiple times
     for (let i = 0; i < 5; i++) {
       const result = await caller.admin.getCheckInStats();
-      
+
       // Verify stats are consistent
       expect(result.total).toBe(mockStats.total);
       expect(result.checkedIn).toBe(mockStats.checkedIn);
@@ -417,9 +415,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.6: Venue Management Preservation
-   * 
+   *
    * **Validates: Requirements 3.4, 3.16**
-   * 
+   *
    * Property: Venue and table management operations should work correctly.
    */
   it('Property 2.6: Venue management operations should work', async () => {
@@ -431,7 +429,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
         }),
         async ({ venueName, tableCount }) => {
           vi.clearAllMocks();
-          
+
           const ctx = createTestContext({ role: 'ADMIN' });
           const caller = createCaller(ctx);
 
@@ -458,9 +456,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.7: Team Flagging Preservation
-   * 
+   *
    * **Validates: Requirements 3.17**
-   * 
+   *
    * Property: Flagging teams should update database and trigger Pusher events.
    * Note: This test respects existing rate limits (30 req/min) which is preservation behavior.
    */
@@ -483,11 +481,11 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
         status: 'SHORTLISTED',
       });
     });
-    
+
     mockPrisma.team.update.mockImplementation((args: any) => {
       return Promise.resolve({ ...args.data, id: args.where.id });
     });
-    
+
     mockPusherTrigger.mockResolvedValue(undefined);
 
     // Flag each team
@@ -501,63 +499,60 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
     // Verify database updates
     expect(mockPrisma.team.update).toHaveBeenCalledTimes(flags.length);
-    
+
     // Verify Pusher events (2 events per flag: flagged + stats)
     expect(mockPusherTrigger.mock.calls.length).toBeGreaterThanOrEqual(flags.length);
   });
 
   /**
    * Test 2.8: Client Scanner Experience Preservation
-   * 
+   *
    * **Validates: Requirements 3.11, 3.12**
-   * 
+   *
    * Property: Valid QR scans should return team data for display.
    */
   it('Property 2.8: Client scanner should receive team data on valid scan', async () => {
     await fc.assert(
-      fc.asyncProperty(
-        fc.string({ minLength: 6, maxLength: 10 }),
-        async (shortCode) => {
-          vi.clearAllMocks();
-          clearMemoryStore(); // Clear rate limits for this iteration
-          
-          // Use unique admin ID per iteration
-          const adminId = `test-admin-${Date.now()}-${Math.random()}`;
-          const ctx = createTestContext({ id: adminId });
-          const caller = createCaller(ctx);
+      fc.asyncProperty(fc.string({ minLength: 6, maxLength: 10 }), async (shortCode) => {
+        vi.clearAllMocks();
+        clearMemoryStore(); // Clear rate limits for this iteration
 
-          const mockTeam = createMockTeam(shortCode);
-          mockPrisma.team.findUnique.mockResolvedValue(mockTeam);
-          mockPusherTrigger.mockResolvedValue(undefined);
+        // Use unique admin ID per iteration
+        const adminId = `test-admin-${Date.now()}-${Math.random()}`;
+        const ctx = createTestContext({ id: adminId });
+        const caller = createCaller(ctx);
 
-          // Generate secure QR payload
-          const qrPayload = await generateSecureQRCode(shortCode);
-          const encodedPayload = encodeQRPayload(qrPayload);
+        const mockTeam = createMockTeam(shortCode);
+        mockPrisma.team.findUnique.mockResolvedValue(mockTeam);
+        mockPusherTrigger.mockResolvedValue(undefined);
 
-          const result = await caller.admin.getTeamByShortCode({
-            qrPayload: encodedPayload,
-            deskId: 'A',
-          });
+        // Generate secure QR payload
+        const qrPayload = await generateSecureQRCode(shortCode);
+        const encodedPayload = encodeQRPayload(qrPayload);
 
-          // Verify team data returned
-          expect(result).toBeDefined();
-          expect(result.shortCode).toBe(shortCode);
-          expect(result.name).toBeDefined();
-          expect(result.members).toBeDefined();
-          
-          // Verify Pusher event triggered for real-time update
-          expect(mockPusherTrigger).toHaveBeenCalledTimes(1);
-        }
-      ),
+        const result = await caller.admin.getTeamByShortCode({
+          qrPayload: encodedPayload,
+          deskId: 'A',
+        });
+
+        // Verify team data returned
+        expect(result).toBeDefined();
+        expect(result.shortCode).toBe(shortCode);
+        expect(result.name).toBeDefined();
+        expect(result.members).toBeDefined();
+
+        // Verify Pusher event triggered for real-time update
+        expect(mockPusherTrigger).toHaveBeenCalledTimes(1);
+      }),
       { numRuns: 5 } // Reduced from 10 to avoid rate limits
     );
   });
 
   /**
    * Test 2.9: Existing Rate Limits Preservation
-   * 
+   *
    * **Validates: Requirements 3.15**
-   * 
+   *
    * Property: Existing rate limits on confirmCheckIn should still work.
    * First 30 requests succeed, requests 31-35 should be rate limited.
    */
@@ -588,9 +583,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
     }
 
     // Count successes and rate limit errors
-    const successCount = results.filter(r => r.status === 'success').length;
+    const successCount = results.filter((r) => r.status === 'success').length;
     const rateLimitedCount = results.filter(
-      r => r.status === 'error' && r.code === 'TOO_MANY_REQUESTS'
+      (r) => r.status === 'error' && r.code === 'TOO_MANY_REQUESTS'
     ).length;
 
     // On unfixed code: First 30 succeed (existing rate limit), 31-35 are rate limited
@@ -601,9 +596,9 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
 
   /**
    * Test 2.10: Data Integrity Preservation
-   * 
+   *
    * **Validates: Requirements 3.18, 3.19, 3.20**
-   * 
+   *
    * Property: Data integrity checks should prevent invalid operations.
    * This test verifies the pattern exists - actual endpoint may vary.
    */
@@ -625,7 +620,7 @@ describe('QR Pusher Security Fixes - Preservation Property Tests', () => {
     // Verify data integrity pattern: venues with assigned teams should have protection
     // The actual implementation may vary, but the pattern should exist
     expect(mockVenue.teams.length).toBeGreaterThan(0);
-    
+
     // This confirms the preservation requirement: data integrity checks exist
     // The specific implementation (preventing deletion, etc.) is preserved
   });

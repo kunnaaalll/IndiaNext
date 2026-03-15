@@ -1199,10 +1199,7 @@ export function buildShortlistEmailHtml(data: ShortlistEmailData): string {
               'Team leader must be present for registration. <strong style="color:#fff;">College ID & Government ID are compulsory.</strong>',
               '',
             ],
-            [
-              'DigiLocker is accepted for Government ID verification.',
-              '',
-            ],
+            ['DigiLocker is accepted for Government ID verification.', ''],
             [
               'All code must be written <strong style="color:#fff;">during the hackathon only.</strong> Pre-built projects are not allowed.',
               '',
@@ -1379,12 +1376,14 @@ async function sendShortlistEmail(
 
   // [NEW] Mark as sent ONLY IF successful
   if (result.success) {
-    await prisma.team.update({
-      where: { id: team.id },
-      data: { shortlistedEmailSent: true },
-    }).catch(err => {
-      console.error(`[Email] Failed to update shortlistedEmailSent for team ${team.id}:`, err);
-    });
+    await prisma.team
+      .update({
+        where: { id: team.id },
+        data: { shortlistedEmailSent: true },
+      })
+      .catch((err) => {
+        console.error(`[Email] Failed to update shortlistedEmailSent for team ${team.id}:`, err);
+      });
   }
 
   return result;
@@ -1722,12 +1721,14 @@ async function sendApprovalEmail(
 
   // [NEW] Mark as sent ONLY IF successful
   if (result.success) {
-    await prisma.team.update({
-      where: { id: team.id },
-      data: { approvedEmailSent: true },
-    }).catch(err => {
-      console.error(`[Email] Failed to update approvedEmailSent for team ${team.id}:`, err);
-    });
+    await prisma.team
+      .update({
+        where: { id: team.id },
+        data: { approvedEmailSent: true },
+      })
+      .catch((err) => {
+        console.error(`[Email] Failed to update approvedEmailSent for team ${team.id}:`, err);
+      });
   }
 
   return result;

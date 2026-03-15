@@ -40,7 +40,11 @@ export default function ScoringAuditPage() {
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
   if (teamLoading) {
@@ -54,7 +58,10 @@ export default function ScoringAuditPage() {
   if (!submissionId) {
     return (
       <div className="space-y-4">
-        <Link href={`/admin/teams/${teamId}`} className="inline-flex items-center gap-2 text-gray-500 hover:text-white text-xs font-mono transition-colors">
+        <Link
+          href={`/admin/teams/${teamId}`}
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-white text-xs font-mono transition-colors"
+        >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to team
         </Link>
         <div className="p-8 text-center text-gray-600 text-xs font-mono">
@@ -121,8 +128,12 @@ export default function ScoringAuditPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <span className="text-xs font-mono text-gray-300">{log.criterionName}</span>
-                          <span className="text-[9px] font-mono text-gray-600 ml-1.5">{log.criterionWeight}%</span>
+                          <span className="text-xs font-mono text-gray-300">
+                            {log.criterionName}
+                          </span>
+                          <span className="text-[9px] font-mono text-gray-600 ml-1.5">
+                            {log.criterionWeight}%
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -131,21 +142,28 @@ export default function ScoringAuditPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs font-mono text-white font-bold">{log.newPoints.toFixed(1)}</span>
+                        <span className="text-xs font-mono text-white font-bold">
+                          {log.newPoints.toFixed(1)}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {isFirst ? (
-                          <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">NEW</span>
+                          <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                            NEW
+                          </span>
                         ) : delta === null ? null : delta > 0 ? (
                           <span className="flex items-center gap-0.5 text-xs font-mono text-emerald-400">
                             <TrendingUp className="h-3 w-3" />+{delta.toFixed(1)}
                           </span>
                         ) : delta < 0 ? (
                           <span className="flex items-center gap-0.5 text-xs font-mono text-red-400">
-                            <TrendingDown className="h-3 w-3" />{delta.toFixed(1)}
+                            <TrendingDown className="h-3 w-3" />
+                            {delta.toFixed(1)}
                           </span>
                         ) : (
-                          <span className="text-gray-600"><Minus className="h-3 w-3" /></span>
+                          <span className="text-gray-600">
+                            <Minus className="h-3 w-3" />
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -157,14 +175,19 @@ export default function ScoringAuditPage() {
                                 style={{ width: `${log.confidence}%` }}
                               />
                             </div>
-                            <span className="text-[9px] font-mono text-gray-500">{log.confidence}%</span>
+                            <span className="text-[9px] font-mono text-gray-500">
+                              {log.confidence}%
+                            </span>
                           </div>
                         ) : (
                           <span className="text-[9px] font-mono text-gray-700">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[10px] font-mono text-gray-500" title={new Date(log.changedAt).toISOString()}>
+                        <span
+                          className="text-[10px] font-mono text-gray-500"
+                          title={new Date(log.changedAt).toISOString()}
+                        >
                           {timeSince(log.changedAt)}
                         </span>
                       </td>
@@ -206,7 +229,9 @@ export default function ScoringAuditPage() {
       <div className="flex items-start gap-2 p-3 bg-white/[0.02] border border-white/[0.05] rounded-lg">
         <History className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
         <p className="text-[9px] font-mono text-gray-500">
-          This log records every time a judge edits their scores for this submission. The first entry per criterion shows the initial submission (no old value). Subsequent entries show the before/after with delta.
+          This log records every time a judge edits their scores for this submission. The first
+          entry per criterion shows the initial submission (no old value). Subsequent entries show
+          the before/after with delta.
         </p>
       </div>
     </div>

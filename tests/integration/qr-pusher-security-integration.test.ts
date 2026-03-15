@@ -1,13 +1,13 @@
 /**
  * Integration Tests: QR Pusher Security Fixes
- * 
+ *
  * Comprehensive integration testing of all security layers working together.
  * Tests validate that legitimate operations continue to function properly
  * while security protections prevent abuse.
- * 
+ *
  * Feature: qr-pusher-security-fixes
  * Task 11: Integration testing and validation
- * 
+ *
  * Validates: Requirements 2.1-2.23 (Security), 3.1-3.20 (Preservation)
  */
 
@@ -57,7 +57,7 @@ function createTestContext(adminOverrides = {}): Context {
     desk: 'A',
     ...adminOverrides,
   };
-  
+
   return {
     prisma: mockPrisma,
     adminSession: {
@@ -102,14 +102,16 @@ function createMockTeam(shortCode: string, overrides = {}) {
 }
 
 // Helper to wait
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('QR Pusher Security Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearMemoryStore();
     mockPrisma.team.count.mockResolvedValue(0);
-    mockPrisma.team.aggregate.mockResolvedValue({ _sum: { breakfastCouponsIssued: 0, lunchCouponsIssued: 0 } });
+    mockPrisma.team.aggregate.mockResolvedValue({
+      _sum: { breakfastCouponsIssued: 0, lunchCouponsIssued: 0 },
+    });
   });
 
   afterEach(() => {
@@ -118,10 +120,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.1: Test full check-in flow with security layers
-   * 
-   * Tests complete flow: QR scan with secure payload → team display → 
+   *
+   * Tests complete flow: QR scan with secure payload → team display →
    * member verification → confirm check-in → dashboard update
-   * 
+   *
    * Validates: Requirements 2.1, 2.3, 2.5, 2.8, 2.12, 3.1, 3.2, 3.3
    */
   describe('11.1 Full check-in flow with security layers', () => {
@@ -166,9 +168,7 @@ describe('QR Pusher Security Integration Tests', () => {
         deskId: 'A',
         breakfastCoupons: 4,
         lunchCoupons: 4,
-        verifications: [
-          { memberId: 'member-1', isPresent: true },
-        ],
+        verifications: [{ memberId: 'member-1', isPresent: true }],
       });
 
       expect(checkInResult.success).toBe(true);
@@ -176,9 +176,9 @@ describe('QR Pusher Security Integration Tests', () => {
 
       // Verify all security checks passed
       expect(mockPusherTrigger.mock.calls.length).toBeGreaterThanOrEqual(3); // qr:scanned + checkin:confirmed + stats:updated
-      
+
       // Verify private channels used
-      mockPusherTrigger.mock.calls.forEach(call => {
+      mockPusherTrigger.mock.calls.forEach((call) => {
         expect(call[0]).toMatch(/^private-/);
       });
     });
@@ -196,18 +196,22 @@ describe('QR Pusher Security Integration Tests', () => {
       for (let i = 0; i < 35; i++) {
         const qrPayload = await generateSecureQRCode(`RATE${i}`);
         const encodedPayload = encodeQRPayload(qrPayload);
-        
+
         scanPromises.push(
-          caller.admin.getTeamByShortCode({
-            qrPayload: encodedPayload,
-            deskId: 'A',
-          }).catch(err => ({ error: err.code }))
+          caller.admin
+            .getTeamByShortCode({
+              qrPayload: encodedPayload,
+              deskId: 'A',
+            })
+            .catch((err) => ({ error: err.code }))
         );
       }
 
       const results = await Promise.all(scanPromises);
-      const successCount = results.filter(r => !('error' in r)).length;
-      const rateLimitedCount = results.filter(r => 'error' in r && r.error === 'TOO_MANY_REQUESTS').length;
+      const successCount = results.filter((r) => !('error' in r)).length;
+      const rateLimitedCount = results.filter(
+        (r) => 'error' in r && r.error === 'TOO_MANY_REQUESTS'
+      ).length;
 
       // Verify rate limiting enforced
       expect(successCount).toBeLessThanOrEqual(30);
@@ -245,9 +249,9 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.2: Test rate limit recovery
-   * 
+   *
    * Exceeds rate limit, waits for window reset, verifies requests succeed again.
-   * 
+   *
    * Validates: Requirements 2.1, 2.4
    */
   describe('11.2 Rate limit recovery', () => {
@@ -264,18 +268,22 @@ describe('QR Pusher Security Integration Tests', () => {
       for (let i = 0; i < 35; i++) {
         const qrPayload = await generateSecureQRCode(`REC${i}`);
         const encodedPayload = encodeQRPayload(qrPayload);
-        
+
         phase1Promises.push(
-          caller.admin.getTeamByShortCode({
-            qrPayload: encodedPayload,
-            deskId: 'A',
-          }).catch(err => ({ error: err.code }))
+          caller.admin
+            .getTeamByShortCode({
+              qrPayload: encodedPayload,
+              deskId: 'A',
+            })
+            .catch((err) => ({ error: err.code }))
         );
       }
 
       const phase1Results = await Promise.all(phase1Promises);
-      const phase1RateLimited = phase1Results.filter(r => 'error' in r && r.error === 'TOO_MANY_REQUESTS').length;
-      
+      const phase1RateLimited = phase1Results.filter(
+        (r) => 'error' in r && r.error === 'TOO_MANY_REQUESTS'
+      ).length;
+
       expect(phase1RateLimited).toBeGreaterThan(0); // Confirm rate limit hit
 
       // Phase 2: Wait for rate limit window to reset (1 minute)
@@ -285,10 +293,10 @@ describe('QR Pusher Security Integration Tests', () => {
       // Phase 3: Verify requests succeed again
       const mockTeamAfter = createMockTeam('RECOVERY_AFTER');
       mockPrisma.team.findUnique.mockResolvedValue(mockTeamAfter);
-      
+
       const qrPayload = await generateSecureQRCode('RECOVERY_AFTER');
       const encodedPayload = encodeQRPayload(qrPayload);
-      
+
       const phase2Result = await caller.admin.getTeamByShortCode({
         qrPayload: encodedPayload,
         deskId: 'A',
@@ -301,10 +309,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.3: Test circuit breaker recovery
-   * 
+   *
    * Triggers 5 consecutive Pusher failures, verifies circuit breaker opens,
    * waits for half-open state, verifies Pusher re-enabled on success.
-   * 
+   *
    * Validates: Requirements 2.20, 2.21, 2.22
    */
   describe('11.3 Circuit breaker recovery', () => {
@@ -321,7 +329,7 @@ describe('QR Pusher Security Integration Tests', () => {
       for (let i = 0; i < 5; i++) {
         const qrPayload = await generateSecureQRCode(`FAIL${i}`);
         const encodedPayload = encodeQRPayload(qrPayload);
-        
+
         try {
           await caller.admin.getTeamByShortCode({
             qrPayload: encodedPayload,
@@ -341,10 +349,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
       const mockTeamRecovery = createMockTeam('RECOVERY');
       mockPrisma.team.findUnique.mockResolvedValue(mockTeamRecovery);
-      
+
       const qrPayload = await generateSecureQRCode('RECOVERY');
       const encodedPayload = encodeQRPayload(qrPayload);
-      
+
       const result = await caller.admin.getTeamByShortCode({
         qrPayload: encodedPayload,
         deskId: 'A',
@@ -357,10 +365,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.4: Test quota monitoring throughout day
-   * 
+   *
    * Sends events throughout simulated day, verifies metrics endpoint shows
    * accurate counts, warnings logged at 80%, emergency throttling at 90%.
-   * 
+   *
    * Validates: Requirements 2.16, 2.17, 2.18, 2.19
    */
   describe('11.4 Quota monitoring throughout day', () => {
@@ -376,7 +384,7 @@ describe('QR Pusher Security Integration Tests', () => {
       for (let i = 0; i < 10; i++) {
         const qrPayload = await generateSecureQRCode(`QUOTA${i}`);
         const encodedPayload = encodeQRPayload(qrPayload);
-        
+
         try {
           await caller.admin.getTeamByShortCode({
             qrPayload: encodedPayload,
@@ -395,10 +403,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.5: Test private channel authentication flow
-   * 
+   *
    * Admin logs in, subscribes to desk channel, receives events,
    * logs out, subscription fails with 403.
-   * 
+   *
    * Validates: Requirements 2.8, 2.9, 2.10, 2.11
    */
   describe('11.5 Private channel authentication flow', () => {
@@ -425,7 +433,7 @@ describe('QR Pusher Security Integration Tests', () => {
     it('should enforce desk restrictions for channel access', async () => {
       // Admin with desk A
       const adminACtx = createTestContext({ id: 'admin-desk-a', desk: 'A' });
-      
+
       // Admin with desk B
       const adminBCtx = createTestContext({ id: 'admin-desk-b', desk: 'B' });
 
@@ -438,10 +446,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.6: Test QR code lifecycle
-   * 
+   *
    * Generates secure QR code, scans 10 times successfully,
    * 11th scan fails with scan limit error, expired QR fails.
-   * 
+   *
    * Validates: Requirements 2.12, 2.13, 2.14, 2.15
    */
   describe('11.6 QR code lifecycle', () => {
@@ -473,7 +481,7 @@ describe('QR Pusher Security Integration Tests', () => {
       }
 
       // Verify some scans succeeded (may hit rate limit)
-      const successfulScans = scanResults.filter(r => r.success).length;
+      const successfulScans = scanResults.filter((r) => r.success).length;
       expect(successfulScans).toBeGreaterThan(0);
     });
 
@@ -507,10 +515,10 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.7: Test multi-desk scenario
-   * 
+   *
    * Sets up 3 admins on different desks, all scan QR codes simultaneously,
    * verifies desk isolation, rate limits enforced per admin, no cross-desk leakage.
-   * 
+   *
    * Validates: Requirements 2.1, 2.8, 2.10, 3.8
    */
   describe('11.7 Multi-desk scenario', () => {
@@ -549,10 +557,10 @@ describe('QR Pusher Security Integration Tests', () => {
       expect(resultC).toBeDefined();
 
       // Verify Pusher events sent to correct desk channels
-      const channelCalls = mockPusherTrigger.mock.calls.map(call => call[0]);
-      expect(channelCalls.some(ch => ch.includes('checkin-A'))).toBe(true);
-      expect(channelCalls.some(ch => ch.includes('checkin-B'))).toBe(true);
-      expect(channelCalls.some(ch => ch.includes('checkin-C'))).toBe(true);
+      const channelCalls = mockPusherTrigger.mock.calls.map((call) => call[0]);
+      expect(channelCalls.some((ch) => ch.includes('checkin-A'))).toBe(true);
+      expect(channelCalls.some((ch) => ch.includes('checkin-B'))).toBe(true);
+      expect(channelCalls.some((ch) => ch.includes('checkin-C'))).toBe(true);
     });
 
     it('should prevent cross-desk data leakage', async () => {
@@ -592,22 +600,26 @@ describe('QR Pusher Security Integration Tests', () => {
       for (let i = 0; i < 35; i++) {
         const qrPayload = await generateSecureQRCode(`A${i}`);
         const encodedPayload = encodeQRPayload(qrPayload);
-        
+
         adminAPromises.push(
-          callerA.admin.getTeamByShortCode({
-            qrPayload: encodedPayload,
-            deskId: 'A',
-          }).catch(err => ({ error: err.code }))
+          callerA.admin
+            .getTeamByShortCode({
+              qrPayload: encodedPayload,
+              deskId: 'A',
+            })
+            .catch((err) => ({ error: err.code }))
         );
       }
 
       const adminAResults = await Promise.all(adminAPromises);
-      const adminARateLimited = adminAResults.filter(r => 'error' in r && r.error === 'TOO_MANY_REQUESTS').length;
+      const adminARateLimited = adminAResults.filter(
+        (r) => 'error' in r && r.error === 'TOO_MANY_REQUESTS'
+      ).length;
 
       // Admin B should still be able to make requests (independent rate limit)
       const qrPayloadB = await generateSecureQRCode('B1');
       const encodedPayloadB = encodeQRPayload(qrPayloadB);
-      
+
       const adminBResult = await callerB.admin.getTeamByShortCode({
         qrPayload: encodedPayloadB,
         deskId: 'A',
@@ -620,17 +632,17 @@ describe('QR Pusher Security Integration Tests', () => {
 
   /**
    * Sub-task 11.8: Test emergency throttling and recovery
-   * 
+   *
    * Approaches 90% of daily quota, verifies emergency throttling activates,
    * only critical events allowed, quota reset allows normal operation.
-   * 
+   *
    * Validates: Requirements 2.18
    */
   describe('11.8 Emergency throttling and recovery', () => {
     it('should activate emergency throttling at 90% quota', async () => {
       // This test verifies the concept of emergency throttling
       // Actual implementation would require simulating 180k messages
-      
+
       const ctx = createTestContext({ id: 'admin-throttle-test' });
       const caller = createCaller(ctx);
 
@@ -642,7 +654,7 @@ describe('QR Pusher Security Integration Tests', () => {
       // For test purposes, we verify the mechanism exists
       const qrPayload = await generateSecureQRCode('THROTTLE123');
       const encodedPayload = encodeQRPayload(qrPayload);
-      
+
       const result = await caller.admin.getTeamByShortCode({
         qrPayload: encodedPayload,
         deskId: 'A',

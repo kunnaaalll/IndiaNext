@@ -127,9 +127,7 @@ export async function executePusherWithCircuitBreaker(
 ): Promise<CircuitBreakerResult> {
   // Check if circuit allows request
   if (!shouldAttemptRequest()) {
-    const timeRemaining = Math.ceil(
-      (TIMEOUT_MS - (Date.now() - circuitState.lastFailure)) / 1000
-    );
+    const timeRemaining = Math.ceil((TIMEOUT_MS - (Date.now() - circuitState.lastFailure)) / 1000);
     return {
       success: false,
       error: `Circuit breaker is open. Retry in ${timeRemaining}s`,

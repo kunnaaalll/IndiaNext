@@ -79,7 +79,12 @@ export async function POST(req: Request) {
     const admin = await verifyAdmin(req);
     if (!admin) {
       return NextResponse.json(
-        createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'UNAUTHORIZED',
+          'Authentication required',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('UNAUTHORIZED') }
       );
     }
@@ -87,14 +92,27 @@ export async function POST(req: Request) {
     const rl = await checkRateLimit(`score-rubric:${admin.id}`, 20, 60);
     if (!rl.success) {
       return NextResponse.json(
-        createErrorResponse('RATE_LIMIT_EXCEEDED', 'Too many scoring requests. Please slow down.', undefined, '/api/admin/teams/score-rubric'),
-        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) } }
+        createErrorResponse(
+          'RATE_LIMIT_EXCEEDED',
+          'Too many scoring requests. Please slow down.',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rl.reset - Date.now()) / 1000)) },
+        }
       );
     }
 
     if (!hasPermission(admin.role, 'SCORE_TEAMS')) {
       return NextResponse.json(
-        createErrorResponse('FORBIDDEN', 'Insufficient permissions to score submissions', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'FORBIDDEN',
+          'Insufficient permissions to score submissions',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('FORBIDDEN') }
       );
     }
@@ -103,7 +121,12 @@ export async function POST(req: Request) {
     const validation = RubricScoreSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        createErrorResponse('VALIDATION_ERROR', validation.error.errors[0].message, validation.error.errors, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'VALIDATION_ERROR',
+          validation.error.errors[0].message,
+          validation.error.errors,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: 400 }
       );
     }
@@ -131,18 +154,28 @@ export async function POST(req: Request) {
       include: { submission: true },
     });
 
-    if (!team) return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
+    if (!team)
+      return NextResponse.json({ success: false, error: 'Team not found' }, { status: 404 });
 
     if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
       return NextResponse.json(
-        { success: false, error: 'TEAM_NOT_ELIGIBLE', message: `Cannot score team with status: ${team.status}.` },
+        {
+          success: false,
+          error: 'TEAM_NOT_ELIGIBLE',
+          message: `Cannot score team with status: ${team.status}.`,
+        },
         { status: 403 }
       );
     }
 
     if (!team.submission) {
       return NextResponse.json(
-        createErrorResponse('NOT_FOUND', 'Team has no submission', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'NOT_FOUND',
+          'Team has no submission',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('NOT_FOUND') }
       );
     }
@@ -158,7 +191,11 @@ export async function POST(req: Request) {
     const missingCriteria = Array.from(criteriaIds).filter((id) => !scoredIds.has(id));
     if (missingCriteria.length > 0) {
       return NextResponse.json(
-        { success: false, error: 'INCOMPLETE_SCORING', message: `Missing scores for criteria: ${missingCriteria.join(', ')}` },
+        {
+          success: false,
+          error: 'INCOMPLETE_SCORING',
+          message: `Missing scores for criteria: ${missingCriteria.join(', ')}`,
+        },
         { status: 400 }
       );
     }
@@ -170,10 +207,24 @@ export async function POST(req: Request) {
     for (const score of scores) {
       const criterion = criteriaMap.get(score.criterionId);
       if (!criterion) {
-        return NextResponse.json({ success: false, error: 'INVALID_CRITERION', message: `Invalid criterion: ${score.criterionId}` }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'INVALID_CRITERION',
+            message: `Invalid criterion: ${score.criterionId}`,
+          },
+          { status: 400 }
+        );
       }
       if (score.points > criterion.maxPoints) {
-        return NextResponse.json({ success: false, error: 'INVALID_POINTS', message: `Points for ${criterion.name} exceed maximum of ${criterion.maxPoints}` }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'INVALID_POINTS',
+            message: `Points for ${criterion.name} exceed maximum of ${criterion.maxPoints}`,
+          },
+          { status: 400 }
+        );
       }
       const normalizedScore = (score.points / criterion.maxPoints) * 100;
       totalWeightedScore += (normalizedScore * criterion.weight) / 100;
@@ -226,7 +277,9 @@ export async function POST(req: Request) {
               points: score.points,
               comments: score.comments || null,
               confidence: score.confidence ?? null,
-              previousPoints: existingMap.get(criterionIdToDbId.get(score.criterionId) ?? score.criterionId)?.points ?? null,
+              previousPoints:
+                existingMap.get(criterionIdToDbId.get(score.criterionId) ?? score.criterionId)
+                  ?.points ?? null,
             },
           })
         )
@@ -239,7 +292,10 @@ export async function POST(req: Request) {
       });
 
       // Group by judge → weighted total
-      const judgeMap = new Map<string, { judgeName: string; weightedTotal: number; confidence: number | null }>();
+      const judgeMap = new Map<
+        string,
+        { judgeName: string; weightedTotal: number; confidence: number | null }
+      >();
       for (const cs of allScores) {
         let entry = judgeMap.get(cs.judgeId);
         if (!entry) {
@@ -249,7 +305,10 @@ export async function POST(req: Request) {
         const norm = (cs.points / cs.criterion.maxPoints) * 100;
         entry.weightedTotal += (norm * cs.criterion.weight) / 100;
         // Combine confidences: use the min if multiple criterion confidences differ
-        if (cs.confidence !== null && (entry.confidence === null || cs.confidence < entry.confidence)) {
+        if (
+          cs.confidence !== null &&
+          (entry.confidence === null || cs.confidence < entry.confidence)
+        ) {
           entry.confidence = cs.confidence;
         }
       }
@@ -286,8 +345,7 @@ export async function POST(req: Request) {
             return Math.max(0, Math.min(100, 50 + z * 15));
           })
         );
-        normalizedAverage =
-          normalizedTotals.reduce((a, b) => a + b, 0) / normalizedTotals.length;
+        normalizedAverage = normalizedTotals.reduce((a, b) => a + b, 0) / normalizedTotals.length;
       }
 
       normalizedAverage = Math.round(normalizedAverage * 10) / 10;
@@ -365,7 +423,12 @@ export async function GET(req: Request) {
     const admin = await verifyAdmin(req);
     if (!admin) {
       return NextResponse.json(
-        createErrorResponse('UNAUTHORIZED', 'Authentication required', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'UNAUTHORIZED',
+          'Authentication required',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('UNAUTHORIZED') }
       );
     }
@@ -374,7 +437,12 @@ export async function GET(req: Request) {
     const teamId = searchParams.get('teamId');
     if (!teamId) {
       return NextResponse.json(
-        createErrorResponse('BAD_REQUEST', 'Missing teamId parameter', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'BAD_REQUEST',
+          'Missing teamId parameter',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('BAD_REQUEST') }
       );
     }
@@ -392,7 +460,12 @@ export async function GET(req: Request) {
 
     if (!team) {
       return NextResponse.json(
-        createErrorResponse('NOT_FOUND', 'Team not found', undefined, '/api/admin/teams/score-rubric'),
+        createErrorResponse(
+          'NOT_FOUND',
+          'Team not found',
+          undefined,
+          '/api/admin/teams/score-rubric'
+        ),
         { status: getStatusCode('NOT_FOUND') }
       );
     }
@@ -415,7 +488,12 @@ export async function GET(req: Request) {
       {
         judgeId: string;
         judgeName: string;
-        scores: { criterionId: string; points: number; comments: string | null; confidence: number | null }[];
+        scores: {
+          criterionId: string;
+          points: number;
+          comments: string | null;
+          confidence: number | null;
+        }[];
         weightedTotal: number;
         avgConfidence: number | null;
       }
@@ -423,10 +501,21 @@ export async function GET(req: Request) {
 
     for (const cs of allCriterionScores) {
       if (!judgeMap.has(cs.judgeId)) {
-        judgeMap.set(cs.judgeId, { judgeId: cs.judgeId, judgeName: cs.judgeName, scores: [], weightedTotal: 0, avgConfidence: null });
+        judgeMap.set(cs.judgeId, {
+          judgeId: cs.judgeId,
+          judgeName: cs.judgeName,
+          scores: [],
+          weightedTotal: 0,
+          avgConfidence: null,
+        });
       }
       const judge = judgeMap.get(cs.judgeId)!;
-      judge.scores.push({ criterionId: cs.criterion.criterionId, points: cs.points, comments: cs.comments, confidence: cs.confidence ?? null });
+      judge.scores.push({
+        criterionId: cs.criterion.criterionId,
+        points: cs.points,
+        comments: cs.comments,
+        confidence: cs.confidence ?? null,
+      });
       const norm = (cs.points / cs.criterion.maxPoints) * 100;
       judge.weightedTotal += (norm * cs.criterion.weight) / 100;
       if (cs.confidence !== null) {
@@ -447,7 +536,8 @@ export async function GET(req: Request) {
 
     let stdDev = 0;
     if (judgeCount > 1 && averageScore !== null) {
-      const variance = judges.reduce((s, j) => s + Math.pow(j.weightedTotal - averageScore, 2), 0) / judgeCount;
+      const variance =
+        judges.reduce((s, j) => s + Math.pow(j.weightedTotal - averageScore, 2), 0) / judgeCount;
       stdDev = Math.round(Math.sqrt(variance) * 10) / 10;
     }
 
@@ -457,14 +547,23 @@ export async function GET(req: Request) {
       for (let j = i + 1; j < judges.length; j++) {
         const diff = Math.abs(judges[i].weightedTotal - judges[j].weightedTotal);
         if (diff > CONFLICT_THRESHOLD) {
-          conflicts.push({ judge1: judges[i].judgeName, judge2: judges[j].judgeName, diff: Math.round(diff * 10) / 10 });
+          conflicts.push({
+            judge1: judges[i].judgeName,
+            judge2: judges[j].judgeName,
+            diff: Math.round(diff * 10) / 10,
+          });
         }
       }
     }
 
-    const criterionAverages: Record<string, { average: number; min: number; max: number; count: number }> = {};
+    const criterionAverages: Record<
+      string,
+      { average: number; min: number; max: number; count: number }
+    > = {};
     for (const criterion of criteria) {
-      const scoresForCriterion = allCriterionScores.filter((cs) => cs.criterion.criterionId === criterion.criterionId);
+      const scoresForCriterion = allCriterionScores.filter(
+        (cs) => cs.criterion.criterionId === criterion.criterionId
+      );
       if (scoresForCriterion.length > 0) {
         const points = scoresForCriterion.map((cs) => cs.points);
         criterionAverages[criterion.criterionId] = {

@@ -23,7 +23,8 @@ async function verifyAdmin() {
 export async function GET() {
   try {
     const admin = await verifyAdmin();
-    if (!admin) return NextResponse.json({ success: false, error: 'UNAUTHORIZED' }, { status: 401 });
+    if (!admin)
+      return NextResponse.json({ success: false, error: 'UNAUTHORIZED' }, { status: 401 });
 
     const TIE_TOLERANCE = 0.5;
 
@@ -35,7 +36,12 @@ export async function GET() {
 
       const scored = teams
         .filter((t) => t.submission?.judgeScore != null)
-        .map((t) => ({ id: t.id, name: t.name, score: t.submission!.judgeScore!, manualRank: t.rank }));
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          score: t.submission!.judgeScore!,
+          manualRank: t.rank,
+        }));
 
       const groups: {
         score: number;
@@ -50,12 +56,18 @@ export async function GET() {
         if (group.length >= 2) {
           group.forEach((t) => visited.add(t.id));
           const hasManual = group.some((t) => t.manualRank !== null);
-          groups.push({ score: team.score, teams: group, resolutionType: hasManual ? 'manual' : 'auto' });
+          groups.push({
+            score: team.score,
+            teams: group,
+            resolutionType: hasManual ? 'manual' : 'auto',
+          });
         }
       }
 
       const totalTies = groups.reduce((s, g) => s + g.teams.length, 0);
-      const manualResolved = groups.filter((g) => g.resolutionType === 'manual').reduce((s, g) => s + g.teams.length, 0);
+      const manualResolved = groups
+        .filter((g) => g.resolutionType === 'manual')
+        .reduce((s, g) => s + g.teams.length, 0);
 
       return {
         totalTies,

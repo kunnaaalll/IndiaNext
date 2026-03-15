@@ -25,7 +25,13 @@ interface CriteriaFormProps {
   onSuccess: () => void;
 }
 
-export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSuccess }: CriteriaFormProps) {
+export function CriteriaForm({
+  track,
+  criterion,
+  existingCriteria,
+  onClose,
+  onSuccess,
+}: CriteriaFormProps) {
   const [formData, setFormData] = useState({
     criterionId: '',
     name: '',
@@ -56,8 +62,8 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
       });
     } else {
       // Set default order for new criterion
-      const maxOrder = Math.max(0, ...existingCriteria.map(c => c.order));
-      setFormData(prev => ({ ...prev, order: maxOrder + 1 }));
+      const maxOrder = Math.max(0, ...existingCriteria.map((c) => c.order));
+      setFormData((prev) => ({ ...prev, order: maxOrder + 1 }));
     }
   }, [criterion, existingCriteria]);
 
@@ -69,10 +75,7 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
     } else if (!/^[a-z_]+$/.test(formData.criterionId)) {
       newErrors.criterionId = 'Criterion ID must contain only lowercase letters and underscores';
     } else if (
-      existingCriteria.some(c => 
-        c.criterionId === formData.criterionId && 
-        c.id !== criterion?.id
-      )
+      existingCriteria.some((c) => c.criterionId === formData.criterionId && c.id !== criterion?.id)
     ) {
       newErrors.criterionId = 'Criterion ID already exists';
     }
@@ -99,9 +102,9 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
 
     // Check if total weight would exceed 100%
     const otherCriteriaWeight = existingCriteria
-      .filter(c => c.id !== criterion?.id && c.isActive)
+      .filter((c) => c.id !== criterion?.id && c.isActive)
       .reduce((sum, c) => sum + c.weight, 0);
-    
+
     if (formData.isActive && otherCriteriaWeight + formData.weight > 100) {
       newErrors.weight = `Total weight would be ${otherCriteriaWeight + formData.weight}%. Maximum allowed: ${100 - otherCriteriaWeight}%`;
     }
@@ -112,7 +115,7 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -139,9 +142,9 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
   };
 
   const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -156,9 +159,7 @@ export function CriteriaForm({ track, criterion, existingCriteria, onClose, onSu
             <h2 className="text-lg font-mono font-bold text-white tracking-wider">
               {criterion ? 'EDIT' : 'ADD'} CRITERION
             </h2>
-            <p className="text-xs font-mono text-gray-500 mt-1">
-              {trackLabel} Track
-            </p>
+            <p className="text-xs font-mono text-gray-500 mt-1">{trackLabel} Track</p>
           </div>
           <button
             onClick={onClose}

@@ -118,7 +118,9 @@ export default function LogisticsPage() {
         // Also refresh the team list in the background so data stays fresh
         refetch();
         refetchStats();
-      } catch { /* malformed event — ignore */ }
+      } catch {
+        /* malformed event — ignore */
+      }
     };
 
     es.onerror = () => {
@@ -126,7 +128,7 @@ export default function LogisticsPage() {
     };
 
     return () => es.close();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { data, isLoading, refetch } = trpc.logistics.getApprovedTeams.useQuery(
@@ -514,14 +516,10 @@ export default function LogisticsPage() {
               key={notif.notifId}
               event={notif}
               onDismiss={() =>
-                setScanNotifications((prev) =>
-                  prev.filter((n) => n.notifId !== notif.notifId)
-                )
+                setScanNotifications((prev) => prev.filter((n) => n.notifId !== notif.notifId))
               }
               onCheckedIn={() => {
-                setScanNotifications((prev) =>
-                  prev.filter((n) => n.notifId !== notif.notifId)
-                );
+                setScanNotifications((prev) => prev.filter((n) => n.notifId !== notif.notifId));
                 refetch();
                 refetchStats();
               }}

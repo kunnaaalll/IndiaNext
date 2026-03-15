@@ -48,11 +48,13 @@ export function CriteriaManager({ track, criteria, isLoading, onRefresh }: Crite
     setShowForm(false);
     setEditingCriterion(null);
     onRefresh();
-    toast.success(editingCriterion ? 'Criterion updated successfully' : 'Criterion added successfully');
+    toast.success(
+      editingCriterion ? 'Criterion updated successfully' : 'Criterion added successfully'
+    );
   };
 
   // Calculate total weight
-  const totalWeight = criteria.filter(c => c.isActive).reduce((sum, c) => sum + c.weight, 0);
+  const totalWeight = criteria.filter((c) => c.isActive).reduce((sum, c) => sum + c.weight, 0);
   const isWeightValid = totalWeight === 100;
 
   const trackLabel = track === 'IDEA_SPRINT' ? 'IdeaSprint' : 'BuildStorm';
@@ -98,9 +100,12 @@ export function CriteriaManager({ track, criteria, isLoading, onRefresh }: Crite
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
             <div>
-              <h3 className="text-sm font-mono font-bold text-amber-400">WEIGHT VALIDATION ERROR</h3>
+              <h3 className="text-sm font-mono font-bold text-amber-400">
+                WEIGHT VALIDATION ERROR
+              </h3>
               <p className="text-xs text-gray-400 mt-1">
-                Total weight is {totalWeight}%. Please adjust criteria weights to equal exactly 100%.
+                Total weight is {totalWeight}%. Please adjust criteria weights to equal exactly
+                100%.
               </p>
             </div>
           </div>

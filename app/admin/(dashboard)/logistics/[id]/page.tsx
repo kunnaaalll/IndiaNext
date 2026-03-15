@@ -222,15 +222,21 @@ export default function LogisticsTeamDetailPage({ params }: { params: Promise<{ 
       </div>
 
       {/* ── Venue & Seat Allocation ─────────────────────────── */}
-      <div className={`rounded-lg border p-4 ${
-        currentTeam.venue
-          ? 'bg-emerald-500/5 border-emerald-500/20'
-          : 'bg-white/[0.02] border-white/[0.06]'
-      }`}>
+      <div
+        className={`rounded-lg border p-4 ${
+          currentTeam.venue
+            ? 'bg-emerald-500/5 border-emerald-500/20'
+            : 'bg-white/[0.02] border-white/[0.06]'
+        }`}
+      >
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MapPin className={`h-4 w-4 ${currentTeam.venue ? 'text-emerald-400' : 'text-gray-600'}`} />
-            <h2 className="text-xs font-mono font-bold text-gray-400 tracking-widest">VENUE &amp; SEAT</h2>
+            <MapPin
+              className={`h-4 w-4 ${currentTeam.venue ? 'text-emerald-400' : 'text-gray-600'}`}
+            />
+            <h2 className="text-xs font-mono font-bold text-gray-400 tracking-widest">
+              VENUE &amp; SEAT
+            </h2>
           </div>
           {!currentTeam.venue && (
             <a
@@ -246,26 +252,40 @@ export default function LogisticsTeamDetailPage({ params }: { params: Promise<{ 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Venue name */}
             <div className="bg-black/20 rounded-lg p-3">
-              <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">Venue</p>
-              <p className="text-sm font-mono font-bold text-emerald-400">{currentTeam.venue.name}</p>
+              <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
+                Venue
+              </p>
+              <p className="text-sm font-mono font-bold text-emerald-400">
+                {currentTeam.venue.name}
+              </p>
             </div>
             {/* Floor */}
             {currentTeam.venue.floor && (
               <div className="bg-black/20 rounded-lg p-3">
-                <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">Floor</p>
-                <p className="text-sm font-mono font-bold text-gray-200">{currentTeam.venue.floor}</p>
+                <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
+                  Floor
+                </p>
+                <p className="text-sm font-mono font-bold text-gray-200">
+                  {currentTeam.venue.floor}
+                </p>
               </div>
             )}
             {/* Block */}
             {currentTeam.venue.block && (
               <div className="bg-black/20 rounded-lg p-3">
-                <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">Block</p>
-                <p className="text-sm font-mono font-bold text-gray-200">{currentTeam.venue.block}</p>
+                <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
+                  Block
+                </p>
+                <p className="text-sm font-mono font-bold text-gray-200">
+                  {currentTeam.venue.block}
+                </p>
               </div>
             )}
             {/* Table / Seat */}
             <div className="bg-black/20 rounded-lg p-3">
-              <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">Table / Seat</p>
+              <p className="text-[8px] font-mono font-bold text-gray-500 uppercase tracking-widest mb-1">
+                Table / Seat
+              </p>
               <p className="text-sm font-mono font-bold text-white">
                 {currentTeam.tableNumber || '—'}
               </p>

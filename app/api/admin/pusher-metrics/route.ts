@@ -5,10 +5,10 @@ import { handleGenericError } from '@/lib/error-handler';
 
 /**
  * GET /api/admin/pusher-metrics
- * 
+ *
  * Retrieve Pusher usage metrics and quota information.
  * Requires ADMIN or SUPER_ADMIN role.
- * 
+ *
  * Requirements: 2.19
  */
 
@@ -50,7 +50,7 @@ export async function GET(_req: Request) {
         totalEvents: metrics.totalEvents,
         eventsByType: metrics.eventsByType,
         lastReset: metrics.lastReset,
-        
+
         // Quota information
         quota: {
           limit: quota.limit,
@@ -62,7 +62,6 @@ export async function GET(_req: Request) {
         },
       },
     });
-    
   } catch (error) {
     return handleGenericError(error, '/api/admin/pusher-metrics');
   }

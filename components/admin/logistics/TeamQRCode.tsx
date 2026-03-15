@@ -101,10 +101,7 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
         <div className="p-6 flex flex-col items-center gap-4">
           <div className="bg-white rounded-lg p-3 relative w-[208px] h-[208px] flex items-center justify-center">
             {/* Canvas always present; hidden behind loader while generating */}
-            <canvas
-              ref={canvasRef}
-              className={`w-48 h-48 ${qrReady ? 'block' : 'hidden'}`}
-            />
+            <canvas ref={canvasRef} className={`w-48 h-48 ${qrReady ? 'block' : 'hidden'}`} />
             {!qrReady && !error && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
@@ -152,8 +149,8 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
           </div>
 
           <p className="text-[8px] font-mono text-gray-600 text-center max-w-[200px]">
-            QR expires in 24 hours. Logistics members can scan this code with the QR CHECK-IN
-            button to quickly find and check in this team.
+            QR expires in 24 hours. Logistics members can scan this code with the QR CHECK-IN button
+            to quickly find and check in this team.
           </p>
         </div>
       </div>

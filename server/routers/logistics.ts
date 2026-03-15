@@ -422,7 +422,9 @@ export const logisticsRouter = router({
           scannedAt: new Date().toISOString(),
           scannerAdminId: ctx.admin.id, // ← desk identity
         });
-      } catch { /* SSE emit errors must never break the main response */ }
+      } catch {
+        /* SSE emit errors must never break the main response */
+      }
 
       return result;
     }),
@@ -920,24 +922,45 @@ export const logisticsRouter = router({
 
     const [totalApproved, present, absent, partial, notMarked, totalMembers, membersPresent] =
       await Promise.all([
-        ctx.prisma.team.count({ where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PRESENT', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'ABSENT', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'PRESENT',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PARTIAL', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'ABSENT',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'NOT_MARKED', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'PARTIAL',
+            deletedAt: null,
+          },
+        }),
+        ctx.prisma.team.count({
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'NOT_MARKED',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.teamMember.count({
           where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } },
         }),
         ctx.prisma.teamMember.count({
-          where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null }, isPresent: true },
+          where: {
+            team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null },
+            isPresent: true,
+          },
         }),
       ]);
 

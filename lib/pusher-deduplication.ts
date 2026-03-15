@@ -35,20 +35,17 @@ const memoryStore = new Map<string, MemoryRecord>();
 
 // ─── Deduplication with Redis ──────────────────────────────────────────────────
 
-async function deduplicateWithRedis(
-  eventKey: string,
-  windowSeconds: number
-): Promise<boolean> {
+async function deduplicateWithRedis(eventKey: string, windowSeconds: number): Promise<boolean> {
   const client = getRedis();
   if (!client) return false; // Fall back to memory
 
   try {
     const key = `dedup:${eventKey}`;
-    
+
     // SET with NX (only set if not exists) and EX (expiry)
     // Returns 'OK' if key was set (new event), null if key already exists (duplicate)
     const result = await client.set(key, '1', { nx: true, ex: windowSeconds });
-    
+
     // If result is 'OK', key was set → new event (not duplicate)
     // If result is null, key already exists → duplicate event
     return result === null;
@@ -60,10 +57,7 @@ async function deduplicateWithRedis(
 
 // ─── Deduplication with Memory ─────────────────────────────────────────────────
 
-function deduplicateWithMemory(
-  eventKey: string,
-  windowSeconds: number
-): boolean {
+function deduplicateWithMemory(eventKey: string, windowSeconds: number): boolean {
   const now = Date.now();
   const windowMs = windowSeconds * 1000;
   const key = `dedup:${eventKey}`;
@@ -102,7 +96,9 @@ export async function isDuplicatePusherEvent(
     }
     return isDuplicate;
   } else {
-    console.warn('[PusherDedup] No Redis — using in-memory store. Configure Upstash for production!');
+    console.warn(
+      '[PusherDedup] No Redis — using in-memory store. Configure Upstash for production!'
+    );
     const isDuplicate = deduplicateWithMemory(eventKey, windowSeconds);
     if (isDuplicate) {
       console.log(`[PusherDedup] Duplicate event detected (memory): ${eventKey}`);

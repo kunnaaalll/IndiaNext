@@ -22,7 +22,14 @@ export default function TeamsManagementPage() {
     college: '',
     search: '',
     dateRange: { from: undefined, to: undefined },
-    sortBy: 'createdAt' as 'createdAt' | 'name' | 'status' | 'college' | 'ideasprintRanking' | 'buildstormRanking' | 'overallScore',
+    sortBy: 'createdAt' as
+      | 'createdAt'
+      | 'name'
+      | 'status'
+      | 'college'
+      | 'ideasprintRanking'
+      | 'buildstormRanking'
+      | 'overallScore',
     sortOrder: 'desc' as 'asc' | 'desc',
     page: 1,
     pageSize: 50,
@@ -100,18 +107,18 @@ export default function TeamsManagementPage() {
             {isJudge ? 'LEADERBOARD' : 'TEAMS_MANAGEMENT'}
           </h1>
           <p className="text-[11px] font-mono text-gray-500 mt-1">
-            {isJudge
-              ? 'Ranked by score — per track'
-              : (
-                <>
-                  {data?.totalCount || 0} total teams registered
-                  {(filters.track !== 'all' || filters.status !== 'all') && (
-                    <span className="text-orange-400 ml-2">
-                      • Filtered: {data?.teams.length || 0} teams
-                    </span>
-                  )}
-                </>
-              )}
+            {isJudge ? (
+              'Ranked by score — per track'
+            ) : (
+              <>
+                {data?.totalCount || 0} total teams registered
+                {(filters.track !== 'all' || filters.status !== 'all') && (
+                  <span className="text-orange-400 ml-2">
+                    • Filtered: {data?.teams.length || 0} teams
+                  </span>
+                )}
+              </>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -151,9 +158,15 @@ export default function TeamsManagementPage() {
       {/* ── Tab bar for Judge + Admin ── */}
       {canSeeElimination && (
         <div className="flex items-center gap-1 p-1 bg-white/[0.02] border border-white/[0.06] rounded-lg w-fit">
-          {[{ id: 'teams', label: isJudge ? 'LEADERBOARD' : 'TEAMS', icon: isJudge ? Trophy : List },
+          {[
+            {
+              id: 'teams',
+              label: isJudge ? 'LEADERBOARD' : 'TEAMS',
+              icon: isJudge ? Trophy : List,
+            },
             { id: 'elimination', label: 'ELIMINATION', icon: Zap },
-            { id: 'analytics', label: 'ANALYTICS', icon: BarChart3 }] .map(({ id, label, icon: Icon }) => (
+            { id: 'analytics', label: 'ANALYTICS', icon: BarChart3 },
+          ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id as typeof activeTab)}
@@ -162,8 +175,8 @@ export default function TeamsManagementPage() {
                   ? id === 'elimination'
                     ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
                     : id === 'analytics'
-                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'text-gray-500 hover:text-gray-300'
               }`}
             >
@@ -175,73 +188,75 @@ export default function TeamsManagementPage() {
       )}
 
       {/* Judge / Admin view: leaderboard or teams table */}
-      {activeTab === 'teams' && (
-        isJudge ? (
+      {activeTab === 'teams' &&
+        (isJudge ? (
           <JudgeLeaderboard />
         ) : (
-        <>
-          <TeamsFilters
-            filters={filters}
-            onChange={(newFilters) => {
-              const merged = { ...filters, ...newFilters };
-              setFilters({
-                ...merged,
-                sortBy: merged.sortBy as 'createdAt' | 'name' | 'status' | 'college' | 'ideasprintRanking' | 'buildstormRanking' | 'overallScore',
-                sortOrder: merged.sortOrder as 'asc' | 'desc',
-              });
-            }}
-          />
-
-          {selectedTeams.length > 0 && !isReadOnly && (
-            <BulkActions
-              selectedTeams={selectedTeams}
-              onComplete={() => {
-                setSelectedTeams([]);
-                refetch();
+          <>
+            <TeamsFilters
+              filters={filters}
+              onChange={(newFilters) => {
+                const merged = { ...filters, ...newFilters };
+                setFilters({
+                  ...merged,
+                  sortBy: merged.sortBy as
+                    | 'createdAt'
+                    | 'name'
+                    | 'status'
+                    | 'college'
+                    | 'ideasprintRanking'
+                    | 'buildstormRanking'
+                    | 'overallScore',
+                  sortOrder: merged.sortOrder as 'asc' | 'desc',
+                });
               }}
             />
-          )}
 
-          <TeamsTable
-            teams={data?.teams || []}
-            totalCount={data?.totalCount || 0}
-            currentPage={filters.page}
-            pageSize={filters.pageSize}
-            isLoading={isLoading}
-            selectedTeams={isReadOnly ? [] : selectedTeams}
-            onSelectionChange={isReadOnly ? () => {} : setSelectedTeams}
-            onPageChange={(page: number) => setFilters({ ...filters, page })}
-            onSort={(field: string, order: string) => {
-              if (
-                field === 'createdAt' ||
-                field === 'name' ||
-                field === 'status' ||
-                field === 'college' ||
-                field === 'ideasprintRanking' ||
-                field === 'buildstormRanking' ||
-                field === 'overallScore'
-              ) {
-                if (order === 'asc' || order === 'desc') {
-                  setFilters({ ...filters, sortBy: field, sortOrder: order });
+            {selectedTeams.length > 0 && !isReadOnly && (
+              <BulkActions
+                selectedTeams={selectedTeams}
+                onComplete={() => {
+                  setSelectedTeams([]);
+                  refetch();
+                }}
+              />
+            )}
+
+            <TeamsTable
+              teams={data?.teams || []}
+              totalCount={data?.totalCount || 0}
+              currentPage={filters.page}
+              pageSize={filters.pageSize}
+              isLoading={isLoading}
+              selectedTeams={isReadOnly ? [] : selectedTeams}
+              onSelectionChange={isReadOnly ? () => {} : setSelectedTeams}
+              onPageChange={(page: number) => setFilters({ ...filters, page })}
+              onSort={(field: string, order: string) => {
+                if (
+                  field === 'createdAt' ||
+                  field === 'name' ||
+                  field === 'status' ||
+                  field === 'college' ||
+                  field === 'ideasprintRanking' ||
+                  field === 'buildstormRanking' ||
+                  field === 'overallScore'
+                ) {
+                  if (order === 'asc' || order === 'desc') {
+                    setFilters({ ...filters, sortBy: field, sortOrder: order });
+                  }
                 }
-              }
-            }}
-            judgeMode={false}
-            readOnly={isReadOnly}
-          />
-        </>
-        )
-      )}
+              }}
+              judgeMode={false}
+              readOnly={isReadOnly}
+            />
+          </>
+        ))}
 
       {/* Elimination round panel — judges + admins */}
-      {activeTab === 'elimination' && canSeeElimination && (
-        <EliminationRoundPanel />
-      )}
+      {activeTab === 'elimination' && canSeeElimination && <EliminationRoundPanel />}
 
       {/* Elimination analytics — judges + admins */}
-      {activeTab === 'analytics' && canSeeElimination && (
-        <EliminationAnalytics />
-      )}
+      {activeTab === 'analytics' && canSeeElimination && <EliminationAnalytics />}
     </div>
   );
 }

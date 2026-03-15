@@ -162,10 +162,10 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     try {
       // This is the call that triggers the browser's system permission popup
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment', 
-          width: { ideal: 640 }, 
-          height: { ideal: 480 } 
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 640 },
+          height: { ideal: 480 },
         },
       });
 
@@ -181,7 +181,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
       setScanning(true);
     } catch (err: any) {
       console.error('Camera permission error:', err);
-      
+
       let errorMsg = 'Camera access failed';
       if (err.name === 'NotAllowedError') {
         setCameraState('denied');
@@ -196,7 +196,7 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
         setCameraState('error');
         errorMsg = err.message || 'Camera access failed';
       }
-      
+
       setCameraError(errorMsg);
       toast.error(errorMsg);
     }
@@ -223,7 +223,9 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     video.srcObject = pendingStreamRef.current;
     pendingStreamRef.current = null; // consumed
     // autoPlay handles playback; call play() as a fallback for some browsers
-    video.play().catch(() => {/* autoPlay attribute will handle it */});
+    video.play().catch(() => {
+      /* autoPlay attribute will handle it */
+    });
   }, [cameraState]);
 
   // Simple barcode detection using BarcodeDetector API if available
@@ -549,19 +551,37 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
                 {scanResult?.ok === true && (
                   <div className="absolute inset-0 bg-emerald-900/80 flex flex-col items-center justify-center gap-2">
                     <div className="w-14 h-14 rounded-full bg-emerald-500/30 border-2 border-emerald-400 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <svg
+                        className="w-8 h-8 text-emerald-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <p className="text-sm font-mono font-bold text-emerald-300 text-center px-4">{scanResult.teamName}</p>
+                    <p className="text-sm font-mono font-bold text-emerald-300 text-center px-4">
+                      {scanResult.teamName}
+                    </p>
                     <p className="text-[9px] font-mono text-emerald-400/70">TEAM FOUND ✓</p>
                   </div>
                 )}
                 {scanResult?.ok === false && (
                   <div className="absolute inset-0 bg-red-900/80 flex flex-col items-center justify-center gap-2">
                     <div className="w-14 h-14 rounded-full bg-red-500/30 border-2 border-red-400 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-8 h-8 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </div>
                     <p className="text-[10px] font-mono text-red-300 text-center px-4 max-w-[200px] leading-relaxed">

@@ -1,7 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Eye, ChevronLeft, ChevronRight, MessageSquare, Tag, Crown, Users } from 'lucide-react';
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Tag,
+  Crown,
+  Users,
+  Trophy,
+  Award,
+} from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -32,16 +42,49 @@ interface TeamTag {
 
 interface Team {
   id: string;
+  shortCode: string;
   name: string;
   track: string;
   status: string;
-  college: string | null;
   size: number;
+  college: string | null;
+  hearAbout: string | null;
+  additionalNotes: string | null;
+  referralCode: string | null;
+  createdBy: string | null;
+  reviewedBy: string | null;
+  reviewedAt: Date | string | null;
+  reviewNotes: string | null;
+  rejectionReason: string | null;
+  score: number | null;
+  rank: number | null;
+  attendance: string;
+  checkedInAt: Date | string | null;
+  checkedInBy: string | null;
+  attendanceNotes: string | null;
+  venueId: string | null;
+  tableId: string | null;
+  tableNumber: string | null;
+  checkedIn: boolean;
+  breakfastCouponsIssued: number;
+  lunchCouponsIssued: number;
+  isFlagged: boolean;
+  flagReason: string | null;
+  shortlistedEmailSent: boolean;
+  approvedEmailSent: boolean;
   createdAt: Date | string;
-  members: TeamMember[];
-  submission: TeamSubmission | null;
-  tags: TeamTag[];
-  _count: { comments: number };
+  updatedAt: Date | string;
+  deletedAt: Date | string | null;
+  members?: TeamMember[];
+  submission?: TeamSubmission | null;
+  tags?: TeamTag[];
+  venue?: any;
+  _count?: { comments: number };
+  // Additional fields for ranking calculations
+  calculatedScore?: number;
+  scoreCount?: number;
+  globalRank?: number;
+  currentRank?: number;
 }
 
 interface TeamsTableProps {
@@ -87,6 +130,8 @@ export function TeamsTable({
   selectedTeams,
   onSelectionChange,
   onPageChange,
+  onSort: _onSort,
+  judgeMode = false,
   readOnly = false,
 }: TeamsTableProps) {
   const router = useRouter();
@@ -154,7 +199,7 @@ export function TeamsTable({
         ) : (
           <div className="divide-y divide-white/[0.03]">
             {teams.map((team) => {
-              const leader = team.members.find((m) => m.role === 'LEADER');
+              const leader = team.members?.find((m) => m.role === 'LEADER');
               return (
                 <div
                   key={team.id}
@@ -180,9 +225,12 @@ export function TeamsTable({
                       onClick={() => router.push(`/admin/teams/${team.id}`)}
                     >
                       {/* Team name + status */}
-                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span className="text-sm font-medium text-gray-200 truncate">
                           {team.name}
+                        </span>
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider shrink-0">
+                          {team.shortCode}
                         </span>
                         <span
                           className={`inline-flex text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border shrink-0 ${
@@ -191,6 +239,32 @@ export function TeamsTable({
                         >
                           {team.status.replace('_', ' ')}
                         </span>
+                        {/* Judge Mode: Show ranking */}
+                        {judgeMode && (team as any).calculatedScore !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                              <Trophy className="h-2.5 w-2.5" />
+                              {(team as any).calculatedScore.toFixed(1)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400">
+                              <Award className="h-2.5 w-2.5" />#
+                              {(team as any).globalRank || (team as any).currentRank || 'N/A'}
+                            </span>
+                          </div>
+                        )}
+                        {/* Admin view: Show score badge when team has been scored */}
+                        {!judgeMode && (team.submission as any)?.judgeScore != null && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 shrink-0">
+                            <Trophy className="h-2.5 w-2.5" />
+                            {Number((team.submission as any).judgeScore).toFixed(1)}
+                          </span>
+                        )}
+                        {/* Manual rank badge */}
+                        {!judgeMode && (team as any).rank != null && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-orange-500/20 bg-orange-500/10 text-orange-400 shrink-0">
+                            🔒 #{(team as any).rank}
+                          </span>
+                        )}
                       </div>
                       {/* Leader */}
                       <div className="flex items-center gap-1.5 mb-2">
@@ -216,7 +290,7 @@ export function TeamsTable({
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-3 w-3 text-gray-600" />
-                          {team.members.length}
+                          {team.members?.length || 0}
                         </span>
                         <span>
                           {new Date(team.createdAt).toLocaleDateString('en-US', {
@@ -224,7 +298,7 @@ export function TeamsTable({
                             day: 'numeric',
                           })}
                         </span>
-                        {team._count.comments > 0 && (
+                        {team._count && team._count.comments > 0 && (
                           <span className="inline-flex items-center gap-0.5">
                             <MessageSquare className="h-3 w-3" />
                             {team._count.comments}
@@ -241,7 +315,7 @@ export function TeamsTable({
                         </div>
                       )}
                       {/* Tags */}
-                      {team.tags.length > 0 && (
+                      {team.tags && team.tags.length > 0 && (
                         <div className="flex gap-1 mt-2 flex-wrap">
                           {team.tags.map((tag) => (
                             <span
@@ -302,6 +376,22 @@ export function TeamsTable({
               <th className="px-4 py-3 text-left text-[9px] font-mono font-bold text-gray-500 uppercase tracking-[0.2em]">
                 Status
               </th>
+              {judgeMode && (
+                <>
+                  <th className="px-4 py-3 text-center text-[9px] font-mono font-bold text-amber-500 uppercase tracking-[0.2em]">
+                    <div className="flex items-center justify-center gap-1">
+                      <Trophy className="h-3 w-3" />
+                      Score
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-center text-[9px] font-mono font-bold text-amber-500 uppercase tracking-[0.2em]">
+                    <div className="flex items-center justify-center gap-1">
+                      <Award className="h-3 w-3" />
+                      Rank
+                    </div>
+                  </th>
+                </>
+              )}
               <th className="px-4 py-3 text-left text-[9px] font-mono font-bold text-gray-500 uppercase tracking-[0.2em]">
                 College
               </th>
@@ -320,7 +410,7 @@ export function TeamsTable({
             {teams.length === 0 ? (
               <tr>
                 <td
-                  colSpan={readOnly ? 7 : 8}
+                  colSpan={judgeMode ? (readOnly ? 9 : 10) : readOnly ? 7 : 8}
                   className="px-4 py-12 text-center text-gray-600 text-xs font-mono tracking-widest"
                 >
                   NO TEAMS FOUND
@@ -328,7 +418,7 @@ export function TeamsTable({
               </tr>
             ) : (
               teams.map((team) => {
-                const leader = team.members.find((m) => m.role === 'LEADER');
+                const leader = team.members?.find((m) => m.role === 'LEADER');
                 return (
                   <tr
                     key={team.id}
@@ -351,7 +441,12 @@ export function TeamsTable({
                     )}
                     <td className="px-4 py-3">
                       <div>
-                        <div className="text-sm font-medium text-gray-200">{team.name}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-gray-200">{team.name}</span>
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 tracking-wider shrink-0">
+                            {team.shortCode}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           {leader ? (
                             <>
@@ -364,7 +459,7 @@ export function TeamsTable({
                             <span className="text-[11px] font-mono text-gray-600">No leader</span>
                           )}
                         </div>
-                        {team.tags.length > 0 && (
+                        {team.tags && team.tags.length > 0 && (
                           <div className="flex gap-1 mt-1">
                             {team.tags.map((tag) => (
                               <span
@@ -411,6 +506,39 @@ export function TeamsTable({
                         {team.status.replace('_', ' ')}
                       </span>
                     </td>
+                    {judgeMode && (
+                      <>
+                        {/* Score Column */}
+                        <td className="px-4 py-3 text-center">
+                          {(team as any).calculatedScore !== undefined ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="text-sm font-mono font-bold text-amber-400">
+                                {(team as any).calculatedScore.toFixed(1)}
+                              </span>
+                              <span className="text-[9px] font-mono text-gray-500">
+                                ({(team as any).scoreCount} judge
+                                {(team as any).scoreCount !== 1 ? 's' : ''})
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-mono text-gray-600">Not scored</span>
+                          )}
+                        </td>
+                        {/* Rank Column */}
+                        <td className="px-4 py-3 text-center">
+                          {(team as any).calculatedScore !== undefined ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <Award className="h-3 w-3 text-amber-500" />
+                              <span className="text-sm font-mono font-bold text-amber-400">
+                                #{(team as any).globalRank || (team as any).currentRank || 'N/A'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-mono text-gray-600">—</span>
+                          )}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-3">
                       <span className="text-xs font-mono text-gray-400 max-w-[200px] truncate block">
                         {team.college || '—'}
@@ -419,7 +547,7 @@ export function TeamsTable({
                     <td className="px-4 py-3 text-center">
                       <span className="inline-flex items-center gap-1 text-xs font-mono text-gray-400">
                         <Users className="h-3 w-3 text-gray-600" />
-                        {team.members.length}
+                        {team.members?.length || 0}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -433,7 +561,7 @@ export function TeamsTable({
                     </td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
-                        {team._count.comments > 0 && (
+                        {team._count && team._count.comments > 0 && (
                           <span className="flex items-center gap-0.5 text-[10px] font-mono text-gray-600">
                             <MessageSquare className="h-3 w-3" />
                             {team._count.comments}

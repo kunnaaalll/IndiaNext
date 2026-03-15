@@ -19,7 +19,8 @@ export default function VenuePage() {
             </span>
           </div>
           <p className="text-xs font-mono text-gray-500">
-            Assign physical locations and table numbers to <span className="text-orange-400 font-bold tracking-widest">SHORTLISTED</span> teams.
+            Assign physical locations and table numbers to{' '}
+            <span className="text-orange-400 font-bold tracking-widest">SHORTLISTED</span> teams.
           </p>
         </div>
       </div>

@@ -20,6 +20,8 @@
 import { z } from 'zod';
 import { router, adminProcedure, rateLimitedAdminProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
+import { validateQRCode, generateSecureQRCode, encodeQRPayload } from '@/lib/qr-security';
+import { scanEmitter } from '@/lib/scan-emitter';
 
 // ── Permission guard ────────────────────────────────────────
 
@@ -187,6 +189,9 @@ export const logisticsRouter = router({
             },
             orderBy: { role: 'asc' },
           },
+          venue: {
+            select: { id: true, name: true, floor: true, block: true },
+          },
         },
       });
 
@@ -194,6 +199,107 @@ export const logisticsRouter = router({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Team not found',
+        });
+      }
+
+      if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Team "${team.name}" is not qualified for logistics (status: ${team.status})`,
+        });
+      }
+
+      return {
+        id: team.id,
+        shortCode: team.shortCode,
+        name: team.name,
+        track: team.track,
+        college: team.college,
+        size: team.size,
+        attendance: team.attendance,
+        checkedInAt: team.checkedInAt,
+        checkedInBy: team.checkedInBy,
+        attendanceNotes: team.attendanceNotes,
+        // Venue & seat allocation
+        venueId: team.venueId,
+        tableId: team.tableId,
+        tableNumber: team.tableNumber,
+        venue: team.venue ?? null,
+        members: team.members.map((m) => ({
+          id: m.id,
+          role: m.role,
+          isPresent: m.isPresent,
+          checkedInAt: m.checkedInAt,
+          user: m.user,
+        })),
+      };
+    }),
+
+  // ═══════════════════════════════════════════════════════════
+  // GENERATE SECURE QR PAYLOAD (for printing team QR codes)
+  // Returns a base64-encoded JSON payload that gets embedded
+  // inside the scannable QR image shown on the TeamQRCode card.
+  // ═══════════════════════════════════════════════════════════
+
+  generateQRPayload: adminProcedure
+    .input(z.object({ shortCode: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      requireLogisticsRole(ctx.admin.role, 'Generate QR payload');
+
+      const payload = await generateSecureQRCode(input.shortCode.toUpperCase().trim());
+      const encoded = encodeQRPayload(payload);
+      return { qrPayload: encoded, expiresAt: payload.expiresAt };
+    }),
+
+  // ═══════════════════════════════════════════════════════════
+  // GET TEAM BY SHORT CODE (QR check-in lookup)
+  // ═══════════════════════════════════════════════════════════
+
+  getTeamByShortCode: rateLimitedAdminProcedure
+    .input(z.object({ qrPayload: z.string(), deskId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      requireLogisticsRole(ctx.admin.role, 'QR check-in lookup');
+
+      // Validate QR code security (nonce, expiry, scan limit)
+      const qrValidation = await validateQRCode(input.qrPayload);
+      if (!qrValidation.valid) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: qrValidation.reason || 'Invalid QR code',
+        });
+      }
+
+      const shortCode = qrValidation.shortCode!;
+
+      const team = await ctx.prisma.team.findUnique({
+        where: { shortCode: shortCode.toUpperCase().trim(), deletedAt: null },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  college: true,
+                  degree: true,
+                  year: true,
+                  branch: true,
+                  gender: true,
+                  emailVerified: true,
+                },
+              },
+            },
+            orderBy: { role: 'asc' },
+          },
+        },
+      });
+
+      if (!team) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No team found with code "${shortCode}"`,
         });
       }
 
@@ -226,16 +332,18 @@ export const logisticsRouter = router({
     }),
 
   // ═══════════════════════════════════════════════════════════
-  // GET TEAM BY SHORT CODE (QR check-in lookup)
+  // LOOKUP TEAM BY PLAIN SHORT CODE (manual entry in logistics panel)
+  // No QR security validation — the logistics member is typing the
+  // code directly, so no replay/expiry checks are needed.
   // ═══════════════════════════════════════════════════════════
 
-  getTeamByShortCode: adminProcedure
+  lookupTeamByCode: rateLimitedAdminProcedure
     .input(z.object({ shortCode: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      requireLogisticsRole(ctx.admin.role, 'QR check-in lookup');
+      requireLogisticsRole(ctx.admin.role, 'Manual code lookup');
 
       const team = await ctx.prisma.team.findUnique({
-        where: { shortCode: input.shortCode.toUpperCase().trim() },
+        where: { shortCode: input.shortCode.toUpperCase().trim(), deletedAt: null },
         include: {
           members: {
             include: {
@@ -262,7 +370,7 @@ export const logisticsRouter = router({
       if (!team) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `No team found with code "${input.shortCode}"`,
+          message: `No team found with code "${input.shortCode.toUpperCase()}"`,
         });
       }
 
@@ -273,7 +381,7 @@ export const logisticsRouter = router({
         });
       }
 
-      return {
+      const result = {
         id: team.id,
         shortCode: team.shortCode,
         name: team.name,
@@ -292,6 +400,33 @@ export const logisticsRouter = router({
           user: m.user,
         })),
       };
+
+      // ── Push real-time notification to the scanning desk's SSE client ──
+      // scannerAdminId scopes this event to the admin (desk) that triggered the scan.
+      // SSE clients for other desks will ignore it.
+      try {
+        scanEmitter.emit('scan', {
+          teamId: result.id,
+          teamName: result.name,
+          shortCode: result.shortCode,
+          track: result.track,
+          college: result.college,
+          attendance: result.attendance,
+          checkedInAt: result.checkedInAt,
+          members: result.members.map((m) => ({
+            id: m.id,
+            role: m.role,
+            isPresent: m.isPresent,
+            user: { name: m.user.name ?? '', email: m.user.email },
+          })),
+          scannedAt: new Date().toISOString(),
+          scannerAdminId: ctx.admin.id, // ← desk identity
+        });
+      } catch {
+        /* SSE emit errors must never break the main response */
+      }
+
+      return result;
     }),
 
   // ═══════════════════════════════════════════════════════════
@@ -787,24 +922,45 @@ export const logisticsRouter = router({
 
     const [totalApproved, present, absent, partial, notMarked, totalMembers, membersPresent] =
       await Promise.all([
-        ctx.prisma.team.count({ where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PRESENT', deletedAt: null },
+          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'ABSENT', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'PRESENT',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'PARTIAL', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'ABSENT',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.team.count({
-          where: { status: { in: ['APPROVED', 'SHORTLISTED'] }, attendance: 'NOT_MARKED', deletedAt: null },
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'PARTIAL',
+            deletedAt: null,
+          },
+        }),
+        ctx.prisma.team.count({
+          where: {
+            status: { in: ['APPROVED', 'SHORTLISTED'] },
+            attendance: 'NOT_MARKED',
+            deletedAt: null,
+          },
         }),
         ctx.prisma.teamMember.count({
           where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null } },
         }),
         ctx.prisma.teamMember.count({
-          where: { team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null }, isPresent: true },
+          where: {
+            team: { status: { in: ['APPROVED', 'SHORTLISTED'] }, deletedAt: null },
+            isPresent: true,
+          },
         }),
       ]);
 

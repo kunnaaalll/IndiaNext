@@ -65,19 +65,22 @@ export function middleware(request: NextRequest) {
     if (csrfEnabled) {
       const referer = request.headers.get('referer');
       const host = request.headers.get('host');
-      
+
       const isOriginAllowed = origin && ALLOWED_ORIGINS.has(origin);
-      const isRefererAllowed = referer && origins.some(o => referer.startsWith(o));
-      const isHostAllowed = host && origins.some(o => o.includes(host));
+      const isRefererAllowed = referer && origins.some((o) => referer.startsWith(o));
+      const isHostAllowed = host && origins.some((o) => o.includes(host));
 
       // Allow if ANY of these match our trusted origins
       if (!isOriginAllowed && !isRefererAllowed && !isHostAllowed) {
-        console.warn(`[CSRF] Blocked request. Origin: ${origin}, Referer: ${referer}, Host: ${host}`);
+        console.warn(
+          `[CSRF] Blocked request. Origin: ${origin}, Referer: ${referer}, Host: ${host}`
+        );
         return NextResponse.json(
           {
             success: false,
             error: 'CSRF_VALIDATION_FAILED',
-            message: 'Untrusted request origin. If you are on mobile, please refresh and try again.',
+            message:
+              'Untrusted request origin. If you are on mobile, please refresh and try again.',
           },
           { status: 403 }
         );
@@ -122,10 +125,7 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set(
-    'Permissions-Policy',
-    'camera=*, microphone=(), geolocation=(), payment=()'
-  );
+  response.headers.set('Permissions-Policy', 'camera=*, microphone=(), geolocation=(), payment=()');
 
   // API version header on API responses
   if (pathname.startsWith('/api/')) {

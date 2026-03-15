@@ -55,8 +55,11 @@ function CheckinContent() {
       setTeamData(null);
       setCheckinDone(false);
       try {
+        // Encode the full QR payload as base64 for secure transmission
+        const qrPayload = btoa(codeToLookup.trim().toUpperCase());
+
         const result = await utils.logistics.getTeamByShortCode.fetch({
-          shortCode: codeToLookup.trim().toUpperCase(),
+          qrPayload,
         });
         setTeamData(result as typeof teamData);
         if (result.attendance === 'PRESENT') {

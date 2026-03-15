@@ -242,6 +242,7 @@ export const canMarkAttendance = adminProcedure.use(requirePermission('markAtten
 export const canViewAttendance = adminProcedure.use(requirePermission('viewAttendance'));
 
 // Rate-limited versions
+export const canViewTeamsRateLimited = canViewTeams.use(rateLimitMutation);
 export const canEditTeamsRateLimited = canEditTeams.use(rateLimitMutation);
 export const canDeleteTeamsRateLimited = canDeleteTeams.use(rateLimitMutation);
 export const canExportTeamsRateLimited = canExportTeams.use(rateLimitMutation);

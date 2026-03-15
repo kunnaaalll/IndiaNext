@@ -309,6 +309,14 @@ export function cleanupMemoryStore(): void {
   }
 }
 
+/**
+ * Clear all rate limit data from memory store.
+ * Used for testing to reset rate limit state between tests.
+ */
+export function clearMemoryStore(): void {
+  memoryStore.clear();
+}
+
 if (typeof setInterval !== 'undefined') {
   setInterval(cleanupMemoryStore, 5 * 60 * 1000);
 }

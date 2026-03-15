@@ -2384,6 +2384,7 @@ export const adminRouter = router({
         else where.round2Status = input.status;
       }
 
+
       const teams = await ctx.prisma.team.findMany({
         where,
         select: {
@@ -2399,7 +2400,11 @@ export const adminRouter = router({
           round2ActionAt: true,
           round1ActionBy: true,
           round2ActionBy: true,
-          members: { select: { id: true, role: true } },
+          attendance: true,
+          checkedIn: true,
+          members: {
+            select: { id: true, role: true, isPresent: true, leftAt: true },
+          },
         },
         orderBy: [{ score: 'desc' }, { name: 'asc' }],
       });

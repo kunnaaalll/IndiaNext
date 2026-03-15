@@ -42,8 +42,11 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
       if (!code.trim()) return;
       setLookupPending(true);
       try {
+        // Encode the full QR payload as base64 for secure transmission
+        const qrPayload = btoa(code.trim().toUpperCase());
+        
         const result = await utils.logistics.getTeamByShortCode.fetch({
-          shortCode: code.trim().toUpperCase(),
+          qrPayload,
         });
         toast.success(`Found: ${result.name}`);
         onResult(result.id);
@@ -95,8 +98,46 @@ export function QRScannerModal({ onClose, onResult }: QRScannerModalProps) {
     try {
       // This is the call that triggers the browser's system permission popup
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { 
+          facingMode: 'environment', 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 } 
+        },
       });
+
+      // Store stream reference for cleanup
+      streamRef.current = stream;
+
+      // Attach stream to video element
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+
+      setCameraState('active');
+      setScanning(true);
+    } catch (err: any) {
+      console.error('Camera permission error:', err);
+      
+      let errorMsg = 'Camera access failed';
+      if (err.name === 'NotAllowedError') {
+        setCameraState('denied');
+        errorMsg = 'Camera permission denied. Please allow camera access and try again.';
+      } else if (err.name === 'NotFoundError') {
+        setCameraState('error');
+        errorMsg = 'No camera found on this device.';
+      } else if (err.name === 'NotSupportedError') {
+        setCameraState('unsupported');
+        errorMsg = 'Camera not supported. Please use HTTPS or localhost.';
+      } else {
+        setCameraState('error');
+        errorMsg = err.message || 'Camera access failed';
+      }
+      
+      setCameraError(errorMsg);
+      toast.error(errorMsg);
+    }
+  }, []);
 
       // User clicked "Allow" — start video feed
       streamRef.current = stream;

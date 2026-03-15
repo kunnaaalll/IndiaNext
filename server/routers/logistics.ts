@@ -20,6 +20,7 @@
 import { z } from 'zod';
 import { router, adminProcedure, rateLimitedAdminProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
+import { validateQRCode } from '../utils/qr-security';
 
 // ── Permission guard ────────────────────────────────────────
 
@@ -229,13 +230,24 @@ export const logisticsRouter = router({
   // GET TEAM BY SHORT CODE (QR check-in lookup)
   // ═══════════════════════════════════════════════════════════
 
-  getTeamByShortCode: adminProcedure
-    .input(z.object({ shortCode: z.string().min(1) }))
+  getTeamByShortCode: rateLimitedAdminProcedure
+    .input(z.object({ qrPayload: z.string(), deskId: z.string().optional() }))
     .query(async ({ ctx, input }) => {
       requireLogisticsRole(ctx.admin.role, 'QR check-in lookup');
 
+      // Validate QR code security (nonce, expiry, scan limit)
+      const qrValidation = await validateQRCode(input.qrPayload);
+      if (!qrValidation.valid) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: qrValidation.reason || 'Invalid QR code',
+        });
+      }
+
+      const shortCode = qrValidation.shortCode!;
+
       const team = await ctx.prisma.team.findUnique({
-        where: { shortCode: input.shortCode.toUpperCase().trim() },
+        where: { shortCode: shortCode.toUpperCase().trim(), deletedAt: null },
         include: {
           members: {
             include: {
@@ -262,7 +274,7 @@ export const logisticsRouter = router({
       if (!team) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `No team found with code "${input.shortCode}"`,
+          message: `No team found with code "${shortCode}"`,
         });
       }
 

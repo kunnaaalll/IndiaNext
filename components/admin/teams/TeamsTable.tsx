@@ -233,7 +233,7 @@ export function TeamsTable({
                             </span>
                             <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-amber-500/20 bg-amber-500/10 text-amber-400">
                               <Award className="h-2.5 w-2.5" />
-                              #{teams.findIndex(t => (t as any).calculatedScore >= (team as any).calculatedScore) + 1}
+                              #{(team as any).globalRank || (team as any).currentRank || 'N/A'}
                             </span>
                           </div>
                         )}
@@ -496,7 +496,7 @@ export function TeamsTable({
                             <div className="flex items-center justify-center gap-1">
                               <Award className="h-3 w-3 text-amber-500" />
                               <span className="text-sm font-mono font-bold text-amber-400">
-                                #{teams.findIndex(t => (t as any).calculatedScore >= (team as any).calculatedScore) + 1}
+                                #{(team as any).globalRank || (team as any).currentRank || 'N/A'}
                               </span>
                             </div>
                           ) : (

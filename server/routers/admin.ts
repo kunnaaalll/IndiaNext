@@ -255,9 +255,11 @@ export const adminRouter = router({
 
         // Handle special sorting for ranking fields
         let orderBy: any;
+        let needsRankingCalculation = false;
         
         if (input.sortBy === 'ideasprintRanking' || input.sortBy === 'buildstormRanking' || input.sortBy === 'overallScore') {
-          // For ranking-based sorting, fall back to createdAt sorting
+          needsRankingCalculation = true;
+          // For ranking-based sorting, we'll calculate rankings after fetching
           orderBy = { createdAt: input.sortOrder };
         } else {
           // Validate sortBy field to prevent errors
@@ -292,6 +294,13 @@ export const adminRouter = router({
                   assignedProblemStatement: {
                     select: { title: true },
                   },
+                  criterionScores: {
+                    select: {
+                      score: true,
+                      criterionId: true,
+                      judgeId: true,
+                    },
+                  },
                   _count: {
                     select: { files: true },
                   },
@@ -314,14 +323,78 @@ export const adminRouter = router({
 
         // Post-process teams for ranking if needed
         let processedTeams = teams;
-        if (input.sortBy === 'ideasprintRanking' || input.sortBy === 'buildstormRanking' || input.sortBy === 'overallScore') {
-          // For now, just return teams without ranking calculation
-          // TODO: Implement proper ranking calculation with separate score queries
-          processedTeams = teams.map((team: any) => ({
-            ...team,
-            calculatedScore: 0,
-            scoreCount: 0,
+        if (needsRankingCalculation) {
+          // Calculate scores and rankings for each team
+          processedTeams = await Promise.all(teams.map(async (team: any) => {
+            let calculatedScore = 0;
+            let scoreCount = 0;
+            
+            if (team.submission?.criterionScores) {
+              const scores = team.submission.criterionScores;
+              calculatedScore = scores.reduce((sum: number, score: any) => sum + score.score, 0);
+              scoreCount = scores.length;
+              
+              // Calculate average score if there are scores
+              if (scoreCount > 0) {
+                calculatedScore = calculatedScore / scoreCount;
+              }
+            }
+            
+            return {
+              ...team,
+              calculatedScore,
+              scoreCount,
+            };
           }));
+          
+          // Sort by calculated score for ranking
+          if (input.sortBy === 'ideasprintRanking' && input.track === 'IDEA_SPRINT') {
+            processedTeams.sort((a: any, b: any) => {
+              const scoreA = a.calculatedScore || 0;
+              const scoreB = b.calculatedScore || 0;
+              return input.sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+            });
+          } else if (input.sortBy === 'buildstormRanking' && input.track === 'BUILD_STORM') {
+            processedTeams.sort((a: any, b: any) => {
+              const scoreA = a.calculatedScore || 0;
+              const scoreB = b.calculatedScore || 0;
+              return input.sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+            });
+          } else if (input.sortBy === 'overallScore') {
+            processedTeams.sort((a: any, b: any) => {
+              const scoreA = a.calculatedScore || 0;
+              const scoreB = b.calculatedScore || 0;
+              return input.sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+            });
+          }
+          
+          // Add ranking numbers based on position in sorted array
+          processedTeams = processedTeams.map((team: any, index: number) => ({
+            ...team,
+            currentRank: (input.page - 1) * input.pageSize + index + 1,
+          }));
+        } else {
+          // For non-ranking sorts, still calculate scores but don't sort by them
+          processedTeams = teams.map((team: any) => {
+            let calculatedScore = 0;
+            let scoreCount = 0;
+            
+            if (team.submission?.criterionScores) {
+              const scores = team.submission.criterionScores;
+              calculatedScore = scores.reduce((sum: number, score: any) => sum + score.score, 0);
+              scoreCount = scores.length;
+              
+              if (scoreCount > 0) {
+                calculatedScore = calculatedScore / scoreCount;
+              }
+            }
+            
+            return {
+              ...team,
+              calculatedScore,
+              scoreCount,
+            };
+          });
         }
 
         return {

@@ -62,8 +62,9 @@ const judgeSortOptions = [
 
 const rankingModeOptions = [
   { value: 'all', label: 'All Teams' },
-  { value: 'ideasprint', label: 'IdeaSprint Ranking' },
-  { value: 'buildstorm', label: 'BuildStorm Ranking' },
+  { value: 'ideasprint', label: 'IdeaSprint Rankings' },
+  { value: 'buildstorm', label: 'BuildStorm Rankings' },
+  { value: 'combined', label: 'Combined Rankings' },
 ];
 
 export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
@@ -154,7 +155,27 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
             <Trophy className="h-4 w-4 text-amber-500" />
             <select
               value={filters.rankingMode || 'all'}
-              onChange={(e) => onChange({ rankingMode: e.target.value, page: 1 })}
+              onChange={(e) => {
+                const newRankingMode = e.target.value;
+                const updates: any = { rankingMode: newRankingMode, page: 1 };
+                
+                // Auto-set track filter based on ranking mode
+                if (newRankingMode === 'ideasprint') {
+                  updates.track = 'IDEA_SPRINT';
+                  updates.sortBy = 'ideasprintRanking';
+                  updates.sortOrder = 'desc';
+                } else if (newRankingMode === 'buildstorm') {
+                  updates.track = 'BUILD_STORM';
+                  updates.sortBy = 'buildstormRanking';
+                  updates.sortOrder = 'desc';
+                } else if (newRankingMode === 'combined') {
+                  updates.track = 'all';
+                  updates.sortBy = 'overallScore';
+                  updates.sortOrder = 'desc';
+                }
+                
+                onChange(updates);
+              }}
               title="Filter by ranking mode"
               className={selectClass}
             >
@@ -241,9 +262,21 @@ export function TeamsFilters({ filters, onChange }: TeamsFiltersProps) {
       {/* Judge Mode Indicator */}
       {isJudge && (
         <div className="mt-3 pt-3 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
-            <Award className="h-3.5 w-3.5" />
-            <span>JUDGE MODE: Only approved and shortlisted teams are shown for scoring</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
+              <Award className="h-3.5 w-3.5" />
+              <span>JUDGE MODE: Only approved and shortlisted teams are shown for scoring</span>
+            </div>
+            {filters.rankingMode && filters.rankingMode !== 'all' && (
+              <div className="flex items-center gap-1 text-xs font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded">
+                <Trophy className="h-3 w-3" />
+                <span>
+                  {filters.rankingMode === 'ideasprint' && 'IdeaSprint Rankings Active'}
+                  {filters.rankingMode === 'buildstorm' && 'BuildStorm Rankings Active'}
+                  {filters.rankingMode === 'combined' && 'Combined Rankings Active'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

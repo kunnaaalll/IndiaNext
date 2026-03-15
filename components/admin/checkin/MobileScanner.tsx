@@ -7,8 +7,9 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Wifi, WifiOff, CheckCircle2, LogOut, Loader2, AlertCircle } from 'lucide-react';
 import { useAdminRole } from '../AdminRoleContext';
+import { QRScannerErrorBoundary } from './QRScannerErrorBoundary';
 
-export default function MobileScanner() {
+function MobileScannerContent() {
   const { desk: contextDesk } = useAdminRole();
   const [deskId, setDeskId] = useState<string | null>(() => {
     if (contextDesk) return contextDesk;
@@ -26,6 +27,7 @@ export default function MobileScanner() {
 
   const html5QrCode = useRef<Html5Qrcode | null>(null);
   const lastScanMap = useRef<Map<string, number>>(new Map());
+  const readerRef = useRef<HTMLDivElement>(null);
 
   // Initialize desk from context or localStorage
   useEffect(() => {
@@ -77,6 +79,20 @@ export default function MobileScanner() {
 
     const startScanner = async () => {
       try {
+        // Check if camera is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera API not available. Please use HTTPS or localhost.');
+        }
+
+        // Request camera permission first
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        
+        // Stop the test stream immediately
+        stream.getTracks().forEach(track => track.stop());
+
+        // Now start the QR scanner
         await scanner.start(
           { facingMode: 'environment' },
           {
@@ -96,8 +112,20 @@ export default function MobileScanner() {
         setCameraError(null);
       } catch (err: any) {
         console.error('Camera Error:', err);
-        setCameraError(err.message || 'Could not access camera');
-        toast.error('Camera access denied');
+        let errorMsg = 'Could not access camera';
+        
+        if (err.name === 'NotAllowedError') {
+          errorMsg = 'Camera permission denied. Please allow camera access and refresh.';
+        } else if (err.name === 'NotFoundError') {
+          errorMsg = 'No camera found on this device.';
+        } else if (err.name === 'NotSupportedError') {
+          errorMsg = 'Camera not supported. Please use HTTPS or localhost.';
+        } else if (err.message) {
+          errorMsg = err.message;
+        }
+        
+        setCameraError(errorMsg);
+        toast.error(errorMsg);
       }
     };
 
@@ -284,7 +312,9 @@ export default function MobileScanner() {
         ) : (
           <>
             <div 
+              ref={readerRef}
               id="reader" 
+              suppressHydrationWarning={true}
               className="w-full h-full [&>video]:object-cover [&_div]:!border-none [&_span]:!hidden [&_br]:!hidden" 
             />
 
@@ -382,5 +412,13 @@ export default function MobileScanner() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MobileScanner() {
+  return (
+    <QRScannerErrorBoundary>
+      <MobileScannerContent />
+    </QRScannerErrorBoundary>
   );
 }

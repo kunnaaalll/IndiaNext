@@ -20,7 +20,7 @@
 import { z } from 'zod';
 import { router, adminProcedure, rateLimitedAdminProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
-import { validateQRCode } from '@/lib/qr-security';
+import { validateQRCode, generateSecureQRCode, encodeQRPayload } from '@/lib/qr-security';
 
 // ── Permission guard ────────────────────────────────────────
 
@@ -227,6 +227,22 @@ export const logisticsRouter = router({
     }),
 
   // ═══════════════════════════════════════════════════════════
+  // GENERATE SECURE QR PAYLOAD (for printing team QR codes)
+  // Returns a base64-encoded JSON payload that gets embedded
+  // inside the scannable QR image shown on the TeamQRCode card.
+  // ═══════════════════════════════════════════════════════════
+
+  generateQRPayload: adminProcedure
+    .input(z.object({ shortCode: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      requireLogisticsRole(ctx.admin.role, 'Generate QR payload');
+
+      const payload = await generateSecureQRCode(input.shortCode.toUpperCase().trim());
+      const encoded = encodeQRPayload(payload);
+      return { qrPayload: encoded, expiresAt: payload.expiresAt };
+    }),
+
+  // ═══════════════════════════════════════════════════════════
   // GET TEAM BY SHORT CODE (QR check-in lookup)
   // ═══════════════════════════════════════════════════════════
 
@@ -275,6 +291,77 @@ export const logisticsRouter = router({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: `No team found with code "${shortCode}"`,
+        });
+      }
+
+      if (team.status !== 'APPROVED' && team.status !== 'SHORTLISTED') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Team "${team.name}" is not qualified for logistics (status: ${team.status})`,
+        });
+      }
+
+      return {
+        id: team.id,
+        shortCode: team.shortCode,
+        name: team.name,
+        track: team.track,
+        college: team.college,
+        size: team.size,
+        attendance: team.attendance,
+        checkedInAt: team.checkedInAt,
+        checkedInBy: team.checkedInBy,
+        attendanceNotes: team.attendanceNotes,
+        members: team.members.map((m) => ({
+          id: m.id,
+          role: m.role,
+          isPresent: m.isPresent,
+          checkedInAt: m.checkedInAt,
+          user: m.user,
+        })),
+      };
+    }),
+
+  // ═══════════════════════════════════════════════════════════
+  // LOOKUP TEAM BY PLAIN SHORT CODE (manual entry in logistics panel)
+  // No QR security validation — the logistics member is typing the
+  // code directly, so no replay/expiry checks are needed.
+  // ═══════════════════════════════════════════════════════════
+
+  lookupTeamByCode: rateLimitedAdminProcedure
+    .input(z.object({ shortCode: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      requireLogisticsRole(ctx.admin.role, 'Manual code lookup');
+
+      const team = await ctx.prisma.team.findUnique({
+        where: { shortCode: input.shortCode.toUpperCase().trim(), deletedAt: null },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  college: true,
+                  degree: true,
+                  year: true,
+                  branch: true,
+                  gender: true,
+                  emailVerified: true,
+                },
+              },
+            },
+            orderBy: { role: 'asc' },
+          },
+        },
+      });
+
+      if (!team) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `No team found with code "${input.shortCode.toUpperCase()}"`,
         });
       }
 

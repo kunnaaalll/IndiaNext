@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { trpc } from '@/lib/trpc-client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Wifi, WifiOff, CheckCircle2, LogOut, Loader2, AlertCircle } from 'lucide-react';
 import { useAdminRole } from '../AdminRoleContext';
 import { QRScannerErrorBoundary } from './QRScannerErrorBoundary';
+import { ClientOnlyWrapper } from './ClientOnlyWrapper';
+import { NativeQRScanner } from './NativeQRScanner';
 
 function MobileScannerContent() {
   const { desk: contextDesk } = useAdminRole();
@@ -23,9 +24,7 @@ function MobileScannerContent() {
   const [isConnected, setIsConnected] = useState(false);
   const [showFlash, setShowFlash] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const html5QrCode = useRef<Html5Qrcode | null>(null);
   const lastScanMap = useRef<Map<string, number>>(new Map());
   const readerRef = useRef<HTMLDivElement>(null);
 
@@ -70,74 +69,12 @@ function MobileScannerContent() {
     return () => clearInterval(interval);
   }, [deskId]);
 
+  // Initialize connection when desk is selected
   useEffect(() => {
-    if (!deskId) return;
-
-    // Initialize scanner with library (not the scanner UI)
-    const scanner = new Html5Qrcode('reader');
-    html5QrCode.current = scanner;
-
-    const startScanner = async () => {
-      try {
-        // Check if camera is available
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Camera API not available. Please use HTTPS or localhost.');
-        }
-
-        // Request camera permission first
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        
-        // Stop the test stream immediately
-        stream.getTracks().forEach(track => track.stop());
-
-        // Now start the QR scanner
-        await scanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 15, // Reduced FPS to save battery and processing
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-          },
-          onScanSuccess,
-          (errorMessage) => {
-            // Quieter logs for background scanning failures
-            if (process.env.NODE_ENV === 'development') {
-              console.debug('QR Scan error:', errorMessage);
-            }
-          }
-        );
-        setIsScanning(true);
-        setCameraError(null);
-      } catch (err: any) {
-        console.error('Camera Error:', err);
-        let errorMsg = 'Could not access camera';
-        
-        if (err.name === 'NotAllowedError') {
-          errorMsg = 'Camera permission denied. Please allow camera access and refresh.';
-        } else if (err.name === 'NotFoundError') {
-          errorMsg = 'No camera found on this device.';
-        } else if (err.name === 'NotSupportedError') {
-          errorMsg = 'Camera not supported. Please use HTTPS or localhost.';
-        } else if (err.message) {
-          errorMsg = err.message;
-        }
-        
-        setCameraError(errorMsg);
-        toast.error(errorMsg);
-      }
-    };
-
-    startScanner();
-    setIsConnected(true);
-
-    return () => {
-      if (html5QrCode.current && html5QrCode.current.isScanning) {
-        html5QrCode.current.stop().catch(console.error);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (deskId) {
+      setIsConnected(true);
+      setIsScanning(true);
+    }
   }, [deskId]);
 
   const selectDesk = (id: string) => {
@@ -148,7 +85,7 @@ function MobileScannerContent() {
 
   const lastGlobalScanTime = useRef<number>(0);
 
-  async function onScanSuccess(decodedText: string) {
+  const onScanSuccess = async (decodedText: string) => {
     if (!deskId || isLoading) return;
 
     const now = Date.now();
@@ -195,7 +132,7 @@ function MobileScannerContent() {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   if (!deskId) {
     return (
@@ -283,106 +220,58 @@ function MobileScannerContent() {
 
       {/* Camera Viewport */}
       <div className="flex-1 relative bg-zinc-950 flex items-center justify-center overflow-hidden">
-        {cameraError ? (
-          <div className="text-center p-10 space-y-6 max-w-sm">
-            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
-              <AlertCircle className="h-10 w-10 text-red-500" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-white font-bold text-lg tracking-tight">Camera_Access_Required</h2>
-              <p className="text-zinc-500 text-xs leading-relaxed">
-                We need camera access to scan QR codes. Please ensure you have granted permission in your browser settings.
-              </p>
-            </div>
-            <div className="p-4 bg-zinc-900/50 rounded-xl border border-white/5 text-[10px] text-zinc-400 text-left space-y-2">
-              <p className="font-bold text-zinc-300">Quick Fix:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Tap the lock icon in the URL bar</li>
-                <li>Enable &quot;Camera&quot; permission</li>
-                <li>Refresh the page</li>
-              </ul>
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-4 bg-orange-600 hover:bg-orange-500 active:scale-95 rounded-2xl text-[10px] text-white font-black tracking-[0.3em] uppercase transition-all shadow-xl shadow-orange-900/20"
-            >
-              Retry_Initialization
-            </button>
-          </div>
-        ) : (
-          <>
-            <div 
-              ref={readerRef}
-              id="reader" 
-              suppressHydrationWarning={true}
-              className="w-full h-full [&>video]:object-cover [&_div]:!border-none [&_span]:!hidden [&_br]:!hidden" 
-            />
-
-            {/* Overlay UI */}
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-              {/* Scan Box Frame */}
-              <div className="relative w-64 h-64">
-                {/* Glowing Corners */}
-                <div className="absolute -top-1 -left-1 w-10 h-10 border-t-4 border-l-4 border-orange-500 rounded-tl-2xl shadow-[-5px_-5px_15px_rgba(255,102,0,0.5)]" />
-                <div className="absolute -top-1 -right-1 w-10 h-10 border-t-4 border-r-4 border-orange-500 rounded-tr-2xl shadow-[5px_-5px_15px_rgba(255,102,0,0.5)]" />
-                <div className="absolute -bottom-1 -left-1 w-10 h-10 border-b-4 border-l-4 border-orange-500 rounded-bl-2xl shadow-[-5px_5px_15px_rgba(255,102,0,0.5)]" />
-                <div className="absolute -bottom-1 -right-1 w-10 h-10 border-b-4 border-r-4 border-orange-500 rounded-br-2xl shadow-[5px_5px_15px_rgba(255,102,0,0.5)]" />
-
-                {/* Scanning Beam */}
-                <motion.div
-                  animate={{ 
-                    top: ['5%', '95%', '5%'],
-                    opacity: [0.6, 1, 0.6]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute left-4 right-4 h-0.5 bg-orange-500 shadow-[0_0_15px_rgba(255,102,0,0.8)] z-20"
-                />
-                
-                {/* Clean cutout effect */}
-                <div className="absolute inset-0 border-2 border-white/5 rounded-2xl" />
+        <ClientOnlyWrapper
+          fallback={
+            <div className="text-center p-10 space-y-6 max-w-sm">
+              <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto border border-orange-500/20">
+                <Camera className="h-10 w-10 text-orange-500" />
               </div>
-
-              <div className="mt-12 text-center space-y-4 px-6">
-                <p className="text-[10px] font-black text-white/50 tracking-[0.4em] uppercase">
-                  Align_QR_Code_In_Frame
+              <div className="space-y-2">
+                <h2 className="text-white font-bold text-lg tracking-tight">Initializing_Scanner</h2>
+                <p className="text-zinc-500 text-xs leading-relaxed">
+                  Setting up camera access for QR code scanning...
                 </p>
-                <div className="h-0.5 w-6 bg-orange-500/20 mx-auto rounded-full" />
               </div>
             </div>
-          </>
-        )}
+          }
+        >
+          <NativeQRScanner
+            onScanSuccess={onScanSuccess}
+            isActive={!!deskId && !isLoading}
+          />
 
-        {/* Status Indicator */}
-        <div className="absolute bottom-32 flex flex-col items-center gap-4 w-full pointer-events-none z-30">
-          <AnimatePresence>
-            {isLoading ? (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900/90 border border-orange-500/30 rounded-full shadow-2xl"
-              >
-                <Loader2 className="h-4 w-4 text-orange-500 animate-spin" />
-                <span className="text-white text-[10px] font-bold tracking-[0.2em] uppercase">
-                  Processing...
-                </span>
-              </motion.div>
-            ) : (
-              lastScanned && (
+          {/* Status Indicator */}
+          <div className="absolute bottom-32 flex flex-col items-center gap-4 w-full pointer-events-none z-30">
+            <AnimatePresence>
+              {isLoading ? (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2.5 px-6 py-2.5 bg-zinc-900/90 border border-emerald-500/30 rounded-full shadow-2xl"
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-zinc-900/90 border border-orange-500/30 rounded-full shadow-2xl"
                 >
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span className="text-white text-[11px] font-bold tracking-widest uppercase">
-                    {lastScanned}
+                  <Loader2 className="h-4 w-4 text-orange-500 animate-spin" />
+                  <span className="text-white text-[10px] font-bold tracking-[0.2em] uppercase">
+                    Processing...
                   </span>
                 </motion.div>
-              )
-            )}
-          </AnimatePresence>
-        </div>
+              ) : (
+                lastScanned && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2.5 px-6 py-2.5 bg-zinc-900/90 border border-emerald-500/30 rounded-full shadow-2xl"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <span className="text-white text-[11px] font-bold tracking-widest uppercase">
+                      {lastScanned}
+                    </span>
+                  </motion.div>
+                )
+              )}
+            </AnimatePresence>
+          </div>
+        </ClientOnlyWrapper>
       </div>
 
       {/* Footer */}

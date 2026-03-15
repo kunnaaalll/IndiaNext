@@ -1,8 +1,12 @@
-// TeamQRCode — Display QR code for team's shortCode (for event-day check-in)
+// TeamQRCode — Display a real scannable QR code for team check-in
+// Generates a secure base64 JSON payload via the server and renders it
+// with the `qrcode` library so logistics can scan it with QRScannerModal.
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { X, Download, Printer } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, Download, Printer, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { trpc } from '@/lib/trpc-client';
+import QRCode from 'qrcode';
 
 interface TeamQRCodeProps {
   shortCode: string;
@@ -12,72 +16,48 @@ interface TeamQRCodeProps {
 
 export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrReady, setQrReady] = useState(false);
+  const [error, setError] = useState('');
+  const utils = trpc.useUtils();
 
-  // Generate QR code using a simple canvas-based approach
-  // For production, you'd use a proper QR library. This generates a placeholder visual.
+  // Fetch a secure QR payload from the server (nonce + expiry + scan limit),
+  // then render it as a real scannable QR code on the canvas.
+  const generateQR = async () => {
+    setQrReady(false);
+    setError('');
+    try {
+      const { qrPayload } = await utils.logistics.generateQRPayload.fetch({
+        shortCode,
+      });
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      await QRCode.toCanvas(canvas, qrPayload, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+        errorCorrectionLevel: 'H',
+      });
+
+      setQrReady(true);
+    } catch (err) {
+      console.error('[TeamQRCode] Failed to generate QR:', err);
+      setError('Failed to generate QR code. Please try again.');
+    }
+  };
+
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const size = 256;
-    canvas.width = size;
-    canvas.height = size;
-
-    // White background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, size, size);
-
-    // Generate a simple visual QR-like pattern from the shortCode
-    // This is a visual representation — in production use `qrcode` npm package
-    const cellSize = 8;
-    const gridSize = Math.floor(size / cellSize);
-    const padding = 4;
-
-    // Finder patterns (corners)
-    const drawFinder = (x: number, y: number) => {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(x * cellSize, y * cellSize, 7 * cellSize, 7 * cellSize);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect((x + 1) * cellSize, (y + 1) * cellSize, 5 * cellSize, 5 * cellSize);
-      ctx.fillStyle = '#000000';
-      ctx.fillRect((x + 2) * cellSize, (y + 2) * cellSize, 3 * cellSize, 3 * cellSize);
-    };
-
-    drawFinder(padding, padding);
-    drawFinder(gridSize - padding - 7, padding);
-    drawFinder(padding, gridSize - padding - 7);
-
-    // Generate data pattern from shortCode hash
-    let hash = 0;
-    for (let i = 0; i < shortCode.length; i++) {
-      hash = ((hash << 5) - hash + shortCode.charCodeAt(i)) | 0;
-    }
-
-    ctx.fillStyle = '#000000';
-    for (let y = padding + 8; y < gridSize - padding - 8; y++) {
-      for (let x = padding + 8; x < gridSize - padding - 8; x++) {
-        // Deterministic pattern from hash
-        const val = ((hash * (x + 1) * (y + 1)) >>> 0) % 3;
-        if (val === 0) {
-          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-        }
-      }
-    }
-
-    // Draw shortCode text at the bottom
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(shortCode, size / 2, size - 8);
+    generateQR();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortCode]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
+    if (!canvas || !qrReady) return;
     const link = document.createElement('a');
     link.download = `${shortCode}-qr.png`;
     link.href = canvas.toDataURL('image/png');
@@ -86,8 +66,7 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
 
   const handlePrint = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
+    if (!canvas || !qrReady) return;
     const win = window.open('', '_blank');
     if (!win) return;
     win.document.write(`
@@ -120,8 +99,30 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
 
         {/* QR Code display */}
         <div className="p-6 flex flex-col items-center gap-4">
-          <div className="bg-white rounded-lg p-3">
-            <canvas ref={canvasRef} className="w-48 h-48" />
+          <div className="bg-white rounded-lg p-3 relative w-[208px] h-[208px] flex items-center justify-center">
+            {/* Canvas always present; hidden behind loader while generating */}
+            <canvas
+              ref={canvasRef}
+              className={`w-48 h-48 ${qrReady ? 'block' : 'hidden'}`}
+            />
+            {!qrReady && !error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+                <p className="text-[9px] font-mono text-gray-400">Generating QR…</p>
+              </div>
+            )}
+            {error && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
+                <AlertTriangle className="h-6 w-6 text-red-400" />
+                <p className="text-[9px] font-mono text-red-400 text-center">{error}</p>
+                <button
+                  onClick={generateQR}
+                  className="flex items-center gap-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300"
+                >
+                  <RefreshCw className="h-3 w-3" /> Retry
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="text-center">
@@ -134,14 +135,16 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded hover:bg-emerald-500/20 transition-all"
+              disabled={!qrReady}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded hover:bg-emerald-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="h-3 w-3" />
               DOWNLOAD
             </button>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-bold text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded hover:bg-white/[0.05] transition-all"
+              disabled={!qrReady}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-bold text-gray-400 bg-white/[0.03] border border-white/[0.06] rounded hover:bg-white/[0.05] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Printer className="h-3 w-3" />
               PRINT
@@ -149,8 +152,8 @@ export function TeamQRCode({ shortCode, teamName, onClose }: TeamQRCodeProps) {
           </div>
 
           <p className="text-[8px] font-mono text-gray-600 text-center max-w-[200px]">
-            Logistics members can scan this code with the QR CHECK-IN button to quickly find and
-            check in this team.
+            QR expires in 24 hours. Logistics members can scan this code with the QR CHECK-IN
+            button to quickly find and check in this team.
           </p>
         </div>
       </div>

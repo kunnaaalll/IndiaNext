@@ -29,7 +29,7 @@ export const SESSION_CONFIGS = {
   },
   admin: {
     name: 'admin_token',
-    maxAge: 24 * 60 * 60, // 24 hours (shorter for admin)
+    maxAge: 72 * 60 * 60, // 72 hours (3 days — long enough for multi-day events)
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict' as const, // Stricter for admin

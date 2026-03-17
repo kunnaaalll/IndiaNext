@@ -39,7 +39,14 @@ type RoundTeam = {
   round2ActionAt: Date | string | null;
   round1ActionName?: string | null;
   round2ActionName?: string | null;
-  members: { id: string; role: string }[];
+  attendance?: string | null;
+  checkedIn?: boolean | null;
+  members: {
+    id: string;
+    role: string;
+    isPresent?: boolean | null;
+    leftAt?: Date | string | null;
+  }[];
 };
 
 // ── Confirm Bulk Elimination Modal ─────────────────────────────────────────
@@ -192,7 +199,8 @@ function TeamRoundCard({
             <span className={team.track === 'IDEA_SPRINT' ? 'text-cyan-400' : 'text-orange-400'}>
               {team.track === 'IDEA_SPRINT' ? 'Idea Sprint' : 'Build Storm'}
             </span>{' '}
-            • {team.members.length}m
+            • {team.members.filter((m) => m.isPresent).length || team.members.length}/
+            {team.members.length} <span className="text-emerald-500/70">present</span>
           </p>
         </div>
         <span
